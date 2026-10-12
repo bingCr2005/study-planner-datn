@@ -1,7 +1,19 @@
+using Microsoft.EntityFrameworkCore;
+using StudyPlanner.Infrastructure.Data;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// Lấy chuỗi kết nối từ appsettings.Development.json
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// Đăng ký ApplicationDbContext kết nối đến PostgreSQL trên Neon
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(connectionString));
+
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
