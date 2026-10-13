@@ -1,11 +1,21 @@
 using Microsoft.EntityFrameworkCore;
 using StudyPlanner.Infrastructure.Data;
+using Microsoft.OpenApi;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+//đăng ký dịch vụ sinh tài liệu OpenAPI
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Study Planner API",
+        Version = "v1",
+        Description = "API quản lý kế hoạch và tiến độ học tập."
+    });
+});
 
 // Lấy chuỗi kết nối từ appsettings.Development.json
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -13,9 +23,10 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+//đăng ký controller (dky các dịch vụ hỗ trợ controller)
 builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+
 
 var app = builder.Build();
 
@@ -23,10 +34,18 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint(
+            "/swagger/v1/swagger.json",
+            "Study Planner API v1");
+    });
 }
 
 app.UseHttpsRedirection();
+
+//ánh xạ các route được khai báo trong controller
+app.MapControllers(); //(đưa các route trong controller vào pipeline xử lý request)
 
 var summaries = new[]
 {
@@ -45,8 +64,7 @@ app.MapGet("/weatherforecast", () =>
         .ToArray();
     return forecast;
 })
-.WithName("GetWeatherForecast")
-.WithOpenApi();
+.WithName("GetWeatherForecast");
 
 app.MapGet("/", () => Results.Ok(new
 {
