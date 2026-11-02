@@ -8,38 +8,48 @@ public class FacultyConfiguration : IEntityTypeConfiguration<Faculty>
 {
     public void Configure(EntityTypeBuilder<Faculty> builder)
     {
-        builder.ToTable("faculties", table =>
+        // Tên bảng/cột tiếng Việt; giữ tên constraint/index cũ để migration chỉ rename bảng.
+        builder.Property(x => x.Ma).HasColumnName("ma");
+        builder.Property(x => x.MaTruong).HasColumnName("ma_truong");
+        builder.Property(x => x.KyHieu).HasColumnName("ky_hieu");
+        builder.Property(x => x.Ten).HasColumnName("ten");
+        builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
+        builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
+
+        builder.ToTable("khoa", table =>
         {
-            table.HasCheckConstraint("CK_faculties_code_not_blank", "length(btrim(\"Code\")) > 0");
-            table.HasCheckConstraint("CK_faculties_name_not_blank", "length(btrim(\"Name\")) > 0");
+            table.HasCheckConstraint("CK_faculties_code_not_blank", "length(btrim(\"ky_hieu\")) > 0");
+            table.HasCheckConstraint("CK_faculties_name_not_blank", "length(btrim(\"ten\")) > 0");
         });
 
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).UseIdentityByDefaultColumn();
+        builder.HasKey(x => x.Ma).HasName("PK_faculties");
+        builder.Property(x => x.Ma).UseIdentityByDefaultColumn();
 
-        builder.Property(x => x.Code)
+        builder.Property(x => x.KyHieu)
             .HasMaxLength(50)
             .IsRequired();
 
-        builder.Property(x => x.Name)
+        builder.Property(x => x.Ten)
             .HasMaxLength(200)
             .IsRequired();
 
-        builder.Property(x => x.CreatedAt)
+        builder.Property(x => x.NgayTao)
             .HasColumnType("timestamp with time zone")
             .IsRequired();
 
-        builder.Property(x => x.UpdatedAt)
+        builder.Property(x => x.NgayCapNhat)
             .HasColumnType("timestamp with time zone")
             .IsRequired();
 
         // Mã khoa được lặp ở trường khác, nhưng không được trùng trong cùng trường.
-        builder.HasIndex(x => new { x.SchoolId, x.Code })
+        builder.HasIndex(x => new { x.MaTruong, x.KyHieu })
             .IsUnique();
 
         builder.HasOne(x => x.School)
             .WithMany(x => x.Faculties)
-            .HasForeignKey(x => x.SchoolId)
+            .HasForeignKey(x => x.MaTruong).HasConstraintName("FK_faculties_schools_SchoolId")
             .OnDelete(DeleteBehavior.Restrict); // Còn khoa thì không được xóa trường.
+        // Giữ tên index hiện có để migration chỉ đổi tên cột.
+        builder.HasIndex(x => new { x.MaTruong, x.KyHieu }).HasDatabaseName("IX_faculties_SchoolId_Code");
     }
 }
