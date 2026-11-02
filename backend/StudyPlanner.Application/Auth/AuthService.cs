@@ -29,6 +29,7 @@ public sealed class ChangePasswordRequest
     [Required, StringLength(128, MinimumLength = 8)] public string MatKhauMoi { get; init; } = "";
 }
 public sealed record LoginResponse(string TokenTruyCap, string LoaiToken, DateTimeOffset HetHanLuc, UserResponse NguoiDung);
+public sealed record ChangePasswordResponse(string ThongBao);
 public interface IAccessTokenIssuer { LoginResponse Issue(User user); }
 public sealed class AuthenticationFailureException : Exception;
 

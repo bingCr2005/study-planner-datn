@@ -14,7 +14,11 @@ public sealed class ProfileController(AuthService service) : ControllerBase
     public Task<UserResponse> Me(CancellationToken ct) => service.MeAsync(UserId, ct);
     [HttpPatch]
     public Task<UserResponse> Update(System.Text.Json.JsonElement request, CancellationToken ct) => service.UpdateAsync(UserId, request, ct);
-    [HttpPost("change-password"), ProducesResponseType(204)]
-    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request, CancellationToken ct)
-    { await service.ChangePasswordAsync(UserId, request, ct); return NoContent(); }
+    [HttpPost("change-password"), ProducesResponseType<ChangePasswordResponse>(200)]
+    public async Task<ActionResult<ChangePasswordResponse>> ChangePassword(ChangePasswordRequest request, CancellationToken ct)
+    {
+        // Chỉ báo thành công sau khi dịch vụ đã lưu và commit mật khẩu mới.
+        await service.ChangePasswordAsync(UserId, request, ct);
+        return Ok(new ChangePasswordResponse("Đổi mật khẩu thành công. Vui lòng đăng nhập lại."));
+    }
 }
