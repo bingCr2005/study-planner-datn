@@ -86,7 +86,17 @@ public sealed class VietnameseSwagger : IOperationFilter, ISchemaFilter
         if (controller == "Profile")
         {
             operation.Summary = action switch { "Me" => "Xem hồ sơ của tôi", "Update" => "Sửa hồ sơ của tôi", _ => "Đổi mật khẩu" };
-
+            if (action == "Update")
+            {
+                // PATCH nhận JsonElement để phân biệt thiếu field với null. Đặt mẫu riêng cho thao tác này,
+                // tránh gắn mẫu hồ sơ vào mọi API khác cũng dùng JsonElement.
+                if (operation.RequestBody?.Content is not null)
+                    foreach (var media in operation.RequestBody.Content.Values)
+                        if (media is OpenApiMediaType content)
+                            content.Example = System.Text.Json.Nodes.JsonNode.Parse("""
+                                {"hoTen":"Sinh viên cập nhật","tenTruong":"Trường mẫu","tenLop":"CNTT02","nganhHoc":"Công nghệ thông tin"}
+                                """);
+            }
         }
         var resource = controller switch
         {
