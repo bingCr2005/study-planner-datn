@@ -6,7 +6,7 @@ using StudyPlanner.Application.Auth;
 
 namespace StudyPlanner.Api.Controllers;
 
-[ApiController, Route("api/users/me"), Authorize]
+[ApiController, Route("api/v1/users/me"), Authorize]
 public sealed class ProfileController(AuthService service) : ControllerBase
 {
     private int UserId => int.Parse(User.FindFirstValue("sub")!);
