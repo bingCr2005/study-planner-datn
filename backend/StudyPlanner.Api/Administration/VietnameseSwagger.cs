@@ -53,10 +53,20 @@ public sealed class VietnameseSwagger : IOperationFilter, ISchemaFilter
             if (value is OpenApiSchema property && Fields.TryGetValue(name, out var description))
                 property.Description = description;
         // Cùng tên field nhưng chỉ RegisterRequest bắt buộc đủ hồ sơ; CRUD/response legacy vẫn nullable.
-
+        if (context.Type == typeof(StudyPlanner.Application.Auth.RegisterRequest))
+        {
+            foreach (var name in new[] { "maSoSinhVien", "tenTruong", "tenLop", "nganhHoc" })
+                if (schema.Properties.TryGetValue(name, out var value) && value is OpenApiSchema property)
+                    property.Description = name == "maSoSinhVien"
+                        ? "Bắt buộc, tối đa 50 ký tự; duy nhất trong hệ thống, giữ số 0 đầu."
+                        : "Bắt buộc nhập, tối đa 200 ký tự; không nhận chuỗi trắng.";
+            ((OpenApiSchema)schema).Example = System.Text.Json.Nodes.JsonNode.Parse("""
+                {"email":"sinhvien01@example.test","hoTen":"Sinh viên thử","matKhau":"DemoPass2026!","maSoSinhVien":"0306000001","tenTruong":"Trường mẫu","tenLop":"CNTT01","nganhHoc":"Công nghệ thông tin"}
+                """);
+        }
         if (context.Type == typeof(StudyPlanner.Application.Auth.LoginRequest))
             ((OpenApiSchema)schema).Example = System.Text.Json.Nodes.JsonNode.Parse("""
-                {"email":"sinhvien01@example.test","matKhau":"DemoPass2026!"}
+                {"taiKhoan":"0306000001","matKhau":"DemoPass2026!"}
                 """);
     }
 
@@ -70,7 +80,7 @@ public sealed class VietnameseSwagger : IOperationFilter, ISchemaFilter
             operation.Summary = action == "Register" ? "Đăng ký tài khoản sinh viên" : "Đăng nhập";
             operation.Description = action == "Register"
                 ? "Nhập đủ họ tên, email, mật khẩu, mã sinh viên, trường, lớp và ngành."
-                : "Nhập email và mật khẩu.";
+                : "Nhập email hoặc mã sinh viên vào taiKhoan và nhập matKhau.";
             operation.Security = [];
         }
         if (controller == "Profile")
