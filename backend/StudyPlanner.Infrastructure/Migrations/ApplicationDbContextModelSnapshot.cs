@@ -720,6 +720,16 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasDefaultValue(24)
                         .HasColumnName("nhac_truoc_gio");
 
+                    b.Property<string>("TenLop")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("ten_lop");
+
+                    b.Property<string>("TenTruong")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("ten_truong");
+
                     b.Property<string>("VaiTro")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -757,6 +767,10 @@ namespace StudyPlanner.Infrastructure.Migrations
                             t.HasCheckConstraint("CK_users_role_values", "\"vai_tro\" IN ('Student', 'Admin')");
 
                             t.HasCheckConstraint("CK_users_student_code", "\"ma_so_sinh_vien\" IS NULL OR length(btrim(\"ma_so_sinh_vien\")) > 0");
+
+                            t.HasCheckConstraint("CK_users_ten_lop_not_blank", "\"ten_lop\" IS NULL OR \"ten_lop\" ~ '[^[:space:]]'");
+
+                            t.HasCheckConstraint("CK_users_ten_truong_not_blank", "\"ten_truong\" IS NULL OR \"ten_truong\" ~ '[^[:space:]]'");
 
                             t.HasCheckConstraint("CK_users_timezone_not_blank", "length(btrim(\"mui_gio\")) > 0");
                         });

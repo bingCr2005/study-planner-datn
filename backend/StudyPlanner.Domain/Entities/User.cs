@@ -10,6 +10,9 @@ public class User
     public string HoTen { get; set; } = string.Empty;
     public string MatKhauBam { get; set; } = string.Empty;
     public string? MaSoSinhVien { get; set; }
+    // Hồ sơ tự khai, không bắt buộc liên kết danh mục.
+    public string? TenTruong { get; set; }
+    public string? TenLop { get; set; }
     public int? MaLop { get; set; }
     public string? NganhHoc { get; set; }
     public UserRole VaiTro { get; set; } = UserRole.Student;

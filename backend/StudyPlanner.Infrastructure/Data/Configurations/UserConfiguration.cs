@@ -35,6 +35,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             table.HasCheckConstraint("CK_users_timezone_not_blank", "length(btrim(\"mui_gio\")) > 0");
             table.HasCheckConstraint("CK_users_role_values", "\"vai_tro\" IN ('Student', 'Admin')");
         });
+        builder.Property(x=>x.TenTruong).HasColumnName("ten_truong").HasMaxLength(200);
+        builder.Property(x=>x.TenLop).HasColumnName("ten_lop").HasMaxLength(200);
+        builder.ToTable("users",t=> {
+            t.HasCheckConstraint("CK_users_ten_truong_not_blank","\"ten_truong\" IS NULL OR \"ten_truong\" ~ '[^[:space:]]'");
+            t.HasCheckConstraint("CK_users_ten_lop_not_blank","\"ten_lop\" IS NULL OR \"ten_lop\" ~ '[^[:space:]]'");
+        });
         builder.HasKey(x => x.Ma).HasName("PK_users");
         builder.Property(x => x.Ma).UseIdentityByDefaultColumn();
         builder.Property(x => x.Email).HasMaxLength(320).IsRequired();
