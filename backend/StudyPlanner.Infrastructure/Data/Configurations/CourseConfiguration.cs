@@ -8,21 +8,35 @@ public class CourseConfiguration : IEntityTypeConfiguration<Course>
 {
     public void Configure(EntityTypeBuilder<Course> builder)
     {
-        builder.ToTable("courses", table =>
+        builder.HasAlternateKey(x => new { x.Ma, x.MaHocKy });
+        // Tên bảng/cột tiếng Việt; giữ tên constraint/index cũ để migration chỉ rename bảng.
+        builder.Property(x => x.Ma).HasColumnName("ma");
+        builder.Property(x => x.MaHocKy).HasColumnName("ma_hoc_ky");
+        builder.Property(x => x.KyHieu).HasColumnName("ky_hieu");
+        builder.Property(x => x.Ten).HasColumnName("ten");
+        builder.Property(x => x.SoTinChi).HasColumnName("so_tin_chi");
+        builder.Property(x => x.GiangVien).HasColumnName("giang_vien");
+        builder.Property(x => x.MauSac).HasColumnName("mau_sac");
+        builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
+        builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
+
+        builder.ToTable("mon_hoc", table =>
         {
-            table.HasCheckConstraint("CK_courses_credits", "\"Credits\" IS NULL OR \"Credits\" > 0");
-            table.HasCheckConstraint("CK_courses_color", "\"Color\" IS NULL OR \"Color\" ~ '^#[0-9A-Fa-f]{6}$'");
-            table.HasCheckConstraint("CK_courses_name_not_blank", "length(btrim(\"Name\")) > 0");
+            table.HasCheckConstraint("CK_courses_credits", "\"so_tin_chi\" IS NULL OR \"so_tin_chi\" > 0");
+            table.HasCheckConstraint("CK_courses_color", "\"mau_sac\" IS NULL OR \"mau_sac\" ~ '^#[0-9A-Fa-f]{6}$'");
+            table.HasCheckConstraint("CK_courses_name_not_blank", "length(btrim(\"ten\")) > 0");
         });
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).UseIdentityByDefaultColumn();
-        builder.Property(x => x.Code).HasMaxLength(50);
-        builder.Property(x => x.Name).HasMaxLength(200).IsRequired();
-        builder.Property(x => x.Lecturer).HasMaxLength(200);
-        builder.Property(x => x.Color).HasMaxLength(7);
-        builder.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
-        builder.Property(x => x.UpdatedAt).HasColumnType("timestamp with time zone");
-        builder.HasOne(x => x.Semester).WithMany(x => x.Courses).HasForeignKey(x => x.SemesterId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasKey(x => x.Ma).HasName("PK_courses");
+        builder.Property(x => x.Ma).UseIdentityByDefaultColumn();
+        builder.Property(x => x.KyHieu).HasMaxLength(50);
+        builder.Property(x => x.Ten).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.GiangVien).HasMaxLength(200);
+        builder.Property(x => x.MauSac).HasMaxLength(7);
+        builder.Property(x => x.NgayTao).HasColumnType("timestamp with time zone");
+        builder.Property(x => x.NgayCapNhat).HasColumnType("timestamp with time zone");
+        builder.HasOne(x => x.Semester).WithMany(x => x.Courses).HasForeignKey(x => x.MaHocKy).HasConstraintName("FK_courses_semesters_SemesterId").OnDelete(DeleteBehavior.Cascade);
+        // Giữ tên index hiện có để migration chỉ đổi tên cột.
+        builder.HasIndex(x => x.MaHocKy).HasDatabaseName("IX_courses_SemesterId");
     }
 }
 

@@ -8,17 +8,27 @@ public class CohortConfiguration : IEntityTypeConfiguration<Cohort>
 {
     public void Configure(EntityTypeBuilder<Cohort> builder)
     {
-        builder.ToTable("cohorts", table =>
+        // Tên bảng/cột tiếng Việt; giữ tên constraint/index cũ để migration chỉ rename bảng.
+        builder.Property(x => x.Ma).HasColumnName("ma");
+        builder.Property(x => x.Ten).HasColumnName("ten");
+        builder.Property(x => x.NamBatDau).HasColumnName("nam_bat_dau");
+        builder.Property(x => x.NamKetThuc).HasColumnName("nam_ket_thuc");
+        builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
+        builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
+
+        builder.ToTable("khoa_hoc", table =>
         {
-            table.HasCheckConstraint("CK_cohorts_years", "\"EndYear\" >= \"StartYear\"");
-            table.HasCheckConstraint("CK_cohorts_name_not_blank", "length(btrim(\"Name\")) > 0");
+            table.HasCheckConstraint("CK_cohorts_years", "\"nam_ket_thuc\" >= \"nam_bat_dau\"");
+            table.HasCheckConstraint("CK_cohorts_name_not_blank", "length(btrim(\"ten\")) > 0");
         });
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).UseIdentityByDefaultColumn();
-        builder.Property(x => x.Name).HasMaxLength(200).IsRequired();
-        builder.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
-        builder.Property(x => x.UpdatedAt).HasColumnType("timestamp with time zone");
-        builder.HasIndex(x => x.Name).IsUnique();
+        builder.HasKey(x => x.Ma).HasName("PK_cohorts");
+        builder.Property(x => x.Ma).UseIdentityByDefaultColumn();
+        builder.Property(x => x.Ten).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.NgayTao).HasColumnType("timestamp with time zone");
+        builder.Property(x => x.NgayCapNhat).HasColumnType("timestamp with time zone");
+        builder.HasIndex(x => x.Ten).IsUnique();
+        // Giữ tên index hiện có để migration chỉ đổi tên cột.
+        builder.HasIndex(x => x.Ten).HasDatabaseName("IX_cohorts_Name");
     }
 }
 
