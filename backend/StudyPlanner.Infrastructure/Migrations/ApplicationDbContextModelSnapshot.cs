@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using StudyPlanner.Infrastructure.Data;
@@ -11,8 +12,10 @@ using StudyPlanner.Infrastructure.Data;
 namespace StudyPlanner.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
+
     partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     {
+        /// <inheritdoc />
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
@@ -24,620 +27,738 @@ namespace StudyPlanner.Infrastructure.Migrations
 
             modelBuilder.Entity("StudyPlanner.Domain.Entities.ClassSession", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("Ma")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("ma");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
 
-                    b.Property<int>("CourseId")
-                        .HasColumnType("integer");
+                    b.Property<TimeOnly>("GioBatDau")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("gio_bat_dau");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<TimeOnly>("GioKetThuc")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("gio_ket_thuc");
 
-                    b.Property<int>("DayOfWeek")
-                        .HasColumnType("integer");
+                    b.Property<int>("MaMonHoc")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_mon_hoc");
 
-                    b.Property<TimeOnly>("EndTime")
-                        .HasColumnType("time without time zone");
+                    b.Property<DateTimeOffset>("NgayCapNhat")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_cap_nhat");
 
-                    b.Property<string>("Room")
+                    b.Property<DateTimeOffset>("NgayTao")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_tao");
+
+                    b.Property<string>("PhongHoc")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("phong_hoc");
 
-                    b.Property<TimeOnly>("StartTime")
-                        .HasColumnType("time without time zone");
+                    b.Property<int>("ThuTrongTuan")
+                        .HasColumnType("integer")
+                        .HasColumnName("thu_trong_tuan");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.HasKey("Ma");
 
-                    b.HasKey("Id");
-
-                    b.HasIndex("CourseId", "DayOfWeek", "StartTime");
+                    b.HasIndex("MaMonHoc", "ThuTrongTuan", "GioBatDau")
+                        .HasDatabaseName("IX_class_sessions_CourseId_DayOfWeek_StartTime");
 
                     b.ToTable("class_sessions", null, t =>
                         {
-                            t.HasCheckConstraint("CK_class_sessions_times", "\"EndTime\" > \"StartTime\"");
+                            t.HasCheckConstraint("CK_class_sessions_times", "\"gio_ket_thuc\" > \"gio_bat_dau\"");
 
-                            t.HasCheckConstraint("CK_class_sessions_weekday", "\"DayOfWeek\" BETWEEN 1 AND 7");
+                            t.HasCheckConstraint("CK_class_sessions_weekday", "\"thu_trong_tuan\" BETWEEN 1 AND 7");
                         });
                 });
 
             modelBuilder.Entity("StudyPlanner.Domain.Entities.Cohort", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("Ma")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("ma");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<int>("NamBatDau")
+                        .HasColumnType("integer")
+                        .HasColumnName("nam_bat_dau");
 
-                    b.Property<int>("EndYear")
-                        .HasColumnType("integer");
+                    b.Property<int>("NamKetThuc")
+                        .HasColumnType("integer")
+                        .HasColumnName("nam_ket_thuc");
 
-                    b.Property<string>("Name")
+                    b.Property<DateTimeOffset>("NgayCapNhat")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_cap_nhat");
+
+                    b.Property<DateTimeOffset>("NgayTao")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_tao");
+
+                    b.Property<string>("Ten")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("ten");
 
-                    b.Property<int>("StartYear")
-                        .HasColumnType("integer");
+                    b.HasKey("Ma");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
+                    b.HasIndex("Ten")
+                        .IsUnique()
+                        .HasDatabaseName("IX_cohorts_Name");
 
                     b.ToTable("cohorts", null, t =>
                         {
-                            t.HasCheckConstraint("CK_cohorts_name_not_blank", "length(btrim(\"Name\")) > 0");
+                            t.HasCheckConstraint("CK_cohorts_name_not_blank", "length(btrim(\"ten\")) > 0");
 
-                            t.HasCheckConstraint("CK_cohorts_years", "\"EndYear\" >= \"StartYear\"");
+                            t.HasCheckConstraint("CK_cohorts_years", "\"nam_ket_thuc\" >= \"nam_bat_dau\"");
                         });
                 });
 
             modelBuilder.Entity("StudyPlanner.Domain.Entities.Course", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("Ma")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("ma");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
 
-                    b.Property<string>("Code")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Color")
-                        .HasMaxLength(7)
-                        .HasColumnType("character varying(7)");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("Credits")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Lecturer")
+                    b.Property<string>("GiangVien")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("giang_vien");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("KyHieu")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("ky_hieu");
+
+                    b.Property<int>("MaHocKy")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_hoc_ky");
+
+                    b.Property<string>("MauSac")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)")
+                        .HasColumnName("mau_sac");
+
+                    b.Property<DateTimeOffset>("NgayCapNhat")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_cap_nhat");
+
+                    b.Property<DateTimeOffset>("NgayTao")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_tao");
+
+                    b.Property<int?>("SoTinChi")
+                        .HasColumnType("integer")
+                        .HasColumnName("so_tin_chi");
+
+                    b.Property<string>("Ten")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("ten");
 
-                    b.Property<int>("SemesterId")
-                        .HasColumnType("integer");
+                    b.HasKey("Ma");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SemesterId");
+                    b.HasIndex("MaHocKy")
+                        .HasDatabaseName("IX_courses_SemesterId");
 
                     b.ToTable("courses", null, t =>
                         {
-                            t.HasCheckConstraint("CK_courses_color", "\"Color\" IS NULL OR \"Color\" ~ '^#[0-9A-Fa-f]{6}$'");
+                            t.HasCheckConstraint("CK_courses_color", "\"mau_sac\" IS NULL OR \"mau_sac\" ~ '^#[0-9A-Fa-f]{6}$'");
 
-                            t.HasCheckConstraint("CK_courses_credits", "\"Credits\" IS NULL OR \"Credits\" > 0");
+                            t.HasCheckConstraint("CK_courses_credits", "\"so_tin_chi\" IS NULL OR \"so_tin_chi\" > 0");
 
-                            t.HasCheckConstraint("CK_courses_name_not_blank", "length(btrim(\"Name\")) > 0");
+                            t.HasCheckConstraint("CK_courses_name_not_blank", "length(btrim(\"ten\")) > 0");
                         });
                 });
 
             modelBuilder.Entity("StudyPlanner.Domain.Entities.Faculty", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("Ma")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("ma");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
 
-                    b.Property<string>("Code")
+                    b.Property<string>("KyHieu")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("ky_hieu");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<int>("MaTruong")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_truong");
 
-                    b.Property<string>("Name")
+                    b.Property<DateTimeOffset>("NgayCapNhat")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_cap_nhat");
+
+                    b.Property<DateTimeOffset>("NgayTao")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_tao");
+
+                    b.Property<string>("Ten")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("ten");
 
-                    b.Property<int>("SchoolId")
-                        .HasColumnType("integer");
+                    b.HasKey("Ma");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SchoolId", "Code")
-                        .IsUnique();
+                    b.HasIndex("MaTruong", "KyHieu")
+                        .IsUnique()
+                        .HasDatabaseName("IX_faculties_SchoolId_Code");
 
                     b.ToTable("faculties", null, t =>
                         {
-                            t.HasCheckConstraint("CK_faculties_code_not_blank", "length(btrim(\"Code\")) > 0");
+                            t.HasCheckConstraint("CK_faculties_code_not_blank", "length(btrim(\"ky_hieu\")) > 0");
 
-                            t.HasCheckConstraint("CK_faculties_name_not_blank", "length(btrim(\"Name\")) > 0");
+                            t.HasCheckConstraint("CK_faculties_name_not_blank", "length(btrim(\"ten\")) > 0");
                         });
                 });
 
             modelBuilder.Entity("StudyPlanner.Domain.Entities.Notification", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AttemptCount")
+                    b.Property<int>("Ma")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
-                        .HasDefaultValue(0);
+                        .HasColumnName("ma");
 
-                    b.Property<string>("Content")
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
+
+                    b.Property<DateTimeOffset?>("LanThuTiepTheoLuc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("lan_thu_tiep_theo_luc");
+
+                    b.Property<string>("Loai")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("loai");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<int>("MaNguoiDung")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_nguoi_dung");
 
-                    b.Property<string>("DeliveryStatus")
+                    b.Property<int>("MaNhiemVu")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_nhiem_vu");
+
+                    b.Property<DateTimeOffset>("NgayCapNhat")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_cap_nhat");
+
+                    b.Property<DateTimeOffset?>("NgayDoc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_doc");
+
+                    b.Property<DateTimeOffset?>("NgayPhat")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_phat");
+
+                    b.Property<DateTimeOffset>("NgayTao")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_tao");
+
+                    b.Property<string>("NoiDung")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("noi_dung");
+
+                    b.Property<int>("SoLanThu")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("so_lan_thu");
+
+                    b.Property<DateTimeOffset>("ThoiDiemNhac")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("thoi_diem_nhac");
+
+                    b.Property<string>("TrangThaiPhat")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
-                        .HasDefaultValue("Pending");
+                        .HasDefaultValue("Pending")
+                        .HasColumnName("trang_thai_phat");
 
-                    b.Property<DateTimeOffset?>("NextAttemptAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.HasKey("Ma");
 
-                    b.Property<DateTimeOffset?>("ReadAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.HasIndex("LanThuTiepTheoLuc")
+                        .HasDatabaseName("IX_notifications_NextAttemptAt")
+                        .HasFilter("\"trang_thai_phat\" = 'Failed' AND \"lan_thu_tiep_theo_luc\" IS NOT NULL");
 
-                    b.Property<DateTimeOffset>("RemindAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.HasIndex("ThoiDiemNhac")
+                        .HasDatabaseName("IX_notifications_RemindAt")
+                        .HasFilter("\"trang_thai_phat\" = 'Pending'");
 
-                    b.Property<DateTimeOffset?>("SentAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("TaskId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NextAttemptAt")
-                        .HasFilter("\"DeliveryStatus\" = 'Failed' AND \"NextAttemptAt\" IS NOT NULL");
-
-                    b.HasIndex("RemindAt")
-                        .HasFilter("\"DeliveryStatus\" = 'Pending'");
-
-                    b.HasIndex("TaskId", "Type")
-                        .IsUnique();
-
-                    b.HasIndex("UserId", "SentAt")
+                    b.HasIndex("MaNguoiDung", "NgayPhat")
                         .HasDatabaseName("IX_notifications_delivered")
-                        .HasFilter("\"DeliveryStatus\" = 'Delivered'");
+                        .HasFilter("\"trang_thai_phat\" = 'Delivered'");
 
-                    b.HasIndex(new[] { "UserId", "SentAt" }, "UnreadInbox")
+                    b.HasIndex("MaNhiemVu", "Loai")
+                        .IsUnique()
+                        .HasDatabaseName("IX_notifications_TaskId_Type");
+
+                    b.HasIndex(new[] { "MaNguoiDung", "NgayPhat" }, "UnreadInbox")
                         .HasDatabaseName("IX_notifications_unread")
-                        .HasFilter("\"DeliveryStatus\" = 'Delivered' AND \"ReadAt\" IS NULL");
+                        .HasFilter("\"trang_thai_phat\" = 'Delivered' AND \"ngay_doc\" IS NULL");
 
                     b.ToTable("notifications", null, t =>
                         {
-                            t.HasCheckConstraint("CK_notifications_attempt_count", "\"AttemptCount\" >= 0");
+                            t.HasCheckConstraint("CK_notifications_attempt_count", "\"so_lan_thu\" >= 0");
 
-                            t.HasCheckConstraint("CK_notifications_content_not_blank", "length(btrim(\"Content\")) > 0");
+                            t.HasCheckConstraint("CK_notifications_content_not_blank", "length(btrim(\"noi_dung\")) > 0");
 
-                            t.HasCheckConstraint("CK_notifications_delivery", "(\"DeliveryStatus\" = 'Delivered' AND \"SentAt\" IS NOT NULL) OR (\"DeliveryStatus\" <> 'Delivered' AND \"SentAt\" IS NULL)");
+                            t.HasCheckConstraint("CK_notifications_delivery", "(\"trang_thai_phat\" = 'Delivered' AND \"ngay_phat\" IS NOT NULL) OR (\"trang_thai_phat\" <> 'Delivered' AND \"ngay_phat\" IS NULL)");
 
-                            t.HasCheckConstraint("CK_notifications_deliverystatus_values", "\"DeliveryStatus\" IN ('Pending', 'Delivered', 'Cancelled', 'Failed')");
+                            t.HasCheckConstraint("CK_notifications_deliverystatus_values", "\"trang_thai_phat\" IN ('Pending', 'Delivered', 'Cancelled', 'Failed')");
 
-                            t.HasCheckConstraint("CK_notifications_read", "\"ReadAt\" IS NULL OR (\"DeliveryStatus\" = 'Delivered' AND \"SentAt\" IS NOT NULL AND \"ReadAt\" >= \"SentAt\")");
+                            t.HasCheckConstraint("CK_notifications_read", "\"ngay_doc\" IS NULL OR (\"trang_thai_phat\" = 'Delivered' AND \"ngay_phat\" IS NOT NULL AND \"ngay_doc\" >= \"ngay_phat\")");
 
-                            t.HasCheckConstraint("CK_notifications_type_values", "\"Type\" IN ('DeadlineReminder')");
+                            t.HasCheckConstraint("CK_notifications_type_values", "\"loai\" IN ('DeadlineReminder')");
                         });
                 });
 
             modelBuilder.Entity("StudyPlanner.Domain.Entities.School", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("Ma")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("ma");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
 
-                    b.Property<string>("Code")
+                    b.Property<string>("KyHieu")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("ky_hieu");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset>("NgayCapNhat")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_cap_nhat");
 
-                    b.Property<string>("Name")
+                    b.Property<DateTimeOffset>("NgayTao")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_tao");
+
+                    b.Property<string>("Ten")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("ten");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.HasKey("Ma");
 
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
+                    b.HasIndex("KyHieu")
+                        .IsUnique()
+                        .HasDatabaseName("IX_schools_Code");
 
                     b.ToTable("schools", null, t =>
                         {
-                            t.HasCheckConstraint("CK_schools_code_not_blank", "length(btrim(\"Code\")) > 0");
+                            t.HasCheckConstraint("CK_schools_code_not_blank", "length(btrim(\"ky_hieu\")) > 0");
 
-                            t.HasCheckConstraint("CK_schools_name_not_blank", "length(btrim(\"Name\")) > 0");
+                            t.HasCheckConstraint("CK_schools_name_not_blank", "length(btrim(\"ten\")) > 0");
                         });
                 });
 
             modelBuilder.Entity("StudyPlanner.Domain.Entities.Semester", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("Ma")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("ma");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<int>("MaNguoiDung")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_nguoi_dung");
 
-                    b.Property<DateOnly>("EndDate")
-                        .HasColumnType("date");
+                    b.Property<DateOnly>("NgayBatDau")
+                        .HasColumnType("date")
+                        .HasColumnName("ngay_bat_dau");
 
-                    b.Property<string>("Name")
+                    b.Property<DateTimeOffset>("NgayCapNhat")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_cap_nhat");
+
+                    b.Property<DateOnly>("NgayKetThuc")
+                        .HasColumnType("date")
+                        .HasColumnName("ngay_ket_thuc");
+
+                    b.Property<DateTimeOffset>("NgayTao")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_tao");
+
+                    b.Property<string>("Ten")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("ten");
 
-                    b.Property<DateOnly>("StartDate")
-                        .HasColumnType("date");
+                    b.HasKey("Ma");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "StartDate");
+                    b.HasIndex("MaNguoiDung", "NgayBatDau")
+                        .HasDatabaseName("IX_semesters_UserId_StartDate");
 
                     b.ToTable("semesters", null, t =>
                         {
-                            t.HasCheckConstraint("CK_semesters_dates", "\"EndDate\" >= \"StartDate\"");
+                            t.HasCheckConstraint("CK_semesters_dates", "\"ngay_ket_thuc\" >= \"ngay_bat_dau\"");
 
-                            t.HasCheckConstraint("CK_semesters_name_not_blank", "length(btrim(\"Name\")) > 0");
+                            t.HasCheckConstraint("CK_semesters_name_not_blank", "length(btrim(\"ten\")) > 0");
                         });
                 });
 
             modelBuilder.Entity("StudyPlanner.Domain.Entities.StudentClass", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("Ma")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("ma");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
 
-                    b.Property<int>("CohortId")
-                        .HasColumnType("integer");
+                    b.Property<int>("MaKhoa")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_khoa");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<int>("MaKhoaHoc")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_khoa_hoc");
 
-                    b.Property<int>("FacultyId")
-                        .HasColumnType("integer");
+                    b.Property<DateTimeOffset>("NgayCapNhat")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_cap_nhat");
 
-                    b.Property<string>("Name")
+                    b.Property<DateTimeOffset>("NgayTao")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_tao");
+
+                    b.Property<string>("Ten")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("ten");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.HasKey("Ma");
 
-                    b.HasKey("Id");
+                    b.HasIndex("MaKhoaHoc")
+                        .HasDatabaseName("IX_student_classes_CohortId");
 
-                    b.HasIndex("CohortId");
-
-                    b.HasIndex("FacultyId", "CohortId", "Name")
-                        .IsUnique();
+                    b.HasIndex("MaKhoa", "MaKhoaHoc", "Ten")
+                        .IsUnique()
+                        .HasDatabaseName("IX_student_classes_FacultyId_CohortId_Name");
 
                     b.ToTable("student_classes", null, t =>
                         {
-                            t.HasCheckConstraint("CK_student_classes_name_not_blank", "length(btrim(\"Name\")) > 0");
+                            t.HasCheckConstraint("CK_student_classes_name_not_blank", "length(btrim(\"ten\")) > 0");
                         });
                 });
 
             modelBuilder.Entity("StudyPlanner.Domain.Entities.TaskHistory", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("Ma")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("ma");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
 
-                    b.Property<string>("Action")
+                    b.Property<string>("DuLieuSau")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("du_lieu_sau");
+
+                    b.Property<string>("DuLieuTruoc")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("du_lieu_truoc");
+
+                    b.Property<string>("HanhDong")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("hanh_dong");
 
-                    b.Property<DateTimeOffset>("ChangedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<int?>("MaNguoiDung")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_nguoi_dung");
 
-                    b.Property<string>("NewData")
-                        .HasColumnType("jsonb");
+                    b.Property<int>("MaNhiemVu")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_nhiem_vu");
 
-                    b.Property<string>("OldData")
-                        .HasColumnType("jsonb");
+                    b.Property<DateTimeOffset>("NgayThayDoi")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_thay_doi");
 
-                    b.Property<int>("TaskId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("TaskTitle")
+                    b.Property<string>("TieuDeNhiemVu")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("tieu_de_nhiem_vu");
 
-                    b.Property<int?>("UserId")
-                        .HasColumnType("integer");
+                    b.HasKey("Ma");
 
-                    b.HasKey("Id");
+                    b.HasIndex("MaNguoiDung", "NgayThayDoi")
+                        .HasDatabaseName("IX_task_histories_UserId_ChangedAt");
 
-                    b.HasIndex("TaskId", "ChangedAt");
-
-                    b.HasIndex("UserId", "ChangedAt");
+                    b.HasIndex("MaNhiemVu", "NgayThayDoi")
+                        .HasDatabaseName("IX_task_histories_TaskId_ChangedAt");
 
                     b.ToTable("task_histories", null, t =>
                         {
-                            t.HasCheckConstraint("CK_task_histories_action_values", "\"Action\" IN ('Created', 'Updated', 'Completed', 'Reopened', 'Deleted')");
+                            t.HasCheckConstraint("CK_task_histories_action_values", "\"hanh_dong\" IN ('Created', 'Updated', 'Completed', 'Reopened', 'Deleted')");
 
-                            t.HasCheckConstraint("CK_task_histories_tasktitle_not_blank", "length(btrim(\"TaskTitle\")) > 0");
+                            t.HasCheckConstraint("CK_task_histories_tasktitle_not_blank", "length(btrim(\"tieu_de_nhiem_vu\")) > 0");
                         });
                 });
 
             modelBuilder.Entity("StudyPlanner.Domain.Entities.TaskItem", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTimeOffset?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("CourseId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset?>("DueDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("EstimatedMinutes")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("ParentTaskId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Priority")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasDefaultValue("Medium");
-
-                    b.Property<int>("Progress")
+                    b.Property<int>("Ma")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
-                        .HasDefaultValue(0);
+                        .HasColumnName("ma");
 
-                    b.Property<int?>("ReminderHours")
-                        .HasColumnType("integer");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
 
-                    b.Property<string>("Status")
+                    b.Property<DateTimeOffset?>("HanHoanThanh")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("han_hoan_thanh");
+
+                    b.Property<string>("Loai")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("loai");
+
+                    b.Property<int?>("MaMonHoc")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_mon_hoc");
+
+                    b.Property<int>("MaNguoiDung")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_nguoi_dung");
+
+                    b.Property<int?>("MaNhiemVuCha")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_nhiem_vu_cha");
+
+                    b.Property<string>("MoTa")
+                        .HasColumnType("text")
+                        .HasColumnName("mo_ta");
+
+                    b.Property<string>("MucDoUuTien")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
-                        .HasDefaultValue("NotStarted");
+                        .HasDefaultValue("Medium")
+                        .HasColumnName("muc_do_uu_tien");
 
-                    b.Property<string>("Title")
+                    b.Property<DateTimeOffset>("NgayCapNhat")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_cap_nhat");
+
+                    b.Property<DateTimeOffset?>("NgayHoanThanh")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_hoan_thanh");
+
+                    b.Property<DateTimeOffset>("NgayTao")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_tao");
+
+                    b.Property<int?>("NhacTruocGio")
+                        .HasColumnType("integer")
+                        .HasColumnName("nhac_truoc_gio");
+
+                    b.Property<int?>("ThoiLuongDuKienPhut")
+                        .HasColumnType("integer")
+                        .HasColumnName("thoi_luong_du_kien_phut");
+
+                    b.Property<int>("TienDo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("tien_do");
+
+                    b.Property<string>("TieuDe")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("tieu_de");
 
-                    b.Property<string>("Type")
+                    b.Property<string>("TrangThai")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasColumnType("character varying(32)")
+                        .HasDefaultValue("NotStarted")
+                        .HasColumnName("trang_thai");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.HasKey("Ma");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
+                    b.HasIndex("MaMonHoc")
+                        .HasDatabaseName("IX_task_items_CourseId");
 
-                    b.HasKey("Id");
+                    b.HasIndex("MaNhiemVuCha")
+                        .HasDatabaseName("IX_task_items_ParentTaskId");
 
-                    b.HasIndex("CourseId");
+                    b.HasIndex("MaNguoiDung", "HanHoanThanh")
+                        .HasDatabaseName("IX_task_items_UserId_DueDate");
 
-                    b.HasIndex("ParentTaskId");
-
-                    b.HasIndex("UserId", "DueDate");
-
-                    b.HasIndex("UserId", "Status");
+                    b.HasIndex("MaNguoiDung", "TrangThai")
+                        .HasDatabaseName("IX_task_items_UserId_Status");
 
                     b.ToTable("task_items", null, t =>
                         {
-                            t.HasCheckConstraint("CK_task_items_estimated_minutes", "\"EstimatedMinutes\" IS NULL OR \"EstimatedMinutes\" > 0");
+                            t.HasCheckConstraint("CK_task_items_estimated_minutes", "\"thoi_luong_du_kien_phut\" IS NULL OR \"thoi_luong_du_kien_phut\" > 0");
 
-                            t.HasCheckConstraint("CK_task_items_parent", "\"ParentTaskId\" IS NULL OR \"ParentTaskId\" <> \"Id\"");
+                            t.HasCheckConstraint("CK_task_items_parent", "\"ma_nhiem_vu_cha\" IS NULL OR \"ma_nhiem_vu_cha\" <> \"ma\"");
 
-                            t.HasCheckConstraint("CK_task_items_priority_values", "\"Priority\" IN ('Low', 'Medium', 'High')");
+                            t.HasCheckConstraint("CK_task_items_priority_values", "\"muc_do_uu_tien\" IN ('Low', 'Medium', 'High')");
 
-                            t.HasCheckConstraint("CK_task_items_progress", "\"Progress\" BETWEEN 0 AND 100");
+                            t.HasCheckConstraint("CK_task_items_progress", "\"tien_do\" BETWEEN 0 AND 100");
 
-                            t.HasCheckConstraint("CK_task_items_reminder_hours", "\"ReminderHours\" IS NULL OR \"ReminderHours\" >= 0");
+                            t.HasCheckConstraint("CK_task_items_reminder_hours", "\"nhac_truoc_gio\" IS NULL OR \"nhac_truoc_gio\" >= 0");
 
-                            t.HasCheckConstraint("CK_task_items_state", "(\"Status\" = 'NotStarted' AND \"Progress\" = 0 AND \"CompletedAt\" IS NULL) OR (\"Status\" = 'InProgress' AND \"Progress\" BETWEEN 1 AND 99 AND \"CompletedAt\" IS NULL) OR (\"Status\" = 'Completed' AND \"Progress\" = 100 AND \"CompletedAt\" IS NOT NULL)");
+                            t.HasCheckConstraint("CK_task_items_state", "(\"trang_thai\" = 'NotStarted' AND \"tien_do\" = 0 AND \"ngay_hoan_thanh\" IS NULL) OR (\"trang_thai\" = 'InProgress' AND \"tien_do\" BETWEEN 1 AND 99 AND \"ngay_hoan_thanh\" IS NULL) OR (\"trang_thai\" = 'Completed' AND \"tien_do\" = 100 AND \"ngay_hoan_thanh\" IS NOT NULL)");
 
-                            t.HasCheckConstraint("CK_task_items_status_values", "\"Status\" IN ('NotStarted', 'InProgress', 'Completed')");
+                            t.HasCheckConstraint("CK_task_items_status_values", "\"trang_thai\" IN ('NotStarted', 'InProgress', 'Completed')");
 
-                            t.HasCheckConstraint("CK_task_items_title_not_blank", "length(btrim(\"Title\")) > 0");
+                            t.HasCheckConstraint("CK_task_items_title_not_blank", "length(btrim(\"tieu_de\")) > 0");
 
-                            t.HasCheckConstraint("CK_task_items_type_values", "\"Type\" IN ('Assignment', 'Exam', 'Revision', 'Personal')");
+                            t.HasCheckConstraint("CK_task_items_type_values", "\"loai\" IN ('Assignment', 'Exam', 'Revision', 'Personal')");
                         });
                 });
 
             modelBuilder.Entity("StudyPlanner.Domain.Entities.User", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("Ma")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("ma");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
 
-                    b.Property<int?>("ClassId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<bool>("DangHoatDong")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("dang_hoat_dong");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(320)
-                        .HasColumnType("character varying(320)");
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("email");
 
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
-                    b.Property<string>("Major")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("NormalizedEmail")
+                    b.Property<string>("EmailChuanHoa")
                         .IsRequired()
                         .HasMaxLength(320)
-                        .HasColumnType("character varying(320)");
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("email_chuan_hoa");
 
-                    b.Property<string>("PasswordHash")
+                    b.Property<string>("HoTen")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("ho_ten");
 
-                    b.Property<int>("ReminderHours")
-                        .ValueGeneratedOnAdd()
+                    b.Property<int?>("MaLop")
                         .HasColumnType("integer")
-                        .HasDefaultValue(24);
+                        .HasColumnName("ma_lop");
 
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasDefaultValue("Student");
-
-                    b.Property<string>("StudentCode")
+                    b.Property<string>("MaSoSinhVien")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("ma_so_sinh_vien");
 
-                    b.Property<string>("TimeZone")
+                    b.Property<string>("MatKhauBam")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("mat_khau_bam");
+
+                    b.Property<string>("MuiGio")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
-                        .HasDefaultValue("Asia/Ho_Chi_Minh");
+                        .HasDefaultValue("Asia/Ho_Chi_Minh")
+                        .HasColumnName("mui_gio");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<string>("NganhHoc")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("nganh_hoc");
 
-                    b.HasKey("Id");
+                    b.Property<DateTimeOffset>("NgayCapNhat")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_cap_nhat");
 
-                    b.HasIndex("ClassId");
+                    b.Property<DateTimeOffset>("NgayTao")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_tao");
 
-                    b.HasIndex("NormalizedEmail")
-                        .IsUnique();
+                    b.Property<int>("NhacTruocGio")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(24)
+                        .HasColumnName("nhac_truoc_gio");
 
-                    b.HasIndex("StudentCode")
+                    b.Property<string>("VaiTro")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasDefaultValue("Student")
+                        .HasColumnName("vai_tro");
+
+                    b.HasKey("Ma");
+
+                    b.HasIndex("EmailChuanHoa")
                         .IsUnique()
-                        .HasFilter("\"StudentCode\" IS NOT NULL");
+                        .HasDatabaseName("IX_users_NormalizedEmail");
+
+                    b.HasIndex("MaLop")
+                        .HasDatabaseName("IX_users_ClassId");
+
+                    b.HasIndex("MaSoSinhVien")
+                        .IsUnique()
+                        .HasDatabaseName("IX_users_StudentCode")
+                        .HasFilter("\"ma_so_sinh_vien\" IS NOT NULL");
 
                     b.ToTable("users", null, t =>
                         {
-                            t.HasCheckConstraint("CK_users_email_not_blank", "length(btrim(\"Email\")) > 0");
+                            t.HasCheckConstraint("CK_users_email_not_blank", "length(btrim(\"email\")) > 0");
 
-                            t.HasCheckConstraint("CK_users_fullname_not_blank", "length(btrim(\"FullName\")) > 0");
+                            t.HasCheckConstraint("CK_users_fullname_not_blank", "length(btrim(\"ho_ten\")) > 0");
 
-                            t.HasCheckConstraint("CK_users_normalizedemail_not_blank", "length(btrim(\"NormalizedEmail\")) > 0");
+                            t.HasCheckConstraint("CK_users_normalizedemail_not_blank", "length(btrim(\"email_chuan_hoa\")) > 0");
 
-                            t.HasCheckConstraint("CK_users_passwordhash_not_blank", "length(btrim(\"PasswordHash\")) > 0");
+                            t.HasCheckConstraint("CK_users_passwordhash_not_blank", "length(btrim(\"mat_khau_bam\")) > 0");
 
-                            t.HasCheckConstraint("CK_users_reminder_hours", "\"ReminderHours\" >= 0");
+                            t.HasCheckConstraint("CK_users_reminder_hours", "\"nhac_truoc_gio\" >= 0");
 
-                            t.HasCheckConstraint("CK_users_role_values", "\"Role\" IN ('Student', 'Admin')");
+                            t.HasCheckConstraint("CK_users_role_values", "\"vai_tro\" IN ('Student', 'Admin')");
 
-                            t.HasCheckConstraint("CK_users_student_code", "\"StudentCode\" IS NULL OR length(btrim(\"StudentCode\")) > 0");
+                            t.HasCheckConstraint("CK_users_student_code", "\"ma_so_sinh_vien\" IS NULL OR length(btrim(\"ma_so_sinh_vien\")) > 0");
 
-                            t.HasCheckConstraint("CK_users_timezone_not_blank", "length(btrim(\"TimeZone\")) > 0");
+                            t.HasCheckConstraint("CK_users_timezone_not_blank", "length(btrim(\"mui_gio\")) > 0");
                         });
                 });
 
@@ -645,9 +766,10 @@ namespace StudyPlanner.Infrastructure.Migrations
                 {
                     b.HasOne("StudyPlanner.Domain.Entities.Course", "Course")
                         .WithMany("ClassSessions")
-                        .HasForeignKey("CourseId")
+                        .HasForeignKey("MaMonHoc")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("FK_class_sessions_courses_CourseId");
 
                     b.Navigation("Course");
                 });
@@ -656,9 +778,10 @@ namespace StudyPlanner.Infrastructure.Migrations
                 {
                     b.HasOne("StudyPlanner.Domain.Entities.Semester", "Semester")
                         .WithMany("Courses")
-                        .HasForeignKey("SemesterId")
+                        .HasForeignKey("MaHocKy")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("FK_courses_semesters_SemesterId");
 
                     b.Navigation("Semester");
                 });
@@ -667,26 +790,29 @@ namespace StudyPlanner.Infrastructure.Migrations
                 {
                     b.HasOne("StudyPlanner.Domain.Entities.School", "School")
                         .WithMany("Faculties")
-                        .HasForeignKey("SchoolId")
+                        .HasForeignKey("MaTruong")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("FK_faculties_schools_SchoolId");
 
                     b.Navigation("School");
                 });
 
             modelBuilder.Entity("StudyPlanner.Domain.Entities.Notification", b =>
                 {
-                    b.HasOne("StudyPlanner.Domain.Entities.TaskItem", "Task")
-                        .WithMany("Notifications")
-                        .HasForeignKey("TaskId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("StudyPlanner.Domain.Entities.User", "User")
                         .WithMany("Notifications")
-                        .HasForeignKey("UserId")
+                        .HasForeignKey("MaNguoiDung")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("FK_notifications_users_UserId");
+
+                    b.HasOne("StudyPlanner.Domain.Entities.TaskItem", "Task")
+                        .WithMany("Notifications")
+                        .HasForeignKey("MaNhiemVu")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_notifications_task_items_TaskId");
 
                     b.Navigation("Task");
 
@@ -697,26 +823,29 @@ namespace StudyPlanner.Infrastructure.Migrations
                 {
                     b.HasOne("StudyPlanner.Domain.Entities.User", "User")
                         .WithMany("Semesters")
-                        .HasForeignKey("UserId")
+                        .HasForeignKey("MaNguoiDung")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("FK_semesters_users_UserId");
 
                     b.Navigation("User");
                 });
 
             modelBuilder.Entity("StudyPlanner.Domain.Entities.StudentClass", b =>
                 {
-                    b.HasOne("StudyPlanner.Domain.Entities.Cohort", "Cohort")
-                        .WithMany("StudentClasses")
-                        .HasForeignKey("CohortId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("StudyPlanner.Domain.Entities.Faculty", "Faculty")
                         .WithMany("StudentClasses")
-                        .HasForeignKey("FacultyId")
+                        .HasForeignKey("MaKhoa")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("FK_student_classes_faculties_FacultyId");
+
+                    b.HasOne("StudyPlanner.Domain.Entities.Cohort", "Cohort")
+                        .WithMany("StudentClasses")
+                        .HasForeignKey("MaKhoaHoc")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_student_classes_cohorts_CohortId");
 
                     b.Navigation("Cohort");
 
@@ -727,8 +856,9 @@ namespace StudyPlanner.Infrastructure.Migrations
                 {
                     b.HasOne("StudyPlanner.Domain.Entities.User", "User")
                         .WithMany("TaskHistories")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("MaNguoiDung")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_task_histories_users_UserId");
 
                     b.Navigation("User");
                 });
@@ -737,19 +867,22 @@ namespace StudyPlanner.Infrastructure.Migrations
                 {
                     b.HasOne("StudyPlanner.Domain.Entities.Course", "Course")
                         .WithMany("Tasks")
-                        .HasForeignKey("CourseId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("StudyPlanner.Domain.Entities.TaskItem", "ParentTask")
-                        .WithMany("Children")
-                        .HasForeignKey("ParentTaskId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .HasForeignKey("MaMonHoc")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_task_items_courses_CourseId");
 
                     b.HasOne("StudyPlanner.Domain.Entities.User", "User")
                         .WithMany("Tasks")
-                        .HasForeignKey("UserId")
+                        .HasForeignKey("MaNguoiDung")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("FK_task_items_users_UserId");
+
+                    b.HasOne("StudyPlanner.Domain.Entities.TaskItem", "ParentTask")
+                        .WithMany("Children")
+                        .HasForeignKey("MaNhiemVuCha")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("FK_task_items_task_items_ParentTaskId");
 
                     b.Navigation("Course");
 
@@ -762,8 +895,9 @@ namespace StudyPlanner.Infrastructure.Migrations
                 {
                     b.HasOne("StudyPlanner.Domain.Entities.StudentClass", "Class")
                         .WithMany("Users")
-                        .HasForeignKey("ClassId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("MaLop")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_users_student_classes_ClassId");
 
                     b.Navigation("Class");
                 });
