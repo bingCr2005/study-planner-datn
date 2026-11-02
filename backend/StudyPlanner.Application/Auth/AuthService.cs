@@ -23,13 +23,17 @@ public sealed class LoginRequest
     [Required(ErrorMessage = "Nhập email hoặc mã sinh viên."), StringLength(320)] public string TaiKhoan { get; init; } = "";
     [Required, StringLength(128)] public string MatKhau { get; init; } = "";
 }
-
+public sealed class ChangePasswordRequest
+{
+    [Required, StringLength(128)] public string MatKhauHienTai { get; init; } = "";
+    [Required, StringLength(128, MinimumLength = 8)] public string MatKhauMoi { get; init; } = "";
+}
 public sealed record LoginResponse(string TokenTruyCap, string LoaiToken, DateTimeOffset HetHanLuc, UserResponse NguoiDung);
 public interface IAccessTokenIssuer { LoginResponse Issue(User user); }
 public sealed class AuthenticationFailureException : Exception;
 
 public sealed class AuthService(IAdministrationStore store, IUserPasswordHasher hasher,
-    UserAdministrationService users, IAccessTokenIssuer tokens)
+    UserAdministrationService users, IAccessTokenIssuer tokens, TimeProvider clock)
 {
     // Tài khoản không tồn tại vẫn xác minh hash để giảm khác biệt thời gian đăng nhập.
     private static string? dummyHash;
@@ -63,4 +67,49 @@ public sealed class AuthService(IAdministrationStore store, IUserPasswordHasher 
 
     public Task<UserResponse> MeAsync(int id, CancellationToken ct) => users.GetAsync(id, ct);
 
+    public async Task<UserResponse> UpdateAsync(int id, JsonElement patch, CancellationToken ct)
+    {
+        if (patch.ValueKind != JsonValueKind.Object) throw InvalidProfile();
+        await using var transaction = await store.BeginTransactionAsync(ct);
+        var user = await store.FindAsync<User>(id, ct);
+        if (user is null || !user.DangHoatDong) throw new AuthenticationFailureException();
+        var fullName = user.HoTen; var studentCode = user.MaSoSinhVien; var major = user.NganhHoc;
+        var schoolName = user.TenTruong; var className = user.TenLop;
+        foreach (var field in patch.EnumerateObject())
+        {
+            if (field.Value.ValueKind is not (JsonValueKind.String or JsonValueKind.Null)) throw InvalidProfile();
+            var value = field.Value.GetString()?.Trim();
+            switch (field.Name)
+            {
+                case "hoTen": fullName = value ?? ""; break;
+                case "maSoSinhVien": studentCode = string.IsNullOrWhiteSpace(value) ? null : value; break;
+                case "tenTruong": schoolName = string.IsNullOrWhiteSpace(value) ? null : value; break;
+                case "tenLop": className = string.IsNullOrWhiteSpace(value) ? null : value; break;
+                case "nganhHoc": major = string.IsNullOrWhiteSpace(value) ? null : value; break;
+                default: throw InvalidProfile();
+            }
+        }
+        ResourceRules.Validate(new UserRequest { Email = user.Email, HoTen = fullName,
+            MaSoSinhVien = studentCode, TenTruong = schoolName, TenLop = className,
+            NganhHoc = major, DangHoatDong = user.DangHoatDong });
+        if (studentCode != null && await store.AnyAsync<User>(x => x.Ma != id && x.MaSoSinhVien == studentCode, ct))
+            throw ResourceRules.Conflict("STUDENT_CODE_ALREADY_USED", "Mã sinh viên đã được sử dụng.");
+        user.HoTen = fullName; user.MaSoSinhVien = studentCode; user.NganhHoc = major;
+        user.TenTruong = schoolName; user.TenLop = className;
+        user.NgayCapNhat = clock.GetUtcNow(); await store.SaveAsync(ct); await transaction.CommitAsync(ct);
+        return await users.GetAsync(id, ct);
+    }
+    private static AdministrationException InvalidProfile() => new(FailureKind.InvalidInput, "VALIDATION_ERROR",
+        "Chỉ sửa hoTen, maSoSinhVien, tenTruong, tenLop và nganhHoc với giá trị hợp lệ.");
+
+    public async Task ChangePasswordAsync(int id, ChangePasswordRequest request, CancellationToken ct)
+    {
+        await using var transaction = await store.BeginTransactionAsync(ct);
+        var user = await store.FindAsync<User>(id, ct);
+        if (user is null || !user.DangHoatDong || !hasher.Verify(user, request.MatKhauHienTai))
+            throw new AuthenticationFailureException();
+        user.MatKhauBam = hasher.Hash(user, request.MatKhauMoi);
+        user.NgayCapNhat = clock.GetUtcNow();
+        await store.SaveAsync(ct); await transaction.CommitAsync(ct);
+    }
 }
