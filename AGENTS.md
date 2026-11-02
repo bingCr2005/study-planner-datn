@@ -1,5 +1,7 @@
 ﻿# Quy trình làm việc với dự án
 
+- Tạo nhánh riêng theo công việc: `feat/`, `fix/`, `docs/`, `refactor/` hoặc `chore/`; phần tên dùng tiếng Việt không dấu, nối từ bằng `-`. Không dùng tiền tố `codex/` theo yêu cầu người dùng.
+- Một nhánh cho một chức năng hoặc nhóm công việc liên quan, có thể có nhiều commit. Chỉ tạo nhánh mới khi phần việc độc lập hoặc cần PR riêng; các chỉnh sửa nhỏ cùng nhóm commit tiếp trên nhánh hiện tại. Khi được yêu cầu dọn local, kiểm tra GitHub đã giữ đủ commit rồi mới xóa; giữ `main`, không xóa remote hoặc làm mất commit chưa được lưu.
 - Trước mỗi tác vụ code, đọc `docs/history/README.md`, các bản ghi liên quan và code hiện tại. Không chỉ dựa vào lịch sử hội thoại hoặc tài liệu.
 - Đối chiếu tài liệu với code; nếu khác nhau, nêu rõ điểm khác và cập nhật tài liệu theo trạng thái đã xác minh.
 - Sau mỗi thay đổi có ý nghĩa, thêm một bản ghi trong `docs/history/` theo `TEMPLATE.md`. Ghi yêu cầu, lý do, file thay đổi, logic trước/sau, luồng xử lý, kiểm chứng và việc còn lại.
