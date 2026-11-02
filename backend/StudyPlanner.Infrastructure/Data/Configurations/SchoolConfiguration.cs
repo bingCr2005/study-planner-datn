@@ -8,12 +8,13 @@ public class SchoolConfiguration : IEntityTypeConfiguration<School>
 {
     public void Configure(EntityTypeBuilder<School> builder)
     {
-
+        // Tên bảng/cột tiếng Việt; giữ tên constraint/index cũ để migration chỉ rename bảng.
         builder.Property(x => x.Ma).HasColumnName("ma");
         builder.Property(x => x.KyHieu).HasColumnName("ky_hieu");
         builder.Property(x => x.Ten).HasColumnName("ten");
         builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
         builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
+
         builder.ToTable("truong", table =>
         {
             table.HasCheckConstraint("CK_schools_code_not_blank", "length(btrim(\"ky_hieu\")) > 0");
@@ -31,7 +32,7 @@ public class SchoolConfiguration : IEntityTypeConfiguration<School>
             .HasMaxLength(200)
             .IsRequired();
 
-        // Lưu thời điểm UTC. Service phải gán CreatedAt/UpdatedAt; không có trigger tự cập nhật.
+        // Lưu thời điểm UTC. Service phải gán NgayTao/NgayCapNhat; không có trigger tự cập nhật.
         builder.Property(x => x.NgayTao)
             .HasColumnType("timestamp with time zone")
             .IsRequired();
@@ -40,7 +41,9 @@ public class SchoolConfiguration : IEntityTypeConfiguration<School>
             .HasColumnType("timestamp with time zone")
             .IsRequired();
 
-        builder.HasIndex(x => x.KyHieu).HasDatabaseName("IX_schools_Code")
+        builder.HasIndex(x => x.KyHieu)
             .IsUnique();
+        // Giữ tên index hiện có để migration chỉ đổi tên cột.
+        builder.HasIndex(x => x.KyHieu).HasDatabaseName("IX_schools_Code");
     }
 }

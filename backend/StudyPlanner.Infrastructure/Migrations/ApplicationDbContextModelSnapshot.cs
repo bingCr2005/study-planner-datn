@@ -2,7 +2,6 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using StudyPlanner.Infrastructure.Data;
@@ -12,10 +11,8 @@ using StudyPlanner.Infrastructure.Data;
 namespace StudyPlanner.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-
     partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
@@ -24,6 +21,61 @@ namespace StudyPlanner.Infrastructure.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("StudyPlanner.Domain.Entities.AvailabilityWindow", b =>
+                {
+                    b.Property<int>("Ma")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("ma");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
+
+                    b.Property<bool>("DangSuDung")
+                        .HasColumnType("boolean")
+                        .HasColumnName("dang_su_dung");
+
+                    b.Property<TimeOnly>("GioBatDau")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("gio_bat_dau");
+
+                    b.Property<TimeOnly>("GioKetThuc")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("gio_ket_thuc");
+
+                    b.Property<int>("MaNguoiDung")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_nguoi_dung");
+
+                    b.Property<DateOnly>("NgayBatDau")
+                        .HasColumnType("date")
+                        .HasColumnName("ngay_bat_dau");
+
+                    b.Property<DateTimeOffset>("NgayCapNhat")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_cap_nhat");
+
+                    b.Property<DateOnly>("NgayKetThuc")
+                        .HasColumnType("date")
+                        .HasColumnName("ngay_ket_thuc");
+
+                    b.Property<DateTimeOffset>("NgayTao")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_tao");
+
+                    b.Property<int>("ThuTrongTuan")
+                        .HasColumnType("integer")
+                        .HasColumnName("thu_trong_tuan");
+
+                    b.HasKey("Ma");
+
+                    b.HasIndex("MaNguoiDung", "ThuTrongTuan", "GioBatDau");
+
+                    b.ToTable("khung_gio_ranh", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_khung_gio_ranh_times", "thu_trong_tuan BETWEEN 1 AND 7 AND gio_ket_thuc > gio_bat_dau AND ngay_ket_thuc >= ngay_bat_dau");
+                        });
+                });
 
             modelBuilder.Entity("StudyPlanner.Domain.Entities.ClassSession", b =>
                 {
@@ -45,6 +97,14 @@ namespace StudyPlanner.Infrastructure.Migrations
                     b.Property<int>("MaMonHoc")
                         .HasColumnType("integer")
                         .HasColumnName("ma_mon_hoc");
+
+                    b.Property<DateOnly?>("NgayApDungDen")
+                        .HasColumnType("date")
+                        .HasColumnName("ngay_ap_dung_den");
+
+                    b.Property<DateOnly?>("NgayApDungTu")
+                        .HasColumnType("date")
+                        .HasColumnName("ngay_ap_dung_tu");
 
                     b.Property<DateTimeOffset>("NgayCapNhat")
                         .HasColumnType("timestamp with time zone")
@@ -74,6 +134,8 @@ namespace StudyPlanner.Infrastructure.Migrations
                             t.HasCheckConstraint("CK_class_sessions_times", "\"gio_ket_thuc\" > \"gio_bat_dau\"");
 
                             t.HasCheckConstraint("CK_class_sessions_weekday", "\"thu_trong_tuan\" BETWEEN 1 AND 7");
+
+                            t.HasCheckConstraint("CK_lich_hoc_ngay_ap_dung", "(ngay_ap_dung_tu IS NULL AND ngay_ap_dung_den IS NULL) OR (ngay_ap_dung_tu IS NOT NULL AND ngay_ap_dung_den IS NOT NULL AND ngay_ap_dung_den >= ngay_ap_dung_tu)");
                         });
                 });
 
@@ -233,6 +295,51 @@ namespace StudyPlanner.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("StudyPlanner.Domain.Entities.FocusInterval", b =>
+                {
+                    b.Property<int>("Ma")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("ma");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
+
+                    b.Property<DateTimeOffset>("BatDauThucTe")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("bat_dau_thuc_te");
+
+                    b.Property<DateTimeOffset?>("KetThucThucTe")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ket_thuc_thuc_te");
+
+                    b.Property<int>("MaNguoiDung")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_nguoi_dung");
+
+                    b.Property<int>("MaNhiemVu")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_nhiem_vu");
+
+                    b.Property<int?>("MaPhienTuHoc")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_phien_tu_hoc");
+
+                    b.HasKey("Ma");
+
+                    b.HasIndex("MaNguoiDung")
+                        .IsUnique()
+                        .HasFilter("ket_thuc_thuc_te IS NULL");
+
+                    b.HasIndex("MaNhiemVu", "MaNguoiDung");
+
+                    b.HasIndex("MaPhienTuHoc", "MaNhiemVu", "MaNguoiDung");
+
+                    b.ToTable("doan_thuc_hoc", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_doan_thuc_hoc_times", "ket_thuc_thuc_te IS NULL OR ket_thuc_thuc_te > bat_dau_thuc_te");
+                        });
+                });
+
             modelBuilder.Entity("StudyPlanner.Domain.Entities.Notification", b =>
                 {
                     b.Property<int>("Ma")
@@ -251,6 +358,10 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
                         .HasColumnName("loai");
+
+                    b.Property<int?>("MaLichNhac")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_lich_nhac");
 
                     b.Property<int>("MaNguoiDung")
                         .HasColumnType("integer")
@@ -291,6 +402,14 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("thoi_diem_nhac");
 
+                    b.Property<string>("TieuDe")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasDefaultValue("Nhắc hạn nhiệm vụ")
+                        .HasColumnName("tieu_de");
+
                     b.Property<string>("TrangThaiPhat")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -306,6 +425,10 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasDatabaseName("IX_notifications_NextAttemptAt")
                         .HasFilter("\"trang_thai_phat\" = 'Failed' AND \"lan_thu_tiep_theo_luc\" IS NOT NULL");
 
+                    b.HasIndex("MaLichNhac")
+                        .IsUnique()
+                        .HasFilter("ma_lich_nhac IS NOT NULL");
+
                     b.HasIndex("ThoiDiemNhac")
                         .HasDatabaseName("IX_notifications_RemindAt")
                         .HasFilter("\"trang_thai_phat\" = 'Pending'");
@@ -317,6 +440,8 @@ namespace StudyPlanner.Infrastructure.Migrations
                     b.HasIndex("MaNhiemVu", "Loai")
                         .IsUnique()
                         .HasDatabaseName("IX_notifications_TaskId_Type");
+
+                    b.HasIndex("MaLichNhac", "MaNguoiDung", "MaNhiemVu");
 
                     b.HasIndex(new[] { "MaNguoiDung", "NgayPhat" }, "UnreadInbox")
                         .HasDatabaseName("IX_notifications_unread")
@@ -335,6 +460,193 @@ namespace StudyPlanner.Infrastructure.Migrations
                             t.HasCheckConstraint("CK_notifications_read", "\"ngay_doc\" IS NULL OR (\"trang_thai_phat\" = 'Delivered' AND \"ngay_phat\" IS NOT NULL AND \"ngay_doc\" >= \"ngay_phat\")");
 
                             t.HasCheckConstraint("CK_notifications_type_values", "\"loai\" IN ('DeadlineReminder')");
+
+                            t.HasCheckConstraint("CK_thong_bao_tieu_de", "length(btrim(tieu_de)) > 0");
+                        });
+                });
+
+            modelBuilder.Entity("StudyPlanner.Domain.Entities.PlanningApplication", b =>
+                {
+                    b.Property<int>("Ma")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("ma");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
+
+                    b.Property<string>("DauKiemNoiDung")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("dau_kiem_noi_dung");
+
+                    b.Property<string>("KhoaYeuCau")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("khoa_yeu_cau");
+
+                    b.Property<int>("MaNguoiDung")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_nguoi_dung");
+
+                    b.Property<DateTimeOffset>("NgayTao")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_tao");
+
+                    b.Property<long>("PhienBanNguon")
+                        .HasColumnType("bigint")
+                        .HasColumnName("phien_ban_nguon");
+
+                    b.Property<int>("PhienBanQuyTac")
+                        .HasColumnType("integer")
+                        .HasColumnName("phien_ban_quy_tac");
+
+                    b.HasKey("Ma");
+
+                    b.HasIndex("MaNguoiDung", "KhoaYeuCau")
+                        .IsUnique();
+
+                    b.ToTable("lan_ap_dung_lich", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_lan_ap_dung_lich_key", "length(btrim(khoa_yeu_cau)) > 0 AND dau_kiem_noi_dung ~ '^[0-9a-fA-F]{64}$' AND phien_ban_nguon >= 0 AND phien_ban_quy_tac > 0");
+                        });
+                });
+
+            modelBuilder.Entity("StudyPlanner.Domain.Entities.PriorityRule", b =>
+                {
+                    b.Property<int>("Ma")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("ma");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
+
+                    b.Property<string>("CauHinh")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("cau_hinh");
+
+                    b.Property<bool>("DangSuDung")
+                        .HasColumnType("boolean")
+                        .HasColumnName("dang_su_dung");
+
+                    b.Property<DateTimeOffset>("NgayTao")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_tao");
+
+                    b.Property<int>("PhienBan")
+                        .HasColumnType("integer")
+                        .HasColumnName("phien_ban");
+
+                    b.Property<string>("Ten")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("ten");
+
+                    b.HasKey("Ma");
+
+                    b.HasIndex("DangSuDung")
+                        .IsUnique()
+                        .HasFilter("dang_su_dung = TRUE");
+
+                    b.HasIndex("PhienBan")
+                        .IsUnique();
+
+                    b.ToTable("quy_tac_uu_tien", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_quy_tac_uu_tien_values", "phien_ban > 0 AND length(btrim(ten)) > 0 AND jsonb_typeof(cau_hinh) = 'object'");
+                        });
+                });
+
+            modelBuilder.Entity("StudyPlanner.Domain.Entities.Reminder", b =>
+                {
+                    b.Property<int>("Ma")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("ma");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
+
+                    b.Property<DateTimeOffset?>("LanThuTiepTheoLuc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("lan_thu_tiep_theo_luc");
+
+                    b.Property<int>("MaNguoiDung")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_nguoi_dung");
+
+                    b.Property<int>("MaNhiemVu")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_nhiem_vu");
+
+                    b.Property<int?>("MaThongBaoCu")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_thong_bao_cu");
+
+                    b.Property<string>("MocNhac")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("moc_nhac");
+
+                    b.Property<DateTimeOffset>("NgayCapNhat")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_cap_nhat");
+
+                    b.Property<DateTimeOffset?>("NgayPhat")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_phat");
+
+                    b.Property<DateTimeOffset>("NgayTao")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_tao");
+
+                    b.Property<int?>("NhacTruocPhut")
+                        .HasColumnType("integer")
+                        .HasColumnName("nhac_truoc_phut");
+
+                    b.Property<string>("NoiDung")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("noi_dung");
+
+                    b.Property<int>("SoLanThu")
+                        .HasColumnType("integer")
+                        .HasColumnName("so_lan_thu");
+
+                    b.Property<DateTimeOffset>("ThoiDiemNhac")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("thoi_diem_nhac");
+
+                    b.Property<string>("TrangThai")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("trang_thai");
+
+                    b.HasKey("Ma");
+
+                    b.HasIndex("LanThuTiepTheoLuc")
+                        .HasFilter("trang_thai = 'Failed'");
+
+                    b.HasIndex("MaNguoiDung");
+
+                    b.HasIndex("MaThongBaoCu")
+                        .IsUnique()
+                        .HasFilter("ma_thong_bao_cu IS NOT NULL");
+
+                    b.HasIndex("ThoiDiemNhac")
+                        .HasFilter("trang_thai = 'Pending'");
+
+                    b.HasIndex("MaNhiemVu", "MaNguoiDung");
+
+                    b.ToTable("lich_nhac", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_lich_nhac_status", "trang_thai IN ('Pending','Delivered','Cancelled','Failed') AND ((trang_thai = 'Delivered' AND ngay_phat IS NOT NULL) OR (trang_thai <> 'Delivered' AND ngay_phat IS NULL))");
+
+                            t.HasCheckConstraint("CK_lich_nhac_values", "(nhac_truoc_phut IS NULL OR nhac_truoc_phut >= 0) AND so_lan_thu >= 0 AND length(btrim(moc_nhac)) > 0 AND length(btrim(noi_dung)) > 0");
                         });
                 });
 
@@ -390,6 +702,12 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasColumnName("ma");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
+
+                    b.Property<bool>("DaLuuTru")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("da_luu_tru");
 
                     b.Property<int>("MaNguoiDung")
                         .HasColumnType("integer")
@@ -478,6 +796,127 @@ namespace StudyPlanner.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("StudyPlanner.Domain.Entities.StudySession", b =>
+                {
+                    b.Property<int>("Ma")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("ma");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
+
+                    b.Property<DateTimeOffset>("BatDauDuKien")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("bat_dau_du_kien");
+
+                    b.Property<string>("GhiChu")
+                        .HasColumnType("text")
+                        .HasColumnName("ghi_chu");
+
+                    b.Property<DateTimeOffset>("KetThucDuKien")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ket_thuc_du_kien");
+
+                    b.Property<int?>("MaLanApDung")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_lan_ap_dung");
+
+                    b.Property<int>("MaNguoiDung")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_nguoi_dung");
+
+                    b.Property<int>("MaNhiemVu")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_nhiem_vu");
+
+                    b.Property<DateTimeOffset>("NgayCapNhat")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_cap_nhat");
+
+                    b.Property<DateTimeOffset>("NgayTao")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_tao");
+
+                    b.Property<string>("TrangThai")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("trang_thai");
+
+                    b.HasKey("Ma");
+
+                    b.HasIndex("MaLanApDung", "MaNguoiDung");
+
+                    b.HasIndex("MaNguoiDung", "BatDauDuKien");
+
+                    b.HasIndex("MaNhiemVu", "MaNguoiDung");
+
+                    b.ToTable("phien_tu_hoc", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_phien_tu_hoc_status", "trang_thai IN ('Planned','InProgress','Completed','Missed','Cancelled')");
+
+                            t.HasCheckConstraint("CK_phien_tu_hoc_times", "ket_thuc_du_kien > bat_dau_du_kien");
+                        });
+                });
+
+            modelBuilder.Entity("StudyPlanner.Domain.Entities.TaskAttachment", b =>
+                {
+                    b.Property<int>("Ma")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("ma");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
+
+                    b.Property<string>("KhoaLuuTru")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("khoa_luu_tru");
+
+                    b.Property<long>("KichThuocByte")
+                        .HasColumnType("bigint")
+                        .HasColumnName("kich_thuoc_byte");
+
+                    b.Property<string>("LoaiTep")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("loai_tep");
+
+                    b.Property<int>("MaNguoiTaiLen")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_nguoi_tai_len");
+
+                    b.Property<int>("MaNhiemVu")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_nhiem_vu");
+
+                    b.Property<DateTimeOffset>("NgayTao")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ngay_tao");
+
+                    b.Property<string>("TenTep")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("ten_tep");
+
+                    b.HasKey("Ma");
+
+                    b.HasIndex("KhoaLuuTru")
+                        .IsUnique();
+
+                    b.HasIndex("MaNguoiTaiLen");
+
+                    b.HasIndex("MaNhiemVu", "MaNguoiTaiLen");
+
+                    b.ToTable("tep_dinh_kem_nhiem_vu", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_tep_dinh_kem_nhiem_vu_values", "kich_thuoc_byte > 0 AND length(btrim(ten_tep)) > 0 AND length(btrim(khoa_luu_tru)) > 0 AND length(btrim(loai_tep)) > 0");
+                        });
+                });
+
             modelBuilder.Entity("StudyPlanner.Domain.Entities.TaskHistory", b =>
                 {
                     b.Property<int>("Ma")
@@ -513,6 +952,14 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("ngay_thay_doi");
 
+                    b.Property<string>("NguonThayDoi")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasDefaultValue("User")
+                        .HasColumnName("nguon_thay_doi");
+
                     b.Property<string>("TieuDeNhiemVu")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -530,6 +977,8 @@ namespace StudyPlanner.Infrastructure.Migrations
 
                     b.ToTable("lich_su_nhiem_vu", null, t =>
                         {
+                            t.HasCheckConstraint("CK_lich_su_nguon", "nguon_thay_doi IN ('User','System')");
+
                             t.HasCheckConstraint("CK_task_histories_action_values", "\"hanh_dong\" IN ('Created', 'Updated', 'Completed', 'Reopened', 'Deleted')");
 
                             t.HasCheckConstraint("CK_task_histories_tasktitle_not_blank", "length(btrim(\"tieu_de_nhiem_vu\")) > 0");
@@ -545,15 +994,27 @@ namespace StudyPlanner.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ma"));
 
+                    b.Property<DateTimeOffset?>("BatDauSuKien")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("bat_dau_su_kien");
+
                     b.Property<DateTimeOffset?>("HanHoanThanh")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("han_hoan_thanh");
+
+                    b.Property<DateTimeOffset?>("KetThucSuKien")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ket_thuc_su_kien");
 
                     b.Property<string>("Loai")
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
                         .HasColumnName("loai");
+
+                    b.Property<int?>("MaHocKy")
+                        .HasColumnType("integer")
+                        .HasColumnName("ma_hoc_ky");
 
                     b.Property<int?>("MaMonHoc")
                         .HasColumnType("integer")
@@ -628,6 +1089,10 @@ namespace StudyPlanner.Infrastructure.Migrations
                     b.HasIndex("MaNhiemVuCha")
                         .HasDatabaseName("IX_task_items_ParentTaskId");
 
+                    b.HasIndex("MaHocKy", "MaNguoiDung");
+
+                    b.HasIndex("MaMonHoc", "MaHocKy");
+
                     b.HasIndex("MaNguoiDung", "HanHoanThanh")
                         .HasDatabaseName("IX_task_items_UserId_DueDate");
 
@@ -636,6 +1101,10 @@ namespace StudyPlanner.Infrastructure.Migrations
 
                     b.ToTable("nhiem_vu", null, t =>
                         {
+                            t.HasCheckConstraint("CK_nhiem_vu_mon_hoc_ky", "ma_mon_hoc IS NULL OR ma_hoc_ky IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_nhiem_vu_su_kien", "(bat_dau_su_kien IS NULL AND ket_thuc_su_kien IS NULL) OR (bat_dau_su_kien IS NOT NULL AND ket_thuc_su_kien IS NOT NULL AND ket_thuc_su_kien > bat_dau_su_kien)");
+
                             t.HasCheckConstraint("CK_task_items_estimated_minutes", "\"thoi_luong_du_kien_phut\" IS NULL OR \"thoi_luong_du_kien_phut\" > 0");
 
                             t.HasCheckConstraint("CK_task_items_parent", "\"ma_nhiem_vu_cha\" IS NULL OR \"ma_nhiem_vu_cha\" <> \"ma\"");
@@ -730,6 +1199,12 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasDefaultValue(24)
                         .HasColumnName("nhac_truoc_gio");
 
+                    b.Property<long>("PhienBanLapLich")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("phien_ban_lap_lich");
+
                     b.Property<string>("TenLop")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
@@ -765,6 +1240,8 @@ namespace StudyPlanner.Infrastructure.Migrations
 
                     b.ToTable("nguoi_dung", null, t =>
                         {
+                            t.HasCheckConstraint("CK_nguoi_dung_revision", "phien_ban_lap_lich >= 0");
+
                             t.HasCheckConstraint("CK_users_email_not_blank", "length(btrim(\"email\")) > 0");
 
                             t.HasCheckConstraint("CK_users_fullname_not_blank", "length(btrim(\"ho_ten\")) > 0");
@@ -785,6 +1262,17 @@ namespace StudyPlanner.Infrastructure.Migrations
 
                             t.HasCheckConstraint("CK_users_timezone_not_blank", "length(btrim(\"mui_gio\")) > 0");
                         });
+                });
+
+            modelBuilder.Entity("StudyPlanner.Domain.Entities.AvailabilityWindow", b =>
+                {
+                    b.HasOne("StudyPlanner.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiDung")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("StudyPlanner.Domain.Entities.ClassSession", b =>
@@ -823,6 +1311,34 @@ namespace StudyPlanner.Infrastructure.Migrations
                     b.Navigation("School");
                 });
 
+            modelBuilder.Entity("StudyPlanner.Domain.Entities.FocusInterval", b =>
+                {
+                    b.HasOne("StudyPlanner.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiDung")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("StudyPlanner.Domain.Entities.TaskItem", "Task")
+                        .WithMany()
+                        .HasForeignKey("MaNhiemVu", "MaNguoiDung")
+                        .HasPrincipalKey("Ma", "MaNguoiDung")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("StudyPlanner.Domain.Entities.StudySession", "Session")
+                        .WithMany()
+                        .HasForeignKey("MaPhienTuHoc", "MaNhiemVu", "MaNguoiDung")
+                        .HasPrincipalKey("Ma", "MaNhiemVu", "MaNguoiDung")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("Session");
+
+                    b.Navigation("Task");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("StudyPlanner.Domain.Entities.Notification", b =>
                 {
                     b.HasOne("StudyPlanner.Domain.Entities.User", "User")
@@ -838,6 +1354,45 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("FK_notifications_task_items_TaskId");
+
+                    b.HasOne("StudyPlanner.Domain.Entities.Reminder", "Reminder")
+                        .WithMany()
+                        .HasForeignKey("MaLichNhac", "MaNguoiDung", "MaNhiemVu")
+                        .HasPrincipalKey("Ma", "MaNguoiDung", "MaNhiemVu")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("Reminder");
+
+                    b.Navigation("Task");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("StudyPlanner.Domain.Entities.PlanningApplication", b =>
+                {
+                    b.HasOne("StudyPlanner.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiDung")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("StudyPlanner.Domain.Entities.Reminder", b =>
+                {
+                    b.HasOne("StudyPlanner.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiDung")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("StudyPlanner.Domain.Entities.TaskItem", "Task")
+                        .WithMany()
+                        .HasForeignKey("MaNhiemVu", "MaNguoiDung")
+                        .HasPrincipalKey("Ma", "MaNguoiDung")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Task");
 
@@ -877,6 +1432,54 @@ namespace StudyPlanner.Infrastructure.Migrations
                     b.Navigation("Faculty");
                 });
 
+            modelBuilder.Entity("StudyPlanner.Domain.Entities.StudySession", b =>
+                {
+                    b.HasOne("StudyPlanner.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiDung")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("StudyPlanner.Domain.Entities.PlanningApplication", "Application")
+                        .WithMany()
+                        .HasForeignKey("MaLanApDung", "MaNguoiDung")
+                        .HasPrincipalKey("Ma", "MaNguoiDung")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("StudyPlanner.Domain.Entities.TaskItem", "Task")
+                        .WithMany()
+                        .HasForeignKey("MaNhiemVu", "MaNguoiDung")
+                        .HasPrincipalKey("Ma", "MaNguoiDung")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Application");
+
+                    b.Navigation("Task");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("StudyPlanner.Domain.Entities.TaskAttachment", b =>
+                {
+                    b.HasOne("StudyPlanner.Domain.Entities.User", "UploadedBy")
+                        .WithMany()
+                        .HasForeignKey("MaNguoiTaiLen")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("StudyPlanner.Domain.Entities.TaskItem", "Task")
+                        .WithMany()
+                        .HasForeignKey("MaNhiemVu", "MaNguoiTaiLen")
+                        .HasPrincipalKey("Ma", "MaNguoiDung")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Task");
+
+                    b.Navigation("UploadedBy");
+                });
+
             modelBuilder.Entity("StudyPlanner.Domain.Entities.TaskHistory", b =>
                 {
                     b.HasOne("StudyPlanner.Domain.Entities.User", "User")
@@ -890,12 +1493,6 @@ namespace StudyPlanner.Infrastructure.Migrations
 
             modelBuilder.Entity("StudyPlanner.Domain.Entities.TaskItem", b =>
                 {
-                    b.HasOne("StudyPlanner.Domain.Entities.Course", "Course")
-                        .WithMany("Tasks")
-                        .HasForeignKey("MaMonHoc")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("FK_task_items_courses_CourseId");
-
                     b.HasOne("StudyPlanner.Domain.Entities.User", "User")
                         .WithMany("Tasks")
                         .HasForeignKey("MaNguoiDung")
@@ -909,9 +1506,23 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("FK_task_items_task_items_ParentTaskId");
 
+                    b.HasOne("StudyPlanner.Domain.Entities.Semester", "Semester")
+                        .WithMany()
+                        .HasForeignKey("MaHocKy", "MaNguoiDung")
+                        .HasPrincipalKey("Ma", "MaNguoiDung")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("StudyPlanner.Domain.Entities.Course", "Course")
+                        .WithMany("Tasks")
+                        .HasForeignKey("MaMonHoc", "MaHocKy")
+                        .HasPrincipalKey("Ma", "MaHocKy")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.Navigation("Course");
 
                     b.Navigation("ParentTask");
+
+                    b.Navigation("Semester");
 
                     b.Navigation("User");
                 });

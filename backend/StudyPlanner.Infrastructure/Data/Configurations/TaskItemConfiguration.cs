@@ -9,8 +9,16 @@ public class TaskItemConfiguration : IEntityTypeConfiguration<TaskItem>
 {
     public void Configure(EntityTypeBuilder<TaskItem> builder)
     {
-        builder.HasIndex(x => x.MaMonHoc).HasDatabaseName("IX_task_items_CourseId");
-        builder.HasIndex(x => x.MaNhiemVuCha).HasDatabaseName("IX_task_items_ParentTaskId");
+        builder.Property(x => x.MaHocKy).HasColumnName("ma_hoc_ky");
+        builder.Property(x => x.BatDauSuKien).HasColumnName("bat_dau_su_kien");
+        builder.Property(x => x.KetThucSuKien).HasColumnName("ket_thuc_su_kien");
+        builder.Ignore(x => x.ThoiLuongConLaiPhut);
+        builder.HasAlternateKey(x => new { x.Ma, x.MaNguoiDung });
+        builder.ToTable("nhiem_vu", t => {
+            t.HasCheckConstraint("CK_nhiem_vu_mon_hoc_ky", "ma_mon_hoc IS NULL OR ma_hoc_ky IS NOT NULL");
+            t.HasCheckConstraint("CK_nhiem_vu_su_kien", "(bat_dau_su_kien IS NULL AND ket_thuc_su_kien IS NULL) OR (bat_dau_su_kien IS NOT NULL AND ket_thuc_su_kien IS NOT NULL AND ket_thuc_su_kien > bat_dau_su_kien)");
+        });
+        // Tên bảng/cột tiếng Việt; giữ tên constraint/index cũ để migration chỉ rename bảng.
         builder.Property(x => x.Ma).HasColumnName("ma");
         builder.Property(x => x.MaNguoiDung).HasColumnName("ma_nguoi_dung");
         builder.Property(x => x.MaMonHoc).HasColumnName("ma_mon_hoc");
@@ -27,6 +35,7 @@ public class TaskItemConfiguration : IEntityTypeConfiguration<TaskItem>
         builder.Property(x => x.NgayHoanThanh).HasColumnName("ngay_hoan_thanh");
         builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
         builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
+
         builder.ToTable("nhiem_vu", table =>
         {
             table.HasCheckConstraint("CK_task_items_progress", "\"tien_do\" BETWEEN 0 AND 100");
@@ -55,13 +64,20 @@ public class TaskItemConfiguration : IEntityTypeConfiguration<TaskItem>
         builder.Property(x => x.TienDo).HasDefaultValue(0);
         builder.Property(x => x.HanHoanThanh).HasColumnType("timestamp with time zone");
         builder.Property(x => x.NgayHoanThanh).HasColumnType("timestamp with time zone");
-        builder.HasIndex(x => new { x.MaNguoiDung, x.HanHoanThanh }).HasDatabaseName("IX_task_items_UserId_DueDate");
-        builder.HasIndex(x => new { x.MaNguoiDung, x.TrangThai }).HasDatabaseName("IX_task_items_UserId_Status");
+        builder.HasIndex(x => new { x.MaNguoiDung, x.HanHoanThanh });
+        builder.HasIndex(x => new { x.MaNguoiDung, x.TrangThai });
         builder.HasOne(x => x.User).WithMany(x => x.Tasks).HasForeignKey(x => x.MaNguoiDung).HasConstraintName("FK_task_items_users_UserId").OnDelete(DeleteBehavior.Cascade);
         // Xóa môn giữ nhiệm vụ. Application cần ghi lịch sử bỏ liên kết trước khi xóa môn.
-        builder.HasOne(x => x.Course).WithMany(x => x.Tasks).HasForeignKey(x => x.MaMonHoc).HasConstraintName("FK_task_items_courses_CourseId").OnDelete(DeleteBehavior.SetNull);
+        // Không SET NULL cả FK ghép vì sẽ xóa cả mã người dùng/học kỳ. Dịch vụ xóa bỏ liên kết trước.
+        builder.HasOne(x => x.Course).WithMany(x => x.Tasks).HasForeignKey(x => new { x.MaMonHoc, x.MaHocKy }).HasPrincipalKey(x => new { x.Ma, x.MaHocKy }).OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne(x => x.Semester).WithMany().HasForeignKey(x => new { x.MaHocKy, x.MaNguoiDung }).HasPrincipalKey(x => new { x.Ma, x.MaNguoiDung }).OnDelete(DeleteBehavior.NoAction);
         // Cascade chỉ xóa dữ liệu; không tự ghi TaskHistory hoặc tính lại tiến độ tổ tiên.
         builder.HasOne(x => x.ParentTask).WithMany(x => x.Children).HasForeignKey(x => x.MaNhiemVuCha).HasConstraintName("FK_task_items_task_items_ParentTaskId").OnDelete(DeleteBehavior.Cascade);
+        // Giữ tên index hiện có để migration chỉ đổi tên cột.
+        builder.HasIndex(x => x.MaMonHoc).HasDatabaseName("IX_task_items_CourseId");
+        builder.HasIndex(x => x.MaNhiemVuCha).HasDatabaseName("IX_task_items_ParentTaskId");
+        builder.HasIndex(x => new { x.MaNguoiDung, x.HanHoanThanh }).HasDatabaseName("IX_task_items_UserId_DueDate");
+        builder.HasIndex(x => new { x.MaNguoiDung, x.TrangThai }).HasDatabaseName("IX_task_items_UserId_Status");
     }
 }
 

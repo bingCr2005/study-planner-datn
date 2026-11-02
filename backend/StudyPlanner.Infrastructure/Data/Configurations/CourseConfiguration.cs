@@ -8,7 +8,8 @@ public class CourseConfiguration : IEntityTypeConfiguration<Course>
 {
     public void Configure(EntityTypeBuilder<Course> builder)
     {
-        builder.HasIndex(x => x.MaHocKy).HasDatabaseName("IX_courses_SemesterId");
+        builder.HasAlternateKey(x => new { x.Ma, x.MaHocKy });
+        // Tên bảng/cột tiếng Việt; giữ tên constraint/index cũ để migration chỉ rename bảng.
         builder.Property(x => x.Ma).HasColumnName("ma");
         builder.Property(x => x.MaHocKy).HasColumnName("ma_hoc_ky");
         builder.Property(x => x.KyHieu).HasColumnName("ky_hieu");
@@ -18,6 +19,7 @@ public class CourseConfiguration : IEntityTypeConfiguration<Course>
         builder.Property(x => x.MauSac).HasColumnName("mau_sac");
         builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
         builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
+
         builder.ToTable("mon_hoc", table =>
         {
             table.HasCheckConstraint("CK_courses_credits", "\"so_tin_chi\" IS NULL OR \"so_tin_chi\" > 0");
@@ -33,6 +35,8 @@ public class CourseConfiguration : IEntityTypeConfiguration<Course>
         builder.Property(x => x.NgayTao).HasColumnType("timestamp with time zone");
         builder.Property(x => x.NgayCapNhat).HasColumnType("timestamp with time zone");
         builder.HasOne(x => x.Semester).WithMany(x => x.Courses).HasForeignKey(x => x.MaHocKy).HasConstraintName("FK_courses_semesters_SemesterId").OnDelete(DeleteBehavior.Cascade);
+        // Giữ tên index hiện có để migration chỉ đổi tên cột.
+        builder.HasIndex(x => x.MaHocKy).HasDatabaseName("IX_courses_SemesterId");
     }
 }
 

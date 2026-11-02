@@ -7,8 +7,13 @@ public class Notification
     public int Ma { get; set; }
     public int MaNguoiDung { get; set; }
     public int MaNhiemVu { get; set; }
+    // Giai đoạn chuyển đổi: chỉ bản Delivered cũ được liên kết; cột lập lịch cũ giữ đến cutover worker.
+    public int? MaLichNhac { get; set; }
+    public Reminder? Reminder { get; set; }
     public NotificationType Loai { get; set; } = NotificationType.DeadlineReminder;
     public string NoiDung { get; set; } = string.Empty;
+    // Tiêu đề ngắn của hộp thông báo; nội dung chi tiết vẫn ở NoiDung.
+    public string TieuDe { get; set; } = "Nhắc hạn nhiệm vụ";
     public DateTimeOffset ThoiDiemNhac { get; set; }
     public NotificationDeliveryStatus TrangThaiPhat { get; set; } = NotificationDeliveryStatus.Pending;
     public DateTimeOffset? NgayPhat { get; set; }

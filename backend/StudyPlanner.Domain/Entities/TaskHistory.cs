@@ -9,6 +9,8 @@ public class TaskHistory
     public int MaNhiemVu { get; set; }
     public int? MaNguoiDung { get; set; }
     public TaskHistoryAction HanhDong { get; set; }
+    // User hoặc System khi có worker; không ghi danh tính/bí mật vào trường này.
+    public string NguonThayDoi { get; set; } = "User";
     public string TieuDeNhiemVu { get; set; } = string.Empty;
     // Chuỗi JSON ánh xạ jsonb; chỉ serialize trường nhiệm vụ cho phép, không lưu bí mật.
     public string? DuLieuTruoc { get; set; }

@@ -8,13 +8,14 @@ public class CohortConfiguration : IEntityTypeConfiguration<Cohort>
 {
     public void Configure(EntityTypeBuilder<Cohort> builder)
     {
-
+        // Tên bảng/cột tiếng Việt; giữ tên constraint/index cũ để migration chỉ rename bảng.
         builder.Property(x => x.Ma).HasColumnName("ma");
         builder.Property(x => x.Ten).HasColumnName("ten");
         builder.Property(x => x.NamBatDau).HasColumnName("nam_bat_dau");
         builder.Property(x => x.NamKetThuc).HasColumnName("nam_ket_thuc");
         builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
         builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
+
         builder.ToTable("khoa_hoc", table =>
         {
             table.HasCheckConstraint("CK_cohorts_years", "\"nam_ket_thuc\" >= \"nam_bat_dau\"");
@@ -25,7 +26,9 @@ public class CohortConfiguration : IEntityTypeConfiguration<Cohort>
         builder.Property(x => x.Ten).HasMaxLength(200).IsRequired();
         builder.Property(x => x.NgayTao).HasColumnType("timestamp with time zone");
         builder.Property(x => x.NgayCapNhat).HasColumnType("timestamp with time zone");
-        builder.HasIndex(x => x.Ten).HasDatabaseName("IX_cohorts_Name").IsUnique();
+        builder.HasIndex(x => x.Ten).IsUnique();
+        // Giữ tên index hiện có để migration chỉ đổi tên cột.
+        builder.HasIndex(x => x.Ten).HasDatabaseName("IX_cohorts_Name");
     }
 }
 
