@@ -13,13 +13,13 @@ public class HealthController : ControllerBase
     public ActionResult<LivenessResponse> Live()
     {
         var response = new LivenessResponse(
-            Status: "Healthy",
-            CheckedAt: DateTimeOffset.UtcNow);
+            TrangThai: "Healthy",
+            KiemTraLuc: DateTimeOffset.UtcNow);
 
         return Ok(response);
     }
 }
 
 public record LivenessResponse(
-    string Status,
-    DateTimeOffset CheckedAt);
+    string TrangThai,
+    DateTimeOffset KiemTraLuc);
