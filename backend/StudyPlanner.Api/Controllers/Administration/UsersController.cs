@@ -19,4 +19,17 @@ public sealed class UsersController(UserAdministrationService service) : Control
     [HttpPut("{id}")] public Task<UserResponse> Update(int id, UserRequest request, CancellationToken ct) => service.UpdateAsync(id, request, ct);
     [HttpDelete("{id}"), ProducesResponseType(204)]
     public async Task<IActionResult> Delete(int id, CancellationToken ct) { await service.DeleteAsync(id, ct); return NoContent(); }
+    [HttpPatch("{id}/activate"), ProducesResponseType<UserActivationResponse>(200)]
+    public async Task<ActionResult<UserActivationResponse>> Activate(int id, CancellationToken ct)
+    {
+        await service.SetActiveAsync(id, new UserActiveRequest { DangHoatDong = true }, ct);
+        return Ok(new UserActivationResponse("Kích hoạt tài khoản thành công.", true));
+    }
+    [HttpPatch("{id}/deactivate"), ProducesResponseType<UserActivationResponse>(200)]
+    public async Task<ActionResult<UserActivationResponse>> Deactivate(int id, CancellationToken ct)
+    {
+        // Dùng chung dịch vụ để giữ giao dịch và bảo vệ Admin hoạt động cuối cùng.
+        await service.SetActiveAsync(id, new UserActiveRequest { DangHoatDong = false }, ct);
+        return Ok(new UserActivationResponse("Vô hiệu hóa tài khoản thành công.", false));
+    }
 }

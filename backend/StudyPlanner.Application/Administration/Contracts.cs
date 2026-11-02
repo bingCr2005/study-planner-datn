@@ -34,7 +34,7 @@ public sealed class UserActiveRequest
 {
     [Required] public bool? DangHoatDong { get; init; }
 }
-
+public sealed record UserActivationResponse(string ThongBao, bool DangHoatDong);
 
 // DTO không có MatKhauBam hoặc navigation để tránh lộ thông tin và vòng JSON.
 public sealed record UserResponse(int Ma, string Email, string HoTen, string? MaSoSinhVien,
