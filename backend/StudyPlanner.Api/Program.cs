@@ -44,7 +44,24 @@ builder.Services.AddStudyPlannerAuth(builder.Configuration, builder.Environment)
 
 
 var app = builder.Build();
-
+// Lệnh chủ động tại máy phát triển; không có endpoint công khai để tự cấp Admin.
+var bootstrapEmail = builder.Configuration["promote-admin"];
+if (!string.IsNullOrWhiteSpace(bootstrapEmail))
+{
+    if (!app.Environment.IsDevelopment()) throw new InvalidOperationException("Chỉ khởi tạo Admin trong Development.");
+    await using var scope = app.Services.CreateAsyncScope();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+    if (await db.Users.AnyAsync(x => x.VaiTro == StudyPlanner.Domain.Enums.UserRole.Admin))
+        throw new InvalidOperationException("Đã có Admin; không dùng lại lệnh khởi tạo.");
+    var normalized = bootstrapEmail.Trim().ToUpperInvariant();
+    var user = await db.Users.SingleOrDefaultAsync(x => x.EmailChuanHoa == normalized && x.DangHoatDong)
+        ?? throw new InvalidOperationException("Cần đăng ký tài khoản hoạt động trước.");
+    user.VaiTro = StudyPlanner.Domain.Enums.UserRole.Admin; user.NgayCapNhat = DateTimeOffset.UtcNow;
+    await db.SaveChangesAsync(); await transaction.CommitAsync();
+    Console.WriteLine("Đã khởi tạo Admin. Chạy lại API bình thường và đăng nhập.");
+    return;
+}
 app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
