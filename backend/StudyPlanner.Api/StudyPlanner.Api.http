@@ -1,6 +1,12 @@
 @StudyPlanner.Api_HostAddress = http://localhost:5059
 
-GET {{StudyPlanner.Api_HostAddress}}/weatherforecast/
+GET {{StudyPlanner.Api_HostAddress}}/health/live
+Accept: application/json
+
+###
+
+# Hồ sơ cần JWT lấy từ /api/v1/auth/login; dùng Swagger Authorize để thử thuận tiện.
+GET {{StudyPlanner.Api_HostAddress}}/api/v1/users/me
 Accept: application/json
 
 ###
