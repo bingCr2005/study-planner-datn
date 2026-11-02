@@ -5,7 +5,7 @@ using StudyPlanner.Application.Administration;
 
 namespace StudyPlanner.Api.Controllers.Administration;
 
-[ApiController, Authorize(Policy = "Admin"), Route("api/admin/users")]
+[ApiController, Authorize(Policy = "Admin"), Route("api/v1/admin/users")]
 public sealed class UsersController(UserAdministrationService service) : ControllerBase
 {
     [HttpGet] public Task<PagedResult<UserResponse>> List([FromQuery] ListRequest query, CancellationToken ct) => service.ListAsync(query, ct);
