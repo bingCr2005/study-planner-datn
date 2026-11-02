@@ -18,7 +18,7 @@ public class CourseConfiguration : IEntityTypeConfiguration<Course>
         builder.Property(x => x.MauSac).HasColumnName("mau_sac");
         builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
         builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
-        builder.ToTable("courses", table =>
+        builder.ToTable("mon_hoc", table =>
         {
             table.HasCheckConstraint("CK_courses_credits", "\"so_tin_chi\" IS NULL OR \"so_tin_chi\" > 0");
             table.HasCheckConstraint("CK_courses_color", "\"mau_sac\" IS NULL OR \"mau_sac\" ~ '^#[0-9A-Fa-f]{6}$'");

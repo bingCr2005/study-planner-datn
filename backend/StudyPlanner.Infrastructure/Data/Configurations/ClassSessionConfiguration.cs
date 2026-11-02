@@ -17,7 +17,7 @@ public class ClassSessionConfiguration : IEntityTypeConfiguration<ClassSession>
         builder.Property(x => x.PhongHoc).HasColumnName("phong_hoc");
         builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
         builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
-        builder.ToTable("class_sessions", table =>
+        builder.ToTable("lich_hoc", table =>
         {
             table.HasCheckConstraint("CK_class_sessions_weekday", "\"thu_trong_tuan\" BETWEEN 1 AND 7");
             table.HasCheckConstraint("CK_class_sessions_times", "\"gio_ket_thuc\" > \"gio_bat_dau\"");

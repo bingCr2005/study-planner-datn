@@ -23,7 +23,7 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
         builder.Property(x => x.LanThuTiepTheoLuc).HasColumnName("lan_thu_tiep_theo_luc");
         builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
         builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
-        builder.ToTable("notifications", table =>
+        builder.ToTable("thong_bao", table =>
         {
             table.HasCheckConstraint("CK_notifications_attempt_count", "\"so_lan_thu\" >= 0");
             table.HasCheckConstraint("CK_notifications_delivery", "(\"trang_thai_phat\" = 'Delivered' AND \"ngay_phat\" IS NOT NULL) OR (\"trang_thai_phat\" <> 'Delivered' AND \"ngay_phat\" IS NULL)");

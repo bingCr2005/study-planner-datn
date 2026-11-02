@@ -15,7 +15,7 @@ public class StudentClassConfiguration : IEntityTypeConfiguration<StudentClass>
         builder.Property(x => x.Ten).HasColumnName("ten");
         builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
         builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
-        builder.ToTable("student_classes", table =>
+        builder.ToTable("lop_sinh_vien", table =>
         {
             table.HasCheckConstraint("CK_student_classes_name_not_blank", "length(btrim(\"ten\")) > 0");
         });

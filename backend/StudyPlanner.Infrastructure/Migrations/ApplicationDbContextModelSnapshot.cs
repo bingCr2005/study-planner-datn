@@ -63,12 +63,13 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("thu_trong_tuan");
 
-                    b.HasKey("Ma");
+                    b.HasKey("Ma")
+                        .HasName("PK_class_sessions");
 
                     b.HasIndex("MaMonHoc", "ThuTrongTuan", "GioBatDau")
                         .HasDatabaseName("IX_class_sessions_CourseId_DayOfWeek_StartTime");
 
-                    b.ToTable("class_sessions", null, t =>
+                    b.ToTable("lich_hoc", null, t =>
                         {
                             t.HasCheckConstraint("CK_class_sessions_times", "\"gio_ket_thuc\" > \"gio_bat_dau\"");
 
@@ -107,13 +108,14 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("ten");
 
-                    b.HasKey("Ma");
+                    b.HasKey("Ma")
+                        .HasName("PK_cohorts");
 
                     b.HasIndex("Ten")
                         .IsUnique()
                         .HasDatabaseName("IX_cohorts_Name");
 
-                    b.ToTable("cohorts", null, t =>
+                    b.ToTable("khoa_hoc", null, t =>
                         {
                             t.HasCheckConstraint("CK_cohorts_name_not_blank", "length(btrim(\"ten\")) > 0");
 
@@ -167,12 +169,13 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("ten");
 
-                    b.HasKey("Ma");
+                    b.HasKey("Ma")
+                        .HasName("PK_courses");
 
                     b.HasIndex("MaHocKy")
                         .HasDatabaseName("IX_courses_SemesterId");
 
-                    b.ToTable("courses", null, t =>
+                    b.ToTable("mon_hoc", null, t =>
                         {
                             t.HasCheckConstraint("CK_courses_color", "\"mau_sac\" IS NULL OR \"mau_sac\" ~ '^#[0-9A-Fa-f]{6}$'");
 
@@ -215,13 +218,14 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("ten");
 
-                    b.HasKey("Ma");
+                    b.HasKey("Ma")
+                        .HasName("PK_faculties");
 
                     b.HasIndex("MaTruong", "KyHieu")
                         .IsUnique()
                         .HasDatabaseName("IX_faculties_SchoolId_Code");
 
-                    b.ToTable("faculties", null, t =>
+                    b.ToTable("khoa", null, t =>
                         {
                             t.HasCheckConstraint("CK_faculties_code_not_blank", "length(btrim(\"ky_hieu\")) > 0");
 
@@ -295,7 +299,8 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasDefaultValue("Pending")
                         .HasColumnName("trang_thai_phat");
 
-                    b.HasKey("Ma");
+                    b.HasKey("Ma")
+                        .HasName("PK_notifications");
 
                     b.HasIndex("LanThuTiepTheoLuc")
                         .HasDatabaseName("IX_notifications_NextAttemptAt")
@@ -317,7 +322,7 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasDatabaseName("IX_notifications_unread")
                         .HasFilter("\"trang_thai_phat\" = 'Delivered' AND \"ngay_doc\" IS NULL");
 
-                    b.ToTable("notifications", null, t =>
+                    b.ToTable("thong_bao", null, t =>
                         {
                             t.HasCheckConstraint("CK_notifications_attempt_count", "\"so_lan_thu\" >= 0");
 
@@ -362,13 +367,14 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("ten");
 
-                    b.HasKey("Ma");
+                    b.HasKey("Ma")
+                        .HasName("PK_schools");
 
                     b.HasIndex("KyHieu")
                         .IsUnique()
                         .HasDatabaseName("IX_schools_Code");
 
-                    b.ToTable("schools", null, t =>
+                    b.ToTable("truong", null, t =>
                         {
                             t.HasCheckConstraint("CK_schools_code_not_blank", "length(btrim(\"ky_hieu\")) > 0");
 
@@ -411,12 +417,13 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("ten");
 
-                    b.HasKey("Ma");
+                    b.HasKey("Ma")
+                        .HasName("PK_semesters");
 
                     b.HasIndex("MaNguoiDung", "NgayBatDau")
                         .HasDatabaseName("IX_semesters_UserId_StartDate");
 
-                    b.ToTable("semesters", null, t =>
+                    b.ToTable("hoc_ky", null, t =>
                         {
                             t.HasCheckConstraint("CK_semesters_dates", "\"ngay_ket_thuc\" >= \"ngay_bat_dau\"");
 
@@ -455,7 +462,8 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("ten");
 
-                    b.HasKey("Ma");
+                    b.HasKey("Ma")
+                        .HasName("PK_student_classes");
 
                     b.HasIndex("MaKhoaHoc")
                         .HasDatabaseName("IX_student_classes_CohortId");
@@ -464,7 +472,7 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_student_classes_FacultyId_CohortId_Name");
 
-                    b.ToTable("student_classes", null, t =>
+                    b.ToTable("lop_sinh_vien", null, t =>
                         {
                             t.HasCheckConstraint("CK_student_classes_name_not_blank", "length(btrim(\"ten\")) > 0");
                         });
@@ -511,7 +519,8 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("tieu_de_nhiem_vu");
 
-                    b.HasKey("Ma");
+                    b.HasKey("Ma")
+                        .HasName("PK_task_histories");
 
                     b.HasIndex("MaNguoiDung", "NgayThayDoi")
                         .HasDatabaseName("IX_task_histories_UserId_ChangedAt");
@@ -519,7 +528,7 @@ namespace StudyPlanner.Infrastructure.Migrations
                     b.HasIndex("MaNhiemVu", "NgayThayDoi")
                         .HasDatabaseName("IX_task_histories_TaskId_ChangedAt");
 
-                    b.ToTable("task_histories", null, t =>
+                    b.ToTable("lich_su_nhiem_vu", null, t =>
                         {
                             t.HasCheckConstraint("CK_task_histories_action_values", "\"hanh_dong\" IN ('Created', 'Updated', 'Completed', 'Reopened', 'Deleted')");
 
@@ -610,7 +619,8 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasDefaultValue("NotStarted")
                         .HasColumnName("trang_thai");
 
-                    b.HasKey("Ma");
+                    b.HasKey("Ma")
+                        .HasName("PK_task_items");
 
                     b.HasIndex("MaMonHoc")
                         .HasDatabaseName("IX_task_items_CourseId");
@@ -624,7 +634,7 @@ namespace StudyPlanner.Infrastructure.Migrations
                     b.HasIndex("MaNguoiDung", "TrangThai")
                         .HasDatabaseName("IX_task_items_UserId_Status");
 
-                    b.ToTable("task_items", null, t =>
+                    b.ToTable("nhiem_vu", null, t =>
                         {
                             t.HasCheckConstraint("CK_task_items_estimated_minutes", "\"thoi_luong_du_kien_phut\" IS NULL OR \"thoi_luong_du_kien_phut\" > 0");
 
@@ -738,7 +748,8 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasDefaultValue("Student")
                         .HasColumnName("vai_tro");
 
-                    b.HasKey("Ma");
+                    b.HasKey("Ma")
+                        .HasName("PK_users");
 
                     b.HasIndex("EmailChuanHoa")
                         .IsUnique()
@@ -752,7 +763,7 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasDatabaseName("IX_users_StudentCode")
                         .HasFilter("\"ma_so_sinh_vien\" IS NOT NULL");
 
-                    b.ToTable("users", null, t =>
+                    b.ToTable("nguoi_dung", null, t =>
                         {
                             t.HasCheckConstraint("CK_users_email_not_blank", "length(btrim(\"email\")) > 0");
 

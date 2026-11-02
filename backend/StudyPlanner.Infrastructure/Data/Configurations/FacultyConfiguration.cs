@@ -15,7 +15,7 @@ public class FacultyConfiguration : IEntityTypeConfiguration<Faculty>
         builder.Property(x => x.Ten).HasColumnName("ten");
         builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
         builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
-        builder.ToTable("faculties", table =>
+        builder.ToTable("khoa", table =>
         {
             table.HasCheckConstraint("CK_faculties_code_not_blank", "length(btrim(\"ky_hieu\")) > 0");
             table.HasCheckConstraint("CK_faculties_name_not_blank", "length(btrim(\"ten\")) > 0");

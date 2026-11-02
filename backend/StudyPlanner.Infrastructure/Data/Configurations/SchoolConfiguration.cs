@@ -14,7 +14,7 @@ public class SchoolConfiguration : IEntityTypeConfiguration<School>
         builder.Property(x => x.Ten).HasColumnName("ten");
         builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
         builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
-        builder.ToTable("schools", table =>
+        builder.ToTable("truong", table =>
         {
             table.HasCheckConstraint("CK_schools_code_not_blank", "length(btrim(\"ky_hieu\")) > 0");
             table.HasCheckConstraint("CK_schools_name_not_blank", "length(btrim(\"ten\")) > 0");

@@ -18,7 +18,7 @@ public class TaskHistoryConfiguration : IEntityTypeConfiguration<TaskHistory>
         builder.Property(x => x.DuLieuTruoc).HasColumnName("du_lieu_truoc");
         builder.Property(x => x.DuLieuSau).HasColumnName("du_lieu_sau");
         builder.Property(x => x.NgayThayDoi).HasColumnName("ngay_thay_doi");
-        builder.ToTable("task_histories", table =>
+        builder.ToTable("lich_su_nhiem_vu", table =>
         {
             table.HasCheckConstraint("CK_task_histories_tasktitle_not_blank", "length(btrim(\"tieu_de_nhiem_vu\")) > 0");
             table.HasCheckConstraint("CK_task_histories_action_values", "\"hanh_dong\" IN ('Created', 'Updated', 'Completed', 'Reopened', 'Deleted')");

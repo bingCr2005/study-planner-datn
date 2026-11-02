@@ -27,7 +27,7 @@ public class TaskItemConfiguration : IEntityTypeConfiguration<TaskItem>
         builder.Property(x => x.NgayHoanThanh).HasColumnName("ngay_hoan_thanh");
         builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
         builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
-        builder.ToTable("task_items", table =>
+        builder.ToTable("nhiem_vu", table =>
         {
             table.HasCheckConstraint("CK_task_items_progress", "\"tien_do\" BETWEEN 0 AND 100");
             table.HasCheckConstraint("CK_task_items_estimated_minutes", "\"thoi_luong_du_kien_phut\" IS NULL OR \"thoi_luong_du_kien_phut\" > 0");

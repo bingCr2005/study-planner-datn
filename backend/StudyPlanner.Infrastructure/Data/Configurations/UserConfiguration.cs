@@ -24,7 +24,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.NhacTruocGio).HasColumnName("nhac_truoc_gio");
         builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
         builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
-        builder.ToTable("users", table =>
+        builder.ToTable("nguoi_dung", table =>
         {
             table.HasCheckConstraint("CK_users_reminder_hours", "\"nhac_truoc_gio\" >= 0");
             table.HasCheckConstraint("CK_users_student_code", "\"ma_so_sinh_vien\" IS NULL OR length(btrim(\"ma_so_sinh_vien\")) > 0");
@@ -37,7 +37,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         });
         builder.Property(x=>x.TenTruong).HasColumnName("ten_truong").HasMaxLength(200);
         builder.Property(x=>x.TenLop).HasColumnName("ten_lop").HasMaxLength(200);
-        builder.ToTable("users",t=> {
+        builder.ToTable("nguoi_dung",t=> {
             t.HasCheckConstraint("CK_users_ten_truong_not_blank","\"ten_truong\" IS NULL OR \"ten_truong\" ~ '[^[:space:]]'");
             t.HasCheckConstraint("CK_users_ten_lop_not_blank","\"ten_lop\" IS NULL OR \"ten_lop\" ~ '[^[:space:]]'");
         });

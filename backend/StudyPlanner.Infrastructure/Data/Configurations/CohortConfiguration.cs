@@ -15,7 +15,7 @@ public class CohortConfiguration : IEntityTypeConfiguration<Cohort>
         builder.Property(x => x.NamKetThuc).HasColumnName("nam_ket_thuc");
         builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
         builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
-        builder.ToTable("cohorts", table =>
+        builder.ToTable("khoa_hoc", table =>
         {
             table.HasCheckConstraint("CK_cohorts_years", "\"nam_ket_thuc\" >= \"nam_bat_dau\"");
             table.HasCheckConstraint("CK_cohorts_name_not_blank", "length(btrim(\"ten\")) > 0");

@@ -7,7 +7,7 @@ var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseNpgsql("Hos
 using var db = new ApplicationDbContext(options);
 var model=db.GetService<IDesignTimeModel>().Model;
 var entities=model.GetEntityTypes().ToArray();
-string[] tables=["schools","faculties","cohorts","student_classes","users","semesters","courses","class_sessions","task_items","notifications","task_histories"];
+string[] tables=["truong","khoa","khoa_hoc","lop_sinh_vien","nguoi_dung","hoc_ky","mon_hoc","lich_hoc","nhiem_vu","thong_bao","lich_su_nhiem_vu"];
 Check(entities.Length==11 && entities.Select(x=>x.GetTableName()).Order().SequenceEqual(tables.Order()),"11 expected tables");
 Check(entities.Sum(x=>x.GetForeignKeys().Count())==13,"13 foreign keys");
 Check(entities.All(x=>x.GetProperties().All(p=>!p.IsShadowProperty())),"No shadow columns");

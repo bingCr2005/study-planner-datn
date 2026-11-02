@@ -16,7 +16,7 @@ public class SemesterConfiguration : IEntityTypeConfiguration<Semester>
         builder.Property(x => x.NgayKetThuc).HasColumnName("ngay_ket_thuc");
         builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
         builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
-        builder.ToTable("semesters", table =>
+        builder.ToTable("hoc_ky", table =>
         {
             table.HasCheckConstraint("CK_semesters_dates", "\"ngay_ket_thuc\" >= \"ngay_bat_dau\"");
             table.HasCheckConstraint("CK_semesters_name_not_blank", "length(btrim(\"ten\")) > 0");
