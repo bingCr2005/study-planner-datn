@@ -1,0 +1,43 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using StudyPlanner.Domain.Entities;
+
+namespace StudyPlanner.Infrastructure.Data.Configurations;
+
+public class LichHocConfiguration : IEntityTypeConfiguration<LichHoc>
+{
+    public void Configure(EntityTypeBuilder<LichHoc> builder)
+    {
+        builder.Property(x => x.NgayApDungTu).HasColumnName("ngay_ap_dung_tu").HasColumnType("date");
+        builder.Property(x => x.NgayApDungDen).HasColumnName("ngay_ap_dung_den").HasColumnType("date");
+        // Dịch vụ còn phải kiểm tra khoảng ngày nằm trong học kỳ của môn.
+        builder.ToTable("lich_hoc", t => t.HasCheckConstraint("CK_lich_hoc_ngay_ap_dung", "(ngay_ap_dung_tu IS NULL AND ngay_ap_dung_den IS NULL) OR (ngay_ap_dung_tu IS NOT NULL AND ngay_ap_dung_den IS NOT NULL AND ngay_ap_dung_den >= ngay_ap_dung_tu)"));
+        // Tên bảng/cột tiếng Việt; giữ tên constraint/index cũ để migration chỉ rename bảng.
+        builder.Property(x => x.Ma).HasColumnName("ma");
+        builder.Property(x => x.MaMonHoc).HasColumnName("ma_mon_hoc");
+        builder.Property(x => x.ThuTrongTuan).HasColumnName("thu_trong_tuan");
+        builder.Property(x => x.GioBatDau).HasColumnName("gio_bat_dau");
+        builder.Property(x => x.GioKetThuc).HasColumnName("gio_ket_thuc");
+        builder.Property(x => x.PhongHoc).HasColumnName("phong_hoc");
+        builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
+        builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
+
+        builder.ToTable("lich_hoc", table =>
+        {
+            table.HasCheckConstraint("CK_class_sessions_weekday", "\"thu_trong_tuan\" BETWEEN 1 AND 7");
+            table.HasCheckConstraint("CK_class_sessions_times", "\"gio_ket_thuc\" > \"gio_bat_dau\"");
+        });
+        builder.HasKey(x => x.Ma).HasName("PK_class_sessions");
+        builder.Property(x => x.Ma).UseIdentityByDefaultColumn();
+        builder.Property(x => x.PhongHoc).HasMaxLength(200);
+        builder.Property(x => x.NgayTao).HasColumnType("timestamp with time zone");
+        builder.Property(x => x.NgayCapNhat).HasColumnType("timestamp with time zone");
+        builder.Property(x => x.GioBatDau).HasColumnType("time without time zone");
+        builder.Property(x => x.GioKetThuc).HasColumnType("time without time zone");
+        builder.HasIndex(x => new { x.MaMonHoc, x.ThuTrongTuan, x.GioBatDau });
+        builder.HasOne(x => x.MonHoc).WithMany(x => x.DanhSachLichHoc).HasForeignKey(x => x.MaMonHoc).HasConstraintName("FK_class_sessions_courses_CourseId").OnDelete(DeleteBehavior.Cascade);
+        // Giữ tên index hiện có để migration chỉ đổi tên cột.
+        builder.HasIndex(x => new { x.MaMonHoc, x.ThuTrongTuan, x.GioBatDau }).HasDatabaseName("IX_class_sessions_CourseId_DayOfWeek_StartTime");
+    }
+}
+

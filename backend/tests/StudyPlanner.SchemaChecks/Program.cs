@@ -35,19 +35,19 @@ Check(entities.All(entity => entity.GetProperties().All(property =>
 
 var expectedDeletes = new (Type Dependent, string Property, Type Principal, DeleteBehavior Behavior)[]
 {
-    (typeof(Faculty), "MaTruong", typeof(School), DeleteBehavior.Restrict),
-    (typeof(StudentClass), "MaKhoa", typeof(Faculty), DeleteBehavior.Restrict),
-    (typeof(StudentClass), "MaKhoaHoc", typeof(Cohort), DeleteBehavior.Restrict),
-    (typeof(User), "MaLop", typeof(StudentClass), DeleteBehavior.SetNull),
-    (typeof(Semester), "MaNguoiDung", typeof(User), DeleteBehavior.Cascade),
-    (typeof(Course), "MaHocKy", typeof(Semester), DeleteBehavior.Cascade),
-    (typeof(ClassSession), "MaMonHoc", typeof(Course), DeleteBehavior.Cascade),
-    (typeof(TaskItem), "MaNguoiDung", typeof(User), DeleteBehavior.Cascade),
+    (typeof(Khoa), "MaTruong", typeof(Truong), DeleteBehavior.Restrict),
+    (typeof(LopSinhVien), "MaKhoa", typeof(Khoa), DeleteBehavior.Restrict),
+    (typeof(LopSinhVien), "MaKhoaHoc", typeof(KhoaHoc), DeleteBehavior.Restrict),
+    (typeof(NguoiDung), "MaLop", typeof(LopSinhVien), DeleteBehavior.SetNull),
+    (typeof(HocKy), "MaNguoiDung", typeof(NguoiDung), DeleteBehavior.Cascade),
+    (typeof(MonHoc), "MaHocKy", typeof(HocKy), DeleteBehavior.Cascade),
+    (typeof(LichHoc), "MaMonHoc", typeof(MonHoc), DeleteBehavior.Cascade),
+    (typeof(NhiemVu), "MaNguoiDung", typeof(NguoiDung), DeleteBehavior.Cascade),
 
-    (typeof(TaskItem), "MaNhiemVuCha", typeof(TaskItem), DeleteBehavior.Cascade),
-    (typeof(Notification), "MaNguoiDung", typeof(User), DeleteBehavior.Cascade),
-    (typeof(Notification), "MaNhiemVu", typeof(TaskItem), DeleteBehavior.Cascade),
-    (typeof(TaskHistory), "MaNguoiDung", typeof(User), DeleteBehavior.SetNull)
+    (typeof(NhiemVu), "MaNhiemVuCha", typeof(NhiemVu), DeleteBehavior.Cascade),
+    (typeof(ThongBao), "MaNguoiDung", typeof(NguoiDung), DeleteBehavior.Cascade),
+    (typeof(ThongBao), "MaNhiemVu", typeof(NhiemVu), DeleteBehavior.Cascade),
+    (typeof(LichSuNhiemVu), "MaNguoiDung", typeof(NguoiDung), DeleteBehavior.SetNull)
 };
 foreach (var (dependent, property, principal, behavior) in expectedDeletes)
 {
@@ -56,37 +56,37 @@ foreach (var (dependent, property, principal, behavior) in expectedDeletes)
     Check(fk.PrincipalEntityType.ClrType == principal && fk.DeleteBehavior == behavior,
         dependent.Name + "." + property + " delete behavior");
 }
-Check(Entity(typeof(TaskHistory)).GetForeignKeys().All(x =>
+Check(Entity(typeof(LichSuNhiemVu)).GetForeignKeys().All(x =>
     x.Properties.All(p => p.Name != "MaNhiemVu")), "History survives task deletion without a Task FK");
-Check(Entity(typeof(TaskHistory)).FindProperty("DuLieuTruoc")!.GetColumnType() == "jsonb",
+Check(Entity(typeof(LichSuNhiemVu)).FindProperty("DuLieuTruoc")!.GetColumnType() == "jsonb",
     "History snapshots use jsonb");
-Check(Entity(typeof(TaskItem)).FindProperty("MaMonHoc")!.IsNullable &&
-      Entity(typeof(TaskItem)).FindProperty("MaNhiemVuCha")!.IsNullable, "Personal and root tasks allowed");
-Check(Entity(typeof(Semester)).FindProperty("NgayBatDau")!.GetColumnType() == "date" &&
-      Entity(typeof(ClassSession)).FindProperty("GioBatDau")!.GetColumnType() == "time without time zone",
+Check(Entity(typeof(NhiemVu)).FindProperty("MaMonHoc")!.IsNullable &&
+      Entity(typeof(NhiemVu)).FindProperty("MaNhiemVuCha")!.IsNullable, "Personal and root tasks allowed");
+Check(Entity(typeof(HocKy)).FindProperty("NgayBatDau")!.GetColumnType() == "date" &&
+      Entity(typeof(LichHoc)).FindProperty("GioBatDau")!.GetColumnType() == "time without time zone",
     "Recurring local calendar dates and times retain their types");
-Check(Entity(typeof(User)).GetIndexes().Any(x => x.IsUnique &&
+Check(Entity(typeof(NguoiDung)).GetIndexes().Any(x => x.IsUnique &&
     Names(x) == "EmailChuanHoa"), "Normalized email unique");
-Check(Entity(typeof(User)).GetIndexes().Any(x => x.IsUnique &&
+Check(Entity(typeof(NguoiDung)).GetIndexes().Any(x => x.IsUnique &&
     Names(x) == "MaSoSinhVien" && x.GetFilter() == "\"ma_so_sinh_vien\" IS NOT NULL"),
     "Student code optional but unique when present");
 foreach (var name in new[] { "TenTruong", "TenLop" })
 {
-    var property = Entity(typeof(User)).FindProperty(name);
+    var property = Entity(typeof(NguoiDung)).FindProperty(name);
     Check(property != null && property.IsNullable && property.GetMaxLength() == 200,
         "Self-declared profile field " + name + " is optional and limited to 200 characters");
 }
-Check(Entity(typeof(Notification)).GetIndexes().Any(x => x.IsUnique &&
+Check(Entity(typeof(ThongBao)).GetIndexes().Any(x => x.IsUnique &&
     Names(x) == "MaNhiemVu,Loai"), "One reminder per task and type");
-Check(Entity(typeof(Notification)).GetIndexes().Count(x =>
+Check(Entity(typeof(ThongBao)).GetIndexes().Count(x =>
     Names(x) == "MaNguoiDung,NgayPhat" && x.GetFilter() != null) == 2,
     "Delivered and unread inbox indexes both preserved");
-var priority = Entity(typeof(TaskItem)).FindProperty("MucDoUuTien")!;
-var reminderHours = Entity(typeof(User)).FindProperty("NhacTruocGio")!;
+var priority = Entity(typeof(NhiemVu)).FindProperty("MucDoUuTien")!;
+var reminderHours = Entity(typeof(NguoiDung)).FindProperty("NhacTruocGio")!;
 Check(Equals(reminderHours.Sentinel, 24) && !Equals(reminderHours.Sentinel, 0),
     "Explicit zero reminder hours is not replaced by DB default");
-Check(Equals(priority.Sentinel, TaskPriority.Medium) &&
-      !Equals(priority.Sentinel, TaskPriority.Low), "Explicit Low priority is not replaced by DB default");
+Check(Equals(priority.Sentinel, MucDoUuTienNhiemVu.Medium) &&
+      !Equals(priority.Sentinel, MucDoUuTienNhiemVu.Low), "Explicit Low priority is not replaced by DB default");
 foreach (var entity in entities)
 {
     foreach (var property in entity.GetProperties().Where(x => x.ClrType.IsEnum))
