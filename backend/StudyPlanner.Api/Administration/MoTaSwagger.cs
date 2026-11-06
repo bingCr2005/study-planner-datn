@@ -10,6 +10,8 @@ public sealed class MoTaSwagger : IOperationFilter, ISchemaFilter
     {
         "NguoiDung" => "Quản lý người dùng",
         "Health" => "Kiểm tra hoạt động API",
+        "Semesters" => "Quản lý học kỳ",
+        "Courses" => "Quản lý môn học",
         "XacThuc" => "Đăng ký và đăng nhập",
         "HoSo" => "Hồ sơ cá nhân",
         "NhiemVu" => "Quản lý nhiệm vụ và chia nhỏ",
@@ -39,6 +41,16 @@ public sealed class MoTaSwagger : IOperationFilter, ISchemaFilter
         ["gioKetThuc"] = "Phải sau giờ bắt đầu trong cùng ngày.",
         ["tokenPreview"] = "Phiếu gợi ý do server ký, không được sửa nội dung, có hạn 10 phút.",
         ["ma"] = "Mã bản ghi.",
+        ["ten"] = "Tên bắt buộc, tối đa 200 ký tự.",
+        ["ngayBatDau"] = "Ngày bắt đầu học kỳ, dạng yyyy-MM-dd.",
+        ["ngayKetThuc"] = "Ngày kết thúc phải từ ngày bắt đầu trở đi, dạng yyyy-MM-dd.",
+        ["kyHieu"] = "Mã môn tùy chọn, tối đa 50 ký tự.",
+        ["soTinChi"] = "Số tín chỉ tùy chọn; nếu có phải lớn hơn 0.",
+        ["giangVien"] = "Giảng viên tùy chọn, tối đa 200 ký tự.",
+        ["mauSac"] = "Màu tùy chọn, đúng định dạng #RRGGBB; phản hồi viết hoa.",
+        ["soMonHoc"] = "Số môn học sẽ bị xóa.",
+        ["soBuoiHoc"] = "Số mẫu lịch học sẽ bị xóa, không phải số lần xuất hiện theo tuần.",
+        ["soNhiemVuBoLienKet"] = "Số nhiệm vụ giữ lại và bỏ liên kết tương ứng.",
         ["id"] = "Mã bản ghi trên đường dẫn.",
         ["tenTruong"] = "Tên trường tự nhập; có thể null, tối đa 200 ký tự.",
         ["tenLop"] = "Tên lớp tự nhập; có thể null, tối đa 200 ký tự.",
@@ -69,6 +81,7 @@ public sealed class MoTaSwagger : IOperationFilter, ISchemaFilter
         if (context.Type.Namespace != "StudyPlanner.Application.Administration" &&
             context.Type.Namespace != "StudyPlanner.Application.Auth" &&
             context.Type.Namespace != "StudyPlanner.Application.HocTap" &&
+            context.Type.Namespace != "StudyPlanner.Application.Academic" &&
             context.Type != typeof(Controllers.LivenessResponse)) return;
         if (schema.Properties is null) return;
         foreach (var (name, value) in schema.Properties)
@@ -157,6 +170,24 @@ public sealed class MoTaSwagger : IOperationFilter, ISchemaFilter
         {
             "NguoiDung" => "người dùng", _ => ""
         };
+        if (controller is "Semesters" or "Courses")
+        {
+            var name = controller == "Semesters" ? "học kỳ" : "môn học";
+            operation.Summary = action switch
+            {
+                "List" => "Danh sách " + name, "Get" => "Chi tiết " + name,
+                "Create" => "Tạo " + name, "Update" => "Sửa " + name,
+                "Delete" => "Xóa " + name, "Preview" => "Xem ảnh hưởng trước khi xóa " + name,
+                "ListCourses" => "Danh sách môn trong học kỳ", "CreateCourse" => "Thêm môn vào học kỳ", _ => operation.Summary
+            };
+            operation.Description = action switch
+            {
+                "Preview" => "Chỉ dữ liệu thuộc người gọi. Preview không khóa dữ liệu; DELETE kiểm tra lại tại thời điểm xóa.",
+                "Delete" => "Giao dịch giữ nhiệm vụ/cây/hạn/tiến độ và ghi lịch sử bỏ liên kết; xóa lịch và tài nguyên. Xóa môn giữ liên kết học kỳ, xóa học kỳ bỏ cả hai liên kết. Trả 204 không body.",
+                "Update" when controller == "Courses" => "Không hỗ trợ chuyển học kỳ; gửi maHocKy hoặc trường ngoài DTO sẽ trả 400.",
+                _ => "Bearer JWT; chỉ dữ liệu của người gọi. ID không tồn tại hoặc không thuộc người gọi đều trả 404."
+            };
+        }
         if (resource.Length > 0)
         {
             operation.Summary = action switch

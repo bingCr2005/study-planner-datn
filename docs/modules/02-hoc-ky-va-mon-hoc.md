@@ -1,6 +1,6 @@
 # Module 02 — Học kỳ và môn học
 
-Trạng thái: đặc tả dự thảo, chưa triển khai. Nguồn: [quy ước chung](00-quy-uoc-va-quyet-dinh.md), [ERD](../erd.md), [API — Semesters/Courses](../THIET-KE-API-SWAGGER.md). Giai đoạn 4.
+Trạng thái: đã triển khai API học kỳ/môn, phân trang, preview và giao dịch xóa; nhiệm vụ/lịch chưa có API ghi. Xem [hợp đồng đã triển khai](../API-HOC-KY-MON-HOC.md) và [kiểm chứng](../history/2026-11-04-api-hoc-ky-mon-hoc.md). Nguồn: [quy ước chung](00-quy-uoc-va-quyet-dinh.md), [ERD](../erd.md), [API — Semesters/Courses](../THIET-KE-API-SWAGGER.md). Giai đoạn 4.
 
 ## 1. Mục tiêu và phạm vi
 
@@ -28,7 +28,7 @@ Module này quản lý Semester/Course; mẫu buổi học thuộc [Lịch](05-l
 1. Giao diện gọi deletion-preview, hiển thị số môn/buổi học bị xóa và số nhiệm vụ bị bỏ liên kết.
 2. Người dùng xác nhận thao tác trong sản phẩm; server kiểm tra lại quyền và dữ liệu tại lúc xóa. Preview không khóa dữ liệu cho DELETE sau đó.
 3. Xóa Course: ghi lịch sử thay đổi CourseId của các nhiệm vụ liên quan, bỏ liên kết môn, xóa ClassSession và Course trong cùng giao dịch.
-4. Xóa Semester: áp dụng cho các Course liên quan rồi xóa học kỳ. Nhiệm vụ/cây vẫn tồn tại với CourseId NULL.
+4. Xóa Semester: áp dụng cho các Course liên quan rồi xóa học kỳ. Nhiệm vụ/cây vẫn tồn tại với MaMonHoc NULL; xóa học kỳ cũng bỏ MaHocKy, kể cả việc chung kỳ không có môn. Xóa riêng môn giữ MaHocKy.
 5. Giữ UserId, ParentTaskId, hạn và tiến độ nhiệm vụ; truy vấn lọc theo học kỳ cũ không còn lấy các nhiệm vụ đã bỏ liên kết. Danh sách toàn bộ việc của người dùng vẫn phải thấy chúng.
 
 Cascade/SET NULL không tự tạo TaskHistory. Khi nhiệm vụ được triển khai, dịch vụ xóa cần phối hợp [Lịch sử](04-lich-su-nhiem-vu.md) trước khi database xóa/bỏ liên kết. Không công bố hoàn thành luồng xóa đầy đủ trước khi thử với nhiệm vụ thật.
@@ -37,11 +37,11 @@ Cascade/SET NULL không tự tạo TaskHistory. Khi nhiệm vụ được triể
 
 | Nhóm | Route/thao tác |
 | --- | --- |
-| Học kỳ | GET/POST /api/semesters; GET/PUT/DELETE /api/semesters/{id} |
-| Xem ảnh hưởng | GET /api/semesters/{id}/deletion-preview |
-| Môn theo học kỳ | GET/POST /api/semesters/{id}/courses |
-| Chi tiết môn | GET/PUT/DELETE /api/courses/{id} |
-| Xem ảnh hưởng môn | GET /api/courses/{id}/deletion-preview |
+| Học kỳ | GET/POST /api/v1/semesters; GET/PUT/DELETE /api/v1/semesters/{id} |
+| Xem ảnh hưởng | GET /api/v1/semesters/{id}/deletion-preview |
+| Môn theo học kỳ | GET/POST /api/v1/semesters/{id}/courses |
+| Chi tiết môn | GET/PUT/DELETE /api/v1/courses/{id} |
+| Xem ảnh hưởng môn | GET /api/v1/courses/{id}/deletion-preview |
 
 Tạo trả 201, đọc/sửa 200, xóa 204. Đầu vào sai trả 400; ID không thuộc người gọi trả 404. Cơ chế xung đột khi dữ liệu đổi sau preview phụ thuộc Q04; không hứa preview là một ảnh chụp được khóa.
 
@@ -59,4 +59,4 @@ Tạo trả 201, đọc/sửa 200, xóa 204. Đầu vào sai trả 400; ID khôn
 
 ## 7. Điểm cần chốt và điều kiện hoàn thành
 
-Chốt Q04 cho sửa/xóa đồng thời. Thống nhất nội dung cảnh báo xóa và cách UI tìm nhiệm vụ đã bỏ liên kết. Hoàn thành mốc cơ bản khi CRUD và kiểm tra hai tài khoản đạt; bổ sung nghiệm thu xóa xuyên module ngay khi có nhiệm vụ/lịch sử.
+Giao dịch ghi dùng Serializable; lỗi cập nhật đồng thời/serialization được trả 409 theo cơ chế hiện có. Preview không khóa phiên bản cho lần DELETE sau; số liệu có thể thay đổi trước khi xác nhận. Thống nhất nội dung cảnh báo xóa và cách UI tìm nhiệm vụ đã bỏ liên kết. Hoàn thành mốc cơ bản khi CRUD và kiểm tra hai tài khoản đạt; bổ sung nghiệm thu xóa xuyên module ngay khi có nhiệm vụ/lịch sử.
