@@ -35,6 +35,9 @@ try {
     if ($ArtifactsDirectory) { dotnet (Join-Path $ArtifactsDirectory 'StudyPlanner.AuthChecks.dll') }
     else { dotnet ("backend/tests/StudyPlanner.AuthChecks/bin/{0}/net10.0/StudyPlanner.AuthChecks.dll" -f $TestConfiguration) }
     if ($LASTEXITCODE -ne 0) { throw 'Auth checks failed.' }
+    if ($ArtifactsDirectory) { dotnet (Join-Path $ArtifactsDirectory 'StudyPlanner.AcademicChecks.dll') }
+    else { dotnet ("backend/tests/StudyPlanner.AcademicChecks/bin/{0}/net10.0/StudyPlanner.AcademicChecks.dll" -f $TestConfiguration) }
+    if ($LASTEXITCODE -ne 0) { throw 'Academic checks failed.' }
 }
 finally {
     $env:STUDYPLANNER_TEST_POSTGRES = $previousTestPostgres

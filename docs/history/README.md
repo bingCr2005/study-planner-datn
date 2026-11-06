@@ -23,3 +23,5 @@ Không sửa bản ghi cũ để làm mất lịch sử. Khi logic thay đổi, 
 - [2026-10-13: Ghi chú kiến trúc backend](2026-10-13-ghi-chu-kien-truc-backend.md)
 - [2026-10-13: Kế hoạch chi tiết và thiết kế API/Swagger](2026-10-13-ke-hoach-chi-tiet-api-swagger.md)
 - [2026-10-13: Đặc tả nghiệp vụ bản đầu và phạm vi gợi ý](2026-10-13-dac-ta-nghiep-vu-ban-dau.md)
+
+- [2026-11-04: API học kỳ/môn học, quyền sở hữu và xóa giữ nhiệm vụ](2026-11-04-api-hoc-ky-mon-hoc.md)
