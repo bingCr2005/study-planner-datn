@@ -40,6 +40,9 @@ public sealed class LapKeHoachConfiguration : IEntityTypeConfiguration<KhungGioR
             .HasPrincipalKey(x => new { x.Ma, x.MaNguoiDung }).OnDelete(DeleteBehavior.NoAction);
         b.Property(x => x.TrangThai).HasConversion<string>().HasMaxLength(32);
         b.HasIndex(x => new { x.MaNguoiDung, x.BatDauDuKien });
+        // Khóa tài khoản là điều phối chính; unique này là lớp bảo vệ DB cho hai lệnh Start cạnh tranh.
+        b.HasIndex(x => x.MaNguoiDung).IsUnique().HasDatabaseName("UX_phien_tu_hoc_dang_hoc")
+            .HasFilter("trang_thai = 'InProgress'");
         Check(b,t,"times", "ket_thuc_du_kien > bat_dau_du_kien");
         Check(b,t,"status", "trang_thai IN ('Planned','InProgress','Completed','Missed','Cancelled')");
         Map(b,t);

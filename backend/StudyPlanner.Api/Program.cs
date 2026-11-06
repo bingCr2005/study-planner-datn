@@ -3,6 +3,7 @@ using StudyPlanner.Infrastructure.Data;
 using Microsoft.OpenApi;
 using StudyPlanner.Api.Administration;
 using StudyPlanner.Api.Auth;
+using StudyPlanner.Api.HocTap;
 using StudyPlanner.Api.Academic;
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +41,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 //đăng ký controller (dky các dịch vụ hỗ trợ controller)
 builder.Services.AddQuanTri();
+builder.Services.AddHocTap();
 builder.Services.AddAcademic();
 builder.Services.AddStudyPlannerXacThuc(builder.Configuration, builder.Environment);
 

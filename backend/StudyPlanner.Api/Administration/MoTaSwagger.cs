@@ -14,14 +14,34 @@ public sealed class MoTaSwagger : IOperationFilter, ISchemaFilter
         "Courses" => "Quản lý môn học",
         "XacThuc" => "Đăng ký và đăng nhập",
         "HoSo" => "Hồ sơ cá nhân",
+        "NhiemVu" => "Quản lý nhiệm vụ và chia nhỏ",
+        "LichSuNhiemVu" => "Lịch sử nhiệm vụ",
+        "LichHoc" => "Quản lý lịch học theo môn",
+        "KhungGioRanh" => "Quản lý giờ rảnh",
+        "ThoiKhoaBieu" => "Thời khóa biểu",
+        "LapLich" => "Gợi ý và áp dụng lịch tự học",
+        "PhienTuHoc" => "Quản lý phiên tự học",
         _ => "API mẫu và hệ thống"
     };
 
     private static readonly Dictionary<string, string> Fields = new(StringComparer.OrdinalIgnoreCase)
     {
+        ["phienBan"] = "Phiên bản nguồn theo tài khoản; gửi If-Match dạng \"ht-N\" khi sửa dữ liệu.",
+        ["tieuDe"] = "Tiêu đề bắt buộc, tối đa 200 ký tự, không chỉ khoảng trắng.",
+        ["maHocKy"] = "Học kỳ của chính người dùng; môn nếu có phải thuộc học kỳ này.",
+        ["maMonHoc"] = "Môn của chính người dùng; có thể bỏ trống với nhiệm vụ cá nhân.",
+        ["maNhiemVuCha"] = "Cha cùng phạm vi. null để tách thành nhiệm vụ gốc.",
+        ["hanHoanThanh"] = "Hạn riêng, có offset. null có thể kế thừa hạn tổ tiên.",
+        ["hanHieuLuc"] = "Hạn dùng chung khi lọc, hiển thị lịch và xếp phiên; được server tính.",
+        ["thoiLuongDuKienPhut"] = "Ước lượng nguyên dương cho lá, tối đa 100.000 phút. Không nhập tay ở cha.",
+        ["tienDo"] = "0–100; trạng thái do server xác định. Cha lấy trung bình con trực tiếp.",
+        ["huyPhienLienQuan"] = "Chỉ true sau khi đã xem ảnh hưởng và xác nhận hủy các phiên Planned bị tác động.",
+        ["thuTrongTuan"] = "1 = thứ Hai, 7 = Chủ nhật.",
+        ["gioBatDau"] = "Giờ địa phương theo múi giờ tài khoản, ví dụ 19:00:00.",
+        ["gioKetThuc"] = "Phải sau giờ bắt đầu trong cùng ngày.",
+        ["tokenPreview"] = "Phiếu gợi ý do server ký, không được sửa nội dung, có hạn 10 phút.",
         ["ma"] = "Mã bản ghi.",
         ["ten"] = "Tên bắt buộc, tối đa 200 ký tự.",
-        ["maHocKy"] = "Học kỳ xác định khi tạo môn; không thể đổi bằng PUT.",
         ["ngayBatDau"] = "Ngày bắt đầu học kỳ, dạng yyyy-MM-dd.",
         ["ngayKetThuc"] = "Ngày kết thúc phải từ ngày bắt đầu trở đi, dạng yyyy-MM-dd.",
         ["kyHieu"] = "Mã môn tùy chọn, tối đa 50 ký tự.",
@@ -60,6 +80,7 @@ public sealed class MoTaSwagger : IOperationFilter, ISchemaFilter
         // Tránh gán nghĩa trường CRUD cho các kiểu khác, ví dụ status của ProblemDetails là mã HTTP.
         if (context.Type.Namespace != "StudyPlanner.Application.Administration" &&
             context.Type.Namespace != "StudyPlanner.Application.Auth" &&
+            context.Type.Namespace != "StudyPlanner.Application.HocTap" &&
             context.Type.Namespace != "StudyPlanner.Application.Academic" &&
             context.Type != typeof(Controllers.LivenessResponse)) return;
         if (schema.Properties is null) return;
@@ -82,6 +103,15 @@ public sealed class MoTaSwagger : IOperationFilter, ISchemaFilter
             ((OpenApiSchema)schema).Example = System.Text.Json.Nodes.JsonNode.Parse("""
                 {"taiKhoan":"0306000001","matKhau":"DemoPass2026!"}
                 """);
+        if (context.Type.Namespace == "StudyPlanner.Application.HocTap")
+        {
+            if (schema.Properties.TryGetValue("trangThai",out var state) && state is OpenApiSchema stateSchema)
+                stateSchema.Description = "Trạng thái nghiệp vụ; nhiệm vụ NotStarted/InProgress/Completed, phiên Planned/InProgress/Completed/Missed/Cancelled.";
+            if (context.Type == typeof(StudyPlanner.Application.HocTap.NhiemVuRequest))
+                ((OpenApiSchema)schema).Example = System.Text.Json.Nodes.JsonNode.Parse("""
+                    {"tieuDe":"Hoàn thiện ERD","moTa":"Đối chiếu quan hệ và ràng buộc","loai":"Assignment","mucDoUuTien":"High","hanHoanThanh":"2026-11-10T23:59:00+07:00","thoiLuongDuKienPhut":120}
+                    """);
+        }
     }
 
     public void Apply(OpenApiOperation operation, OperationFilterContext context)
@@ -89,6 +119,30 @@ public sealed class MoTaSwagger : IOperationFilter, ISchemaFilter
         var routes = context.ApiDescription.ActionDescriptor.RouteValues;
         var controller = routes.TryGetValue("controller", out var controllerName) ? controllerName ?? "" : "";
         var action = routes.TryGetValue("action", out var actionName) ? actionName ?? "" : "";
+        if (typeof(HocTap.HocTapControllerBase).IsAssignableFrom(context.MethodInfo.DeclaringType))
+        {
+            var method = context.ApiDescription.HttpMethod ?? "GET";
+            operation.Summary = action switch
+            {
+                "DanhSach" => "Xem danh sách", "ChiTiet" => "Xem chi tiết", "Them" => "Tạo mới", "Sua" => "Sửa dữ liệu", "Xoa" => "Xóa có kiểm tra ảnh hưởng",
+                "Cay" => "Xem nhánh nhiệm vụ", "ThemCon" => "Thêm nhóm nhiệm vụ con", "DoiCha" => "Chuyển hoặc tách nhiệm vụ cha", "DoiPhamVi" => "Đổi học kỳ/môn của cả cây",
+                "TienDo" => "Cập nhật tiến độ nhiệm vụ lá", "HoanThanh" => "Hoàn thành nhiệm vụ lá", "MoLai" => "Mở lại nhiệm vụ lá", "XemThayDoi" or "XemXoa" or "XemAnhHuong" => "Xem ảnh hưởng trước khi thay đổi",
+                "XemTruoc" => "Gợi ý lịch tự học, chưa ghi phiên", "ApDung" => "Áp dụng các phiên đã chọn", "BatDau" => "Bắt đầu phiên", "KetThuc" => "Kết thúc phiên, không tự hoàn thành nhiệm vụ",
+                "BoLo" => "Xác nhận bỏ lỡ phiên", "Huy" => "Hủy phiên dự kiến", _ => "Xem thời khóa biểu"
+            };
+            operation.Description = "Chỉ thao tác dữ liệu của tài khoản đăng nhập. Response có phienBan/duLieu và ETag; lỗi dùng ProblemDetails. " +
+                (method == "PUT" ? "PUT gửi đầy đủ DTO; thiếu trường tùy chọn sẽ bỏ giá trị. " : "") +
+                (controller == "LapLich" ? "Preview không ghi DB. Apply kiểm tra lại hạn, giờ rảnh, lịch bận, thời lượng và phiên bản; Idempotency-Key chống ghi lặp." : "Thay đổi ảnh hưởng phiên học yêu cầu xem trước/xác nhận; lỗi rollback toàn bộ.");
+            var preview = action is "XemTruoc" or "XemThayDoi" or "XemXoa" or "XemAnhHuong";
+            if (method != "GET" && !preview && !(controller == "LapLich" && action == "ApDung"))
+            {
+                operation.Parameters ??= [];
+                if (!operation.Parameters.Any(p => p.Name == "If-Match")) operation.Parameters.Add(new OpenApiParameter { Name="If-Match",In=ParameterLocation.Header,Required=true,Description="ETag đọc gần nhất, ví dụ \"ht-0\". Thiếu trả 428, cũ trả 409.",Schema=new OpenApiSchema { Type=JsonSchemaType.String } });
+            }
+            operation.Responses ??= [];
+            foreach (var status in new[] { "400","401","404","409","428" })
+                operation.Responses.TryAdd(status,new OpenApiResponse { Description=status == "428" ? "Thiếu If-Match." : "Lỗi có code/traceId trong ProblemDetails." });
+        }
         if (controller == "XacThuc")
         {
             operation.Summary = action == "DangKy" ? "Đăng ký tài khoản sinh viên" : "Đăng nhập";
