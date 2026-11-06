@@ -847,6 +847,11 @@ namespace StudyPlanner.Infrastructure.Migrations
 
                     b.HasIndex("MaLanApDung", "MaNguoiDung");
 
+                    b.HasIndex("MaNguoiDung")
+                        .IsUnique()
+                        .HasDatabaseName("UX_phien_tu_hoc_dang_hoc")
+                        .HasFilter("trang_thai = 'InProgress'");
+
                     b.HasIndex("MaNguoiDung", "BatDauDuKien");
 
                     b.HasIndex("MaNhiemVu", "MaNguoiDung");

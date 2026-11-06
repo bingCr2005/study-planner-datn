@@ -10,6 +10,15 @@ public sealed class QuanTriExceptionHandler : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken ct)
     {
+        if (exception is StudyPlanner.Application.HocTap.HocTapException hocTap)
+        {
+            var detail = new ProblemDetails { Status=hocTap.Status,Title=hocTap.Message,Detail=hocTap.Message,Instance=context.Request.Path };
+            detail.Extensions["code"]=hocTap.Code; detail.Extensions["traceId"]=context.TraceIdentifier;
+            if (hocTap.Details is not null) detail.Extensions["details"]=hocTap.Details;
+            context.Response.StatusCode=hocTap.Status;
+            await context.Response.WriteAsJsonAsync(detail,options:null,contentType:"application/problem+json",cancellationToken:ct);
+            return true;
+        }
         if (exception is StudyPlanner.Application.Auth.XacThucException)
         {
             await Auth.XacThucRegistration.WriteProblem(context, 401, "INVALID_CREDENTIALS", "Thông tin xác thực không hợp lệ.");
