@@ -1,4 +1,4 @@
-﻿# Lịch sử thay đổi và logic code
+# Lịch sử thay đổi và logic code
 
 Thư mục này giúp nhớ lại đã làm gì, vì sao làm và logic hoạt động thế nào. Tài liệu hỗ trợ đọc hiểu code; mỗi lần AI sửa, người dùng vẫn cần mở bản ghi và đối chiếu code/diff trước khi đưa thay đổi lên repository.
 
@@ -25,3 +25,4 @@ Không sửa bản ghi cũ để làm mất lịch sử. Khi logic thay đổi, 
 - [2026-10-13: Đặc tả nghiệp vụ bản đầu và phạm vi gợi ý](2026-10-13-dac-ta-nghiep-vu-ban-dau.md)
 
 - [2026-11-04: API học kỳ/môn học, quyền sở hữu và xóa giữ nhiệm vụ](2026-11-04-api-hoc-ky-mon-hoc.md)
+- [2026-11-06: Giải quyết conflict khi gộp main vào nhánh học kỳ/môn học](2026-11-06-giai-quyet-conflict-hoc-ky-mon-hoc.md)

@@ -38,7 +38,7 @@ async Task<WebApplication> StartAsync(string environment)
     builder.Logging.ClearProviders();
     builder.WebHost.UseUrls("http://127.0.0.1:0");
     builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(testConfig.ConnectionString));
-    builder.Services.AddAdministration();
+    builder.Services.AddQuanTri();
     builder.Services.AddAuthentication("CrudFixture")
         .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, CrudFixtureAuthentication>("CrudFixture", _ => { });
     builder.Services.AddAuthorization(options => options.AddPolicy("Admin", policy => policy.RequireRole("Admin")));
@@ -131,19 +131,19 @@ try
     int legacyClassId;
     await using (var db = new ApplicationDbContext(dbOptions))
     {
-        var saved = await db.Users.SingleAsync(x => x.Ma == userId);
+        var saved = await db.DanhSachNguoiDung.SingleAsync(x => x.Ma == userId);
         Check(saved.EmailChuanHoa == "STUDENT@EXAMPLE.TEST" && saved.MaSoSinhVien == "SV001", "Normalized identity fields persisted");
-        Check(new PasswordHasher<User>().VerifyHashedPassword(saved, saved.MatKhauBam, password) != PasswordVerificationResult.Failed,
+        Check(new PasswordHasher<NguoiDung>().VerifyHashedPassword(saved, saved.MatKhauBam, password) != PasswordVerificationResult.Failed,
             "Stored password verifies through Identity");
-        Check(!await db.Schools.AnyAsync() && !await db.StudentClasses.AnyAsync(),
+        Check(!await db.DanhSachTruong.AnyAsync() && !await db.DanhSachLopSinhVien.AnyAsync(),
             "Self-declared school/class names do not create catalog entities");
         // Danh mục chỉ được seed trực tiếp làm dữ liệu legacy; không gọi lại API đã rút.
         var now = DateTimeOffset.UtcNow;
-        var school = new School { KyHieu = "LEGACY", Ten = "Trường danh mục cũ", NgayTao = now, NgayCapNhat = now };
-        var cohort = new Cohort { Ten = "LEGACY-K2026", NamBatDau = 2026, NamKetThuc = 2030, NgayTao = now, NgayCapNhat = now };
-        var faculty = new Faculty { School = school, KyHieu = "IT", Ten = "Khoa cũ", NgayTao = now, NgayCapNhat = now };
-        var legacyClass = new StudentClass { Faculty = faculty, Cohort = cohort, Ten = "Lớp danh mục cũ", NgayTao = now, NgayCapNhat = now };
-        db.StudentClasses.Add(legacyClass); await db.SaveChangesAsync();
+        var school = new Truong { KyHieu = "LEGACY", Ten = "Trường danh mục cũ", NgayTao = now, NgayCapNhat = now };
+        var cohort = new KhoaHoc { Ten = "LEGACY-K2026", NamBatDau = 2026, NamKetThuc = 2030, NgayTao = now, NgayCapNhat = now };
+        var faculty = new Khoa { Truong = school, KyHieu = "IT", Ten = "Khoa cũ", NgayTao = now, NgayCapNhat = now };
+        var legacyClass = new LopSinhVien { Khoa = faculty, KhoaHoc = cohort, Ten = "Lớp danh mục cũ", NgayTao = now, NgayCapNhat = now };
+        db.DanhSachLopSinhVien.Add(legacyClass); await db.SaveChangesAsync();
         legacyClassId = legacyClass.Ma; saved.MaLop = legacyClassId; await db.SaveChangesAsync();
     }
     await Put($"/api/v1/admin/users/{userId}", new { email = "student@example.test", hoTen = "Đã sửa", tenTruong = "Trường mới",
@@ -153,7 +153,7 @@ try
     Check(inactive.GetProperty("tenTruong").GetString() == "Trường mới" && inactive.GetProperty("tenLop").ValueKind == JsonValueKind.Null,
         "PUT persists the self-declared school/class fields");
     await using (var db = new ApplicationDbContext(dbOptions))
-        Check((await db.Users.SingleAsync(x => x.Ma == userId)).MaLop == legacyClassId,
+        Check((await db.DanhSachNguoiDung.SingleAsync(x => x.Ma == userId)).MaLop == legacyClassId,
             "Updating the core profile preserves the legacy class FK instead of silently clearing it");
     var page = await Get("/api/v1/admin/users?trang=1&kichThuocTrang=1&dangHoatDong=false&tuKhoa=student");
     Check(page.GetProperty("tongSo").GetInt32() == 1 && page.GetProperty("danhSach").GetArrayLength() == 1 &&
@@ -175,12 +175,12 @@ try
     await using (var db = new ApplicationDbContext(dbOptions))
     {
         var now = DateTimeOffset.UtcNow;
-        var task = new TaskItem { MaNguoiDung = userId, TieuDe = "Việc trước khi xóa", NgayTao = now, NgayCapNhat = now };
-        db.Tasks.Add(task); await db.SaveChangesAsync(); taskId = task.Ma;
-        var foreignChild = new TaskItem { MaNguoiDung = foreignUserId, MaNhiemVuCha = taskId,
+        var task = new NhiemVu { MaNguoiDung = userId, TieuDe = "Việc trước khi xóa", NgayTao = now, NgayCapNhat = now };
+        db.DanhSachNhiemVu.Add(task); await db.SaveChangesAsync(); taskId = task.Ma;
+        var foreignChild = new NhiemVu { MaNguoiDung = foreignUserId, MaNhiemVuCha = taskId,
             TieuDe = "Dữ liệu fixture cố ý sai chủ", NgayTao = now, NgayCapNhat = now };
-        db.Tasks.Add(foreignChild); await db.SaveChangesAsync(); foreignChildId = foreignChild.Ma;
-        db.Notifications.Add(new Notification { MaNguoiDung = userId, MaNhiemVu = taskId, NoiDung = "Nhắc thử",
+        db.DanhSachNhiemVu.Add(foreignChild); await db.SaveChangesAsync(); foreignChildId = foreignChild.Ma;
+        db.DanhSachThongBao.Add(new ThongBao { MaNguoiDung = userId, MaNhiemVu = taskId, NoiDung = "Nhắc thử",
             ThoiDiemNhac = now.AddDays(1), NgayTao = now, NgayCapNhat = now });
         await db.SaveChangesAsync();
         // Ép bước ghi lịch sử lỗi để kiểm tra rollback, chỉ trên DB test do chương trình tạo.
@@ -189,21 +189,21 @@ try
     await Delete($"/api/v1/admin/users/{userId}", HttpStatusCode.Conflict);
     await using (var db = new ApplicationDbContext(dbOptions))
     {
-        Check(await db.Tasks.AnyAsync(x => x.Ma == foreignChildId), "User delete does not cascade another owner's inconsistent child");
-        db.Tasks.Remove(await db.Tasks.SingleAsync(x => x.Ma == foreignChildId)); await db.SaveChangesAsync();
+        Check(await db.DanhSachNhiemVu.AnyAsync(x => x.Ma == foreignChildId), "User delete does not cascade another owner's inconsistent child");
+        db.DanhSachNhiemVu.Remove(await db.DanhSachNhiemVu.SingleAsync(x => x.Ma == foreignChildId)); await db.SaveChangesAsync();
     }
     await Delete($"/api/v1/admin/users/{foreignUserId}");
     await Delete($"/api/v1/admin/users/{userId}", HttpStatusCode.InternalServerError);
     await using (var db = new ApplicationDbContext(dbOptions))
     {
-        Check(await db.Users.AnyAsync(x => x.Ma == userId) && await db.Tasks.AnyAsync(x => x.Ma == taskId), "Failed history write rolls user/task deletion back");
+        Check(await db.DanhSachNguoiDung.AnyAsync(x => x.Ma == userId) && await db.DanhSachNhiemVu.AnyAsync(x => x.Ma == taskId), "Failed history write rolls user/task deletion back");
         await db.Database.ExecuteSqlRawAsync("DROP TRIGGER fail_history ON lich_su_nhiem_vu; DROP FUNCTION fail_test_history();");
         await db.Database.ExecuteSqlRawAsync("CREATE FUNCTION fail_test_user_delete() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test failure'; END $$; CREATE TRIGGER fail_user_delete BEFORE DELETE ON nguoi_dung FOR EACH ROW EXECUTE FUNCTION fail_test_user_delete();");
     }
     await Delete($"/api/v1/admin/users/{userId}", HttpStatusCode.InternalServerError);
     await using (var db = new ApplicationDbContext(dbOptions))
     {
-        Check(await db.Users.AnyAsync(x => x.Ma == userId) && !await db.TaskHistories.AnyAsync(x => x.MaNhiemVu == taskId),
+        Check(await db.DanhSachNguoiDung.AnyAsync(x => x.Ma == userId) && !await db.DanhSachLichSuNhiemVu.AnyAsync(x => x.MaNhiemVu == taskId),
             "Later delete failure rolls previously saved history back");
         await db.Database.ExecuteSqlRawAsync("DROP TRIGGER fail_user_delete ON nguoi_dung; DROP FUNCTION fail_test_user_delete();");
     }
@@ -211,16 +211,16 @@ try
     await Get($"/api/v1/admin/users/{userId}", HttpStatusCode.NotFound);
     await using (var db = new ApplicationDbContext(dbOptions))
     {
-        Check(!await db.Tasks.AnyAsync(x => x.MaNguoiDung == userId) && !await db.Notifications.AnyAsync(x => x.MaNguoiDung == userId), "User delete cascades task and reminder");
-        var history = await db.TaskHistories.SingleAsync(x => x.MaNhiemVu == taskId);
-        Check(history.MaNguoiDung == null && history.HanhDong == TaskHistoryAction.Deleted && history.DuLieuTruoc != null, "History survives user delete with anonymous owner");
+        Check(!await db.DanhSachNhiemVu.AnyAsync(x => x.MaNguoiDung == userId) && !await db.DanhSachThongBao.AnyAsync(x => x.MaNguoiDung == userId), "User delete cascades task and reminder");
+        var history = await db.DanhSachLichSuNhiemVu.SingleAsync(x => x.MaNhiemVu == taskId);
+        Check(history.MaNguoiDung == null && history.HanhDong == HanhDongLichSuNhiemVu.Deleted && history.DuLieuTruoc != null, "History survives user delete with anonymous owner");
         using var snapshot = JsonDocument.Parse(history.DuLieuTruoc!);
         Check(snapshot.RootElement.GetProperty("ma").GetInt32() == taskId &&
             snapshot.RootElement.GetProperty("tieuDe").GetString() == "Việc trước khi xóa" && !snapshot.RootElement.TryGetProperty("matKhauBam", out _),
             "Deletion history keeps the task snapshot without credential data");
-        var adminUser = new User { Email = "admin@example.test", EmailChuanHoa = "ADMIN@EXAMPLE.TEST", HoTen = "Admin thử",
-            MatKhauBam = "test-only-placeholder", VaiTro = UserRole.Admin, NgayTao = DateTimeOffset.UtcNow, NgayCapNhat = DateTimeOffset.UtcNow };
-        db.Users.Add(adminUser); await db.SaveChangesAsync();
+        var adminUser = new NguoiDung { Email = "admin@example.test", EmailChuanHoa = "ADMIN@EXAMPLE.TEST", HoTen = "Admin thử",
+            MatKhauBam = "test-only-placeholder", VaiTro = VaiTroNguoiDung.Admin, NgayTao = DateTimeOffset.UtcNow, NgayCapNhat = DateTimeOffset.UtcNow };
+        db.DanhSachNguoiDung.Add(adminUser); await db.SaveChangesAsync();
         await Delete($"/api/v1/admin/users/{adminUser.Ma}", HttpStatusCode.Conflict);
         await Send(HttpMethod.Patch, $"/api/v1/admin/users/{adminUser.Ma}/deactivate", null, HttpStatusCode.Conflict);
         await Put($"/api/v1/admin/users/{adminUser.Ma}", new { email = adminUser.Email, hoTen = adminUser.HoTen, dangHoatDong = false }, HttpStatusCode.Conflict);
@@ -234,11 +234,11 @@ try
     int[] adminIds;
     await using (var db = new ApplicationDbContext(dbOptions))
     {
-        var secondAdmin = new User { Email = "admin2@example.test", EmailChuanHoa = "ADMIN2@EXAMPLE.TEST", HoTen = "Admin thử thứ hai",
-            VaiTro = UserRole.Admin, NgayTao = DateTimeOffset.UtcNow, NgayCapNhat = DateTimeOffset.UtcNow };
-        secondAdmin.MatKhauBam = new PasswordHasher<User>().HashPassword(secondAdmin, Guid.NewGuid().ToString("N"));
-        db.Users.Add(secondAdmin); await db.SaveChangesAsync();
-        adminIds = await db.Users.Where(x => x.VaiTro == UserRole.Admin && x.DangHoatDong).Select(x => x.Ma).ToArrayAsync();
+        var secondAdmin = new NguoiDung { Email = "admin2@example.test", EmailChuanHoa = "ADMIN2@EXAMPLE.TEST", HoTen = "Admin thử thứ hai",
+            VaiTro = VaiTroNguoiDung.Admin, NgayTao = DateTimeOffset.UtcNow, NgayCapNhat = DateTimeOffset.UtcNow };
+        secondAdmin.MatKhauBam = new PasswordHasher<NguoiDung>().HashPassword(secondAdmin, Guid.NewGuid().ToString("N"));
+        db.DanhSachNguoiDung.Add(secondAdmin); await db.SaveChangesAsync();
+        adminIds = await db.DanhSachNguoiDung.Where(x => x.VaiTro == VaiTroNguoiDung.Admin && x.DangHoatDong).Select(x => x.Ma).ToArrayAsync();
     }
     var competingDeletes = await Task.WhenAll(client.DeleteAsync($"/api/v1/admin/users/{adminIds[0]}"), client.DeleteAsync($"/api/v1/admin/users/{adminIds[1]}"));
     Check(competingDeletes.Count(x => x.StatusCode == HttpStatusCode.NoContent) == 1 &&
@@ -246,14 +246,14 @@ try
         "Concurrent admin deletion retains one active administrator (" + string.Join(",", competingDeletes.Select(x => (int)x.StatusCode)) + ")");
     foreach (var response in competingDeletes) response.Dispose();
     await using (var db = new ApplicationDbContext(dbOptions))
-        Check(await db.Users.CountAsync(x => x.VaiTro == UserRole.Admin && x.DangHoatDong) == 1, "Last active admin remains in PostgreSQL");
+        Check(await db.DanhSachNguoiDung.CountAsync(x => x.VaiTro == VaiTroNguoiDung.Admin && x.DangHoatDong) == 1, "Last active admin remains in PostgreSQL");
     var document = await Get("/swagger/v1/swagger.json");
     Check(document.GetProperty("paths").TryGetProperty("/api/v1/admin/users/{id}", out _), "CRUD appears in OpenAPI");
     Check(document.GetProperty("paths").EnumerateObject().All(path => !path.Name.StartsWith("/api/v1/catalogs/", StringComparison.Ordinal) &&
         !new[] { "/api/v1/admin/schools", "/api/v1/admin/faculties", "/api/v1/admin/cohorts", "/api/v1/admin/student-classes" }
             .Any(retired => path.Name == retired || path.Name.StartsWith(retired + "/", StringComparison.Ordinal))),
         "Retired catalogs are absent from OpenAPI, not merely hidden behind authorization");
-    var userSchema = document.GetProperty("components").GetProperty("schemas").GetProperty("UserResponse").GetProperty("properties");
+    var userSchema = document.GetProperty("components").GetProperty("schemas").GetProperty("NguoiDungResponse").GetProperty("properties");
     Check(userSchema.TryGetProperty("tenTruong", out _) && userSchema.TryGetProperty("tenLop", out _) && !userSchema.TryGetProperty("maLop", out _),
         "Swagger exposes self-declared profile names without the legacy class ID");
     Check(!document.GetRawText().Contains("matKhauBam", StringComparison.OrdinalIgnoreCase), "OpenAPI excludes PasswordHash");

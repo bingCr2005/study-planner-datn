@@ -66,8 +66,8 @@ async Task VerifyColumnRenameMigrationAsync()
     const int childId = fixtureId + 1;
     var fixtureTime = new DateTimeOffset(2026, 10, 31, 7, 0, 0, TimeSpan.Zero);
     var fixturePassword = Guid.NewGuid().ToString("N");
-    var fixtureUser = new User { Ma = fixtureId, Email = "migration-fixture@example.test" };
-    var passwordHasher = new PasswordHasher<User>();
+    var fixtureUser = new NguoiDung { Ma = fixtureId, Email = "migration-fixture@example.test" };
+    var passwordHasher = new PasswordHasher<NguoiDung>();
     var fixtureHash = passwordHasher.HashPassword(fixtureUser, fixturePassword);
     await using var schema = new ApplicationDbContext(options);
     var migrator = schema.GetService<IMigrator>();
@@ -219,19 +219,19 @@ async Task VerifyColumnRenameMigrationAsync()
         await seed.ExecuteNonQueryAsync();
     }
     await migrator.MigrateAsync();
-    Check(await schema.Tasks.Where(x => x.Ma == childId).Select(x => x.MaHocKy).SingleAsync() == fixtureId,
+    Check(await schema.DanhSachNhiemVu.Where(x => x.Ma == childId).Select(x => x.MaHocKy).SingleAsync() == fixtureId,
         "Planning migration backfills task semester from its owned course");
-    var reminder = await schema.Reminders.SingleAsync(x => x.MaThongBaoCu == fixtureId);
+    var reminder = await schema.DanhSachLichNhac.SingleAsync(x => x.MaThongBaoCu == fixtureId);
     Check(reminder.NhacTruocPhut == null && reminder.NgayPhat == fixtureTime.AddHours(-25).AddMinutes(1) &&
         reminder.TrangThai.ToString() == "Delivered", "Legacy reminder preserves delivered time without guessing offset");
-    Check(await schema.Notifications.AnyAsync(x => x.Ma == fixtureId && x.MaLichNhac == reminder.Ma),
+    Check(await schema.DanhSachThongBao.AnyAsync(x => x.Ma == fixtureId && x.MaLichNhac == reminder.Ma),
         "Delivered notification links to its migrated reminder");
     foreach (var state in new[] { "Pending", "Failed", "Cancelled" })
     {
-        var row = await schema.Reminders.SingleAsync(x => x.TrangThai.ToString() == state);
+        var row = await schema.DanhSachLichNhac.SingleAsync(x => x.TrangThai.ToString() == state);
         Check(row.ThoiDiemNhac == fixtureTime && row.SoLanThu == 2 && row.LanThuTiepTheoLuc == fixtureTime,
             "Reminder migration preserves schedule/retry for " + state);
-        Check(!await schema.Notifications.AnyAsync(x => x.MaLichNhac == row.Ma), "Undelivered legacy rows do not become inbox messages");
+        Check(!await schema.DanhSachThongBao.AnyAsync(x => x.MaLichNhac == row.Ma), "Undelivered legacy rows do not become inbox messages");
     }
     async Task RejectSql(string sql, string state)
     {
@@ -251,22 +251,22 @@ async Task VerifyColumnRenameMigrationAsync()
     await RejectSql($"INSERT INTO doan_thuc_hoc(ma_nguoi_dung,ma_nhiem_vu,bat_dau_thuc_te) VALUES({fixtureId},{childId},now()),({fixtureId},{childId},now())", "23505");
     await RejectSql($"INSERT INTO khung_gio_ranh(ma_nguoi_dung,thu_trong_tuan,gio_bat_dau,gio_ket_thuc,ngay_bat_dau,ngay_ket_thuc,dang_su_dung,ngay_tao,ngay_cap_nhat) VALUES({fixtureId},8,'20:00','19:00','2026-10-01','2026-10-31',true,now(),now())", "23514");
     // Model hiện tại chỉ đọc EF sau khi cả cột hồ sơ và tên bảng đã nâng cấp.
-    var migrated = await schema.Users.AsNoTracking().SingleAsync(user => user.Ma == fixtureId);
+    var migrated = await schema.DanhSachNguoiDung.AsNoTracking().SingleAsync(user => user.Ma == fixtureId);
     Check(migrated.TenTruong == "Trường kiểm thử chuyển đổi" && migrated.TenLop == "MIG-CNTT01" && migrated.MaLop == fixtureId,
         "Profile names are backfilled from the legacy school/class without dropping the legacy FK");
-    var unlinked = await schema.Users.AsNoTracking().SingleAsync(user => user.Ma == fixtureId + 2);
+    var unlinked = await schema.DanhSachNguoiDung.AsNoTracking().SingleAsync(user => user.Ma == fixtureId + 2);
     Check(unlinked.TenTruong == null && unlinked.TenLop == null && unlinked.MaLop == null,
         "Users without a legacy class keep optional profile names empty");
     Check(migrated.MatKhauBam == fixtureHash && passwordHasher.VerifyHashedPassword(migrated, migrated.MatKhauBam, fixturePassword) != PasswordVerificationResult.Failed,
         "Legacy password hash remains byte-identical and still verifies after upgrade");
-    Check(await schema.Tasks.AsNoTracking().AnyAsync(task => task.Ma == childId && task.ParentTask!.Ma == fixtureId &&
-        task.Course!.Semester.User.Ma == fixtureId && task.User.Class!.Faculty.School.Ma == fixtureId),
+    Check(await schema.DanhSachNhiemVu.AsNoTracking().AnyAsync(task => task.Ma == childId && task.NhiemVuCha!.Ma == fixtureId &&
+        task.MonHoc!.HocKy.NguoiDung.Ma == fixtureId && task.NguoiDung.LopSinhVien!.Khoa.Truong.Ma == fixtureId),
         "Renamed ownership, task tree, course and catalog foreign keys remain readable");
     // Chỉ fixture trong DB tên ngẫu nhiên do lượt test này tạo; không đụng cấu hình appsettings/Neon.
     var planningTables = new[] { "lich_nhac", "phien_tu_hoc", "khung_gio_ranh", "lan_ap_dung_lich", "doan_thuc_hoc", "tep_dinh_kem_nhiem_vu", "quy_tac_uu_tien" };
     await using var cleanup = new NpgsqlCommand("TRUNCATE TABLE " + string.Join(",", tables.Select(table => Quoted(vietnameseTables[table])).Concat(planningTables.Select(Quoted))) + " RESTART IDENTITY", connection);
     await cleanup.ExecuteNonQueryAsync();
-    Check(!await schema.Users.AnyAsync() && !await schema.Tasks.AnyAsync() && !await schema.TaskHistories.AnyAsync(),
+    Check(!await schema.DanhSachNguoiDung.AnyAsync() && !await schema.DanhSachNhiemVu.AnyAsync() && !await schema.DanhSachLichSuNhiemVu.AnyAsync(),
         "Migration fixture removed before the HTTP authentication scenarios");
 }
 try
@@ -276,10 +276,10 @@ try
     builder.Logging.ClearProviders(); builder.WebHost.UseUrls("http://127.0.0.1:0");
     builder.Configuration["Auth:SigningKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
     builder.Services.AddDbContext<ApplicationDbContext>(o => o.UseNpgsql(config.ConnectionString));
-    builder.Services.AddAdministration(); builder.Services.AddStudyPlannerAuth(builder.Configuration, builder.Environment);
+    builder.Services.AddQuanTri(); builder.Services.AddStudyPlannerXacThuc(builder.Configuration, builder.Environment);
     builder.Services.AddEndpointsApiExplorer(); builder.Services.AddSwaggerGen(o => {
-        o.TagActionsBy(api => [VietnameseSwagger.Group(api.ActionDescriptor.RouteValues["controller"] ?? "")]);
-        o.OperationFilter<VietnameseSwagger>(); o.SchemaFilter<VietnameseSwagger>();
+        o.TagActionsBy(api => [MoTaSwagger.Group(api.ActionDescriptor.RouteValues["controller"] ?? "")]);
+        o.OperationFilter<MoTaSwagger>(); o.SchemaFilter<MoTaSwagger>();
     });
     app = builder.Build(); app.UseExceptionHandler(); app.UseSwagger();
     // Chỉ fixture test: mỗi ca chức năng dùng IP riêng để không chạm quota trong cùng một giây.
@@ -388,13 +388,13 @@ try
     await Send(HttpMethod.Post, "/api/v1/auth/register", new { email = "second@example.test", hoTen = "Second", matKhau = password, maSoSinhVien = "0306000002", tenTruong = "Trường thử", tenLop = "CNTT02", nganhHoc = "IT" }, 201);
     await using (var db = new ApplicationDbContext(options))
     {
-        var second = await db.Users.SingleAsync(x => x.EmailChuanHoa == "SECOND@EXAMPLE.TEST");
+        var second = await db.DanhSachNguoiDung.SingleAsync(x => x.EmailChuanHoa == "SECOND@EXAMPLE.TEST");
         second.MaSoSinhVien = "first@example.test"; await db.SaveChangesAsync();
     }
     await Send(HttpMethod.Post, "/api/v1/auth/login", new { taiKhoan = "first@example.test", matKhau = password }, 401);
     await using (var db = new ApplicationDbContext(options))
     {
-        var second = await db.Users.SingleAsync(x => x.EmailChuanHoa == "SECOND@EXAMPLE.TEST");
+        var second = await db.DanhSachNguoiDung.SingleAsync(x => x.EmailChuanHoa == "SECOND@EXAMPLE.TEST");
         second.MaSoSinhVien = null; await db.SaveChangesAsync();
     }
     await Send(HttpMethod.Post, "/api/v1/auth/login", new { taiKhoan = "second@example.test", matKhau = password }, 200);
@@ -415,14 +415,14 @@ try
     await Send(HttpMethod.Patch, "/api/v1/users/me", new { maLop = 1 }, 400);
     await Send(HttpMethod.Patch, "/api/v1/users/me", new { tenTruong = new string('a', 201) }, 400);
     await Send(HttpMethod.Patch, "/api/v1/users/me", new { tenLop = true }, 400);
-    await using (var db = new ApplicationDbContext(options)) { (await db.Users.FindAsync(id))!.DangHoatDong = false; await db.SaveChangesAsync(); }
+    await using (var db = new ApplicationDbContext(options)) { (await db.DanhSachNguoiDung.FindAsync(id))!.DangHoatDong = false; await db.SaveChangesAsync(); }
     await Send(HttpMethod.Get, "/api/v1/users/me", null, 401);
     await Send(HttpMethod.Post, "/api/v1/auth/login", new { taiKhoan = "first@example.test", matKhau = password }, 401);
     await Send(HttpMethod.Post, "/api/v1/auth/login", new { taiKhoan = "0306000001", matKhau = password }, 401);
-    await using (var db = new ApplicationDbContext(options)) { var u = (await db.Users.FindAsync(id))!; u.DangHoatDong = true; u.VaiTro = UserRole.Admin; await db.SaveChangesAsync(); }
+    await using (var db = new ApplicationDbContext(options)) { var u = (await db.DanhSachNguoiDung.FindAsync(id))!; u.DangHoatDong = true; u.VaiTro = VaiTroNguoiDung.Admin; await db.SaveChangesAsync(); }
     await Send(HttpMethod.Get, "/api/v1/admin/users", null, 200); // Quyền cập nhật từ DB, không phải claim cũ.
     await AssertRetiredRoutes("Admin");
-    await using (var db = new ApplicationDbContext(options)) { (await db.Users.FindAsync(id))!.VaiTro = UserRole.Student; await db.SaveChangesAsync(); }
+    await using (var db = new ApplicationDbContext(options)) { (await db.DanhSachNguoiDung.FindAsync(id))!.VaiTro = VaiTroNguoiDung.Student; await db.SaveChangesAsync(); }
     await Send(HttpMethod.Get, "/api/v1/admin/users", null, 403);
     var nextPassword = Guid.NewGuid().ToString("N");
     await Send(HttpMethod.Post, "/api/v1/users/me/change-password", new { matKhauHienTai = "wrong", matKhauMoi = nextPassword }, 401);
@@ -435,13 +435,13 @@ try
     await Send(HttpMethod.Post, "/api/v1/auth/login", new { taiKhoan = "0306000001", matKhau = nextPassword }, 200);
     client.DefaultRequestHeaders.Authorization = new("Bearer", login.GetProperty("tokenTruyCap").GetString());
     await Send(HttpMethod.Get, "/api/v1/users/me", null, 200);
-    await using (var db = new ApplicationDbContext(options)) { db.Users.Remove((await db.Users.FindAsync(id))!); await db.SaveChangesAsync(); }
+    await using (var db = new ApplicationDbContext(options)) { db.DanhSachNguoiDung.Remove((await db.DanhSachNguoiDung.FindAsync(id))!); await db.SaveChangesAsync(); }
     await Send(HttpMethod.Get, "/api/v1/users/me", null, 401);
     client.DefaultRequestHeaders.Authorization = new("Bearer", token[..^4] + "bad!");
     await Send(HttpMethod.Get, "/api/v1/users/me", null, 401);
     // Token hết hạn/ký sai/issuer sai được tạo bởi thư viện chuẩn, không tự mock validator.
-    User validatorUser;
-    await using (var db = new ApplicationDbContext(options)) validatorUser = await db.Users.SingleAsync(x => x.EmailChuanHoa == "SECOND@EXAMPLE.TEST");
+    NguoiDung validatorUser;
+    await using (var db = new ApplicationDbContext(options)) validatorUser = await db.DanhSachNguoiDung.SingleAsync(x => x.EmailChuanHoa == "SECOND@EXAMPLE.TEST");
     var stamp = app.Services.GetRequiredService<JwtTokenIssuer>().Stamp(validatorUser);
     foreach (var variant in new[] { "expired", "issuer", "audience", "signature" })
     {
@@ -477,13 +477,13 @@ try
     var passwordResponses = openapi.GetProperty("paths").GetProperty("/api/v1/users/me/change-password").GetProperty("post").GetProperty("responses");
     Check(passwordResponses.TryGetProperty("200", out var passwordOk) && passwordOk.TryGetProperty("content", out _) &&
         !passwordResponses.TryGetProperty("204", out _), "OpenAPI documents password change as 200 with a response body");
-    var required = schemas.GetProperty("RegisterRequest").GetProperty("required").EnumerateArray().Select(x => x.GetString()).ToArray();
+    var required = schemas.GetProperty("DangKyRequest").GetProperty("required").EnumerateArray().Select(x => x.GetString()).ToArray();
     Check(new[] { "email", "hoTen", "matKhau", "maSoSinhVien", "tenTruong", "tenLop", "nganhHoc" }.All(required.Contains),
         "OpenAPI requires every registration field");
-    var loginProperties = schemas.GetProperty("LoginRequest").GetProperty("properties");
+    var loginProperties = schemas.GetProperty("DangNhapRequest").GetProperty("properties");
     Check(loginProperties.TryGetProperty("taiKhoan", out _) && !loginProperties.TryGetProperty("email", out _),
         "Swagger login exposes taiKhoan, not the old email request field");
-    Check(schemas.GetProperty("RegisterRequest").GetProperty("example").GetProperty("maSoSinhVien").GetString() == "0306000001",
+    Check(schemas.GetProperty("DangKyRequest").GetProperty("example").GetProperty("maSoSinhVien").GetString() == "0306000001",
         "Swagger provides a usable registration example with leading zeroes");
     for (var i = 0; i < 22; i++) { using var response = await client.PostAsJsonAsync("/api/v1/auth/login", new { taiKhoan = "missing@example.test", matKhau = password });
         if (response.StatusCode == HttpStatusCode.TooManyRequests) { Check(true, "Login rate limit"); break; }

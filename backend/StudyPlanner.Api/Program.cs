@@ -17,10 +17,10 @@ builder.Services.AddSwaggerGen(options =>
         Title = "Study Planner API",
         Version = "v1"
     });
-    options.TagActionsBy(api => new[] { VietnameseSwagger.Group(
+    options.TagActionsBy(api => new[] { MoTaSwagger.Group(
         api.ActionDescriptor.RouteValues.TryGetValue("controller", out var controller) ? controller ?? "" : "") });
-    options.OperationFilter<VietnameseSwagger>();
-    options.SchemaFilter<VietnameseSwagger>();
+    options.OperationFilter<MoTaSwagger>();
+    options.SchemaFilter<MoTaSwagger>();
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT",
@@ -39,9 +39,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 //đăng ký controller (dky các dịch vụ hỗ trợ controller)
-builder.Services.AddAdministration();
+builder.Services.AddQuanTri();
 builder.Services.AddAcademic();
-builder.Services.AddStudyPlannerAuth(builder.Configuration, builder.Environment);
+builder.Services.AddStudyPlannerXacThuc(builder.Configuration, builder.Environment);
 
 
 
@@ -54,12 +54,12 @@ if (!string.IsNullOrWhiteSpace(bootstrapEmail))
     await using var scope = app.Services.CreateAsyncScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
-    if (await db.Users.AnyAsync(x => x.VaiTro == StudyPlanner.Domain.Enums.UserRole.Admin))
+    if (await db.DanhSachNguoiDung.AnyAsync(x => x.VaiTro == StudyPlanner.Domain.Enums.VaiTroNguoiDung.Admin))
         throw new InvalidOperationException("Đã có Admin; không dùng lại lệnh khởi tạo.");
     var normalized = bootstrapEmail.Trim().ToUpperInvariant();
-    var user = await db.Users.SingleOrDefaultAsync(x => x.EmailChuanHoa == normalized && x.DangHoatDong)
+    var user = await db.DanhSachNguoiDung.SingleOrDefaultAsync(x => x.EmailChuanHoa == normalized && x.DangHoatDong)
         ?? throw new InvalidOperationException("Cần đăng ký tài khoản hoạt động trước.");
-    user.VaiTro = StudyPlanner.Domain.Enums.UserRole.Admin; user.NgayCapNhat = DateTimeOffset.UtcNow;
+    user.VaiTro = StudyPlanner.Domain.Enums.VaiTroNguoiDung.Admin; user.NgayCapNhat = DateTimeOffset.UtcNow;
     await db.SaveChangesAsync(); await transaction.CommitAsync();
     Console.WriteLine("Đã khởi tạo Admin. Chạy lại API bình thường và đăng nhập.");
     return;

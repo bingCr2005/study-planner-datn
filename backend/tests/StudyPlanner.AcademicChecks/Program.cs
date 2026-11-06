@@ -34,8 +34,8 @@ try
     var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Development" });
     builder.Logging.ClearProviders(); builder.WebHost.UseUrls("http://127.0.0.1:0");
     builder.Services.AddDbContext<ApplicationDbContext>(o => o.UseNpgsql(config.ConnectionString).AddInterceptors(failure));
-    builder.Services.AddAdministration(); builder.Services.AddAcademic();
-    builder.Services.AddStudyPlannerAuth(builder.Configuration, builder.Environment);
+    builder.Services.AddQuanTri(); builder.Services.AddAcademic();
+    builder.Services.AddStudyPlannerXacThuc(builder.Configuration, builder.Environment);
     builder.Services.AddEndpointsApiExplorer(); builder.Services.AddSwaggerGen();
     app = builder.Build(); app.UseExceptionHandler(); app.UseSwagger();
     app.UseAuthentication(); app.UseAuthorization(); app.UseRateLimiter(); app.MapControllers(); await app.StartAsync();
@@ -47,9 +47,9 @@ try
     Check(!swagger.GetProperty("components").GetProperty("schemas").GetProperty("CourseRequest").GetProperty("properties").TryGetProperty("maHocKy", out _), "Swagger course update cannot reassign semester");
     // PostgreSQL stores microseconds; use whole milliseconds for exact round trips.
     var now = DateTimeOffset.FromUnixTimeMilliseconds(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-    var a = new User { Email = "a@example.test", EmailChuanHoa = "A@EXAMPLE.TEST", HoTen = "A", MatKhauBam = Guid.NewGuid().ToString(), NgayTao = now, NgayCapNhat = now };
-    var b = new User { Email = "b@example.test", EmailChuanHoa = "B@EXAMPLE.TEST", HoTen = "B", MatKhauBam = Guid.NewGuid().ToString(), NgayTao = now, NgayCapNhat = now };
-    await using (var db = new ApplicationDbContext(options)) { db.Users.AddRange(a, b); await db.SaveChangesAsync(); }
+    var a = new NguoiDung { Email = "a@example.test", EmailChuanHoa = "A@EXAMPLE.TEST", HoTen = "A", MatKhauBam = Guid.NewGuid().ToString(), NgayTao = now, NgayCapNhat = now };
+    var b = new NguoiDung { Email = "b@example.test", EmailChuanHoa = "B@EXAMPLE.TEST", HoTen = "B", MatKhauBam = Guid.NewGuid().ToString(), NgayTao = now, NgayCapNhat = now };
+    await using (var db = new ApplicationDbContext(options)) { db.DanhSachNguoiDung.AddRange(a, b); await db.SaveChangesAsync(); }
     var issuer = app.Services.GetRequiredService<JwtTokenIssuer>();
     var tokenA = issuer.Issue(a).TokenTruyCap; var tokenB = issuer.Issue(b).TokenTruyCap;
     void Actor(string? token) => client.DefaultRequestHeaders.Authorization = token == null ? null : new AuthenticationHeaderValue("Bearer", token);
@@ -119,10 +119,10 @@ try
     else Console.WriteLine("FE adapter check skipped: set STUDYPLANNER_FE_ROOT.");
     await using (var db = new ApplicationDbContext(options))
     {
-        var parent = new TaskItem { MaNguoiDung = a.Ma, MaHocKy = sid, MaMonHoc = cid, TieuDe = "Cha", Loai = TaskType.Assignment, HanHoanThanh = now.AddDays(10), NgayTao = now, NgayCapNhat = now };
-        var child = new TaskItem { MaNguoiDung = a.Ma, MaHocKy = sid, MaMonHoc = cid, ParentTask = parent, TieuDe = "Con", Loai = TaskType.Revision, TienDo = 50, TrangThai = TaskItemStatus.InProgress, HanHoanThanh = now.AddDays(11), NgayTao = now, NgayCapNhat = now };
-        db.Tasks.AddRange(parent, child, new TaskItem { MaNguoiDung = a.Ma, MaHocKy = sid, TieuDe = "Việc chung kỳ", NgayTao = now, NgayCapNhat = now });
-        db.ClassSessions.Add(new ClassSession { MaMonHoc = cid, ThuTrongTuan = 1, GioBatDau = new(8, 0), GioKetThuc = new(9, 0), NgayTao = now, NgayCapNhat = now });
+        var parent = new NhiemVu { MaNguoiDung = a.Ma, MaHocKy = sid, MaMonHoc = cid, TieuDe = "Cha", Loai = LoaiNhiemVu.Assignment, HanHoanThanh = now.AddDays(10), NgayTao = now, NgayCapNhat = now };
+        var child = new NhiemVu { MaNguoiDung = a.Ma, MaHocKy = sid, MaMonHoc = cid, NhiemVuCha = parent, TieuDe = "Con", Loai = LoaiNhiemVu.Revision, TienDo = 50, TrangThai = TrangThaiNhiemVu.InProgress, HanHoanThanh = now.AddDays(11), NgayTao = now, NgayCapNhat = now };
+        db.DanhSachNhiemVu.AddRange(parent, child, new NhiemVu { MaNguoiDung = a.Ma, MaHocKy = sid, TieuDe = "Việc chung kỳ", NgayTao = now, NgayCapNhat = now });
+        db.DanhSachLichHoc.Add(new LichHoc { MaMonHoc = cid, ThuTrongTuan = 1, GioBatDau = new(8, 0), GioKetThuc = new(9, 0), NgayTao = now, NgayCapNhat = now });
         await db.SaveChangesAsync(); parentId = parent.Ma; childId = child.Ma;
     }
     var preview = await Get(cp + "/deletion-preview");
@@ -130,28 +130,28 @@ try
     failure.Enabled = true;
     await Delete(cp, HttpStatusCode.InternalServerError);
     await using (var db = new ApplicationDbContext(options))
-        Check(await db.Courses.AnyAsync(x => x.Ma == cid) && await db.Tasks.CountAsync(x => x.MaMonHoc == cid) == 2 && await db.TaskHistories.CountAsync() == 0 && await db.ClassSessions.CountAsync() == 1, "failed delete rolls back history, links and schedules");
+        Check(await db.DanhSachMonHoc.AnyAsync(x => x.Ma == cid) && await db.DanhSachNhiemVu.CountAsync(x => x.MaMonHoc == cid) == 2 && await db.DanhSachLichSuNhiemVu.CountAsync() == 0 && await db.DanhSachLichHoc.CountAsync() == 1, "failed delete rolls back history, links and schedules");
     failure.Enabled = false;
     await Delete(cp); await Get(cp, HttpStatusCode.NotFound);
     await using (var db = new ApplicationDbContext(options))
     {
-        var child = await db.Tasks.SingleAsync(x => x.Ma == childId);
-        Check(child.MaMonHoc == null && child.MaHocKy == sid && child.MaNhiemVuCha == parentId && child.TienDo == 50 && child.TrangThai == TaskItemStatus.InProgress && child.HanHoanThanh == now.AddDays(11), "course deletion keeps tree, semester, deadlines and progress");
-        Check(await db.TaskHistories.CountAsync() == 2 && await db.ClassSessions.CountAsync() == 0, "history created and schedules removed");
+        var child = await db.DanhSachNhiemVu.SingleAsync(x => x.Ma == childId);
+        Check(child.MaMonHoc == null && child.MaHocKy == sid && child.MaNhiemVuCha == parentId && child.TienDo == 50 && child.TrangThai == TrangThaiNhiemVu.InProgress && child.HanHoanThanh == now.AddDays(11), "course deletion keeps tree, semester, deadlines and progress");
+        Check(await db.DanhSachLichSuNhiemVu.CountAsync() == 2 && await db.DanhSachLichHoc.CountAsync() == 0, "history created and schedules removed");
     }
     preview = await Get(path + "/deletion-preview");
     Check(preview.GetProperty("soMonHoc").GetInt32() == 1 && preview.GetProperty("soNhiemVuBoLienKet").GetInt32() == 3, "semester impact includes standalone and detached course tasks");
     failure.Enabled = true;
     await Delete(path, HttpStatusCode.InternalServerError);
     await using (var db = new ApplicationDbContext(options))
-        Check(await db.Semesters.AnyAsync(x => x.Ma == sid) && await db.Tasks.CountAsync(x => x.MaHocKy == sid) == 3 && await db.TaskHistories.CountAsync() == 2, "failed semester delete rolls back all link changes and histories");
+        Check(await db.DanhSachHocKy.AnyAsync(x => x.Ma == sid) && await db.DanhSachNhiemVu.CountAsync(x => x.MaHocKy == sid) == 3 && await db.DanhSachLichSuNhiemVu.CountAsync() == 2, "failed semester delete rolls back all link changes and histories");
     failure.Enabled = false;
     await Delete(path);
     await using (var db = new ApplicationDbContext(options))
     {
-        Check(await db.Tasks.CountAsync() == 3 && await db.Tasks.AllAsync(x => x.MaHocKy == null && x.MaMonHoc == null), "semester deletion preserves all tasks without links");
-        Check(await db.TaskHistories.CountAsync() == 5 && !await db.Courses.AnyAsync(x => x.Ma == secondId), "semester delete records every link change and removes courses");
-        Check((await db.Tasks.SingleAsync(x => x.Ma == childId)).MaNhiemVuCha == parentId, "parent link survives semester deletion");
+        Check(await db.DanhSachNhiemVu.CountAsync() == 3 && await db.DanhSachNhiemVu.AllAsync(x => x.MaHocKy == null && x.MaMonHoc == null), "semester deletion preserves all tasks without links");
+        Check(await db.DanhSachLichSuNhiemVu.CountAsync() == 5 && !await db.DanhSachMonHoc.AnyAsync(x => x.Ma == secondId), "semester delete records every link change and removes courses");
+        Check((await db.DanhSachNhiemVu.SingleAsync(x => x.Ma == childId)).MaNhiemVuCha == parentId, "parent link survives semester deletion");
     }
     await Delete(path, HttpStatusCode.NotFound);
     Actor(null); await Delete("/api/v1/courses/1", HttpStatusCode.Unauthorized);
@@ -169,7 +169,7 @@ sealed class DeleteFailure : SaveChangesInterceptor
     public bool Enabled { get; set; }
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData data, InterceptionResult<int> result, CancellationToken ct = default)
     {
-        if (Enabled && data.Context!.ChangeTracker.Entries<Course>().Any(x => x.State == EntityState.Deleted))
+        if (Enabled && data.Context!.ChangeTracker.Entries<MonHoc>().Any(x => x.State == EntityState.Deleted))
             throw new InvalidOperationException("Injected deletion failure");
         return ValueTask.FromResult(result);
     }
