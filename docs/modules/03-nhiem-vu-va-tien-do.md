@@ -1,6 +1,8 @@
 # Module 03 — Nhiệm vụ và tiến độ
 
-Trạng thái: đặc tả dự thảo, chưa triển khai. Nguồn: [quy ước chung](00-quy-uoc-va-quyet-dinh.md), [ERD](../erd.md), [API — Tasks](../THIET-KE-API-SWAGGER.md). Giai đoạn 5 làm lá; giai đoạn 6 làm cây.
+Trạng thái xác minh ngày 2026-11-06. BE đã có CRUD nhiệm vụ, chia nhỏ, tiến độ tổng hợp, hạn kế thừa, lịch sử và kiểm tra ảnh hưởng lịch. FE React trong repository `Study_Planner_FE` đã nối API và chọn học kỳ/môn theo tên. Lượt đối chiếu đầy đủ với `frontend-preview`, sửa bộ lọc việc cá nhân và kết quả kiểm tra hiện hành được ghi trong [bản ghi chuyển đổi đầy đủ](../history/2026-11-06-chuyen-day-du-frontend-preview-va-sua-bo-loc.md).
+
+Các phần bên dưới giữ nội dung đặc tả ban đầu để đối chiếu. Tên DTO/route và hành vi hiện hành được đối chiếu với `backend/StudyPlanner.Application/HocTap` và `backend/StudyPlanner.Api/Controllers/NhiemVuController.cs`.
 
 ## 1. Mục tiêu, dữ liệu và màn hình
 

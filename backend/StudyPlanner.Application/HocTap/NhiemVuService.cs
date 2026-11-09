@@ -30,8 +30,14 @@ public sealed class NhiemVuService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, 
         if (q.CheDo == "completed") query = query.Where(x => x.TrangThai == TrangThaiNhiemVu.Completed);
         else if (q.TrangThai.HasValue) query = query.Where(x => x.TrangThai == q.TrangThai);
         else query = q.CheDo == "completed" ? query.Where(x => x.TrangThai == TrangThaiNhiemVu.Completed) : query.Where(x => x.TrangThai != TrangThaiNhiemVu.Completed);
-        var keyword = q.TuKhoa?.Trim().ToUpperInvariant();
-        if (!string.IsNullOrEmpty(keyword)) query = query.Where(x => x.TieuDe.ToUpper().Contains(keyword) || (x.MoTa != null && x.MoTa.ToUpper().Contains(keyword)));
+        var keyword = q.TuKhoa?.Trim();
+        if (!string.IsNullOrEmpty(keyword))
+        {
+            var upperKeyword = keyword.ToUpperInvariant();
+            // Giữ phép tìm nguyên văn để từ có dấu vẫn khớp khi collation DB chỉ đổi hoa ASCII.
+            query = query.Where(x => x.TieuDe.Contains(keyword) || x.TieuDe.ToUpper().Contains(upperKeyword) ||
+                (x.MoTa != null && (x.MoTa.Contains(keyword) || x.MoTa.ToUpper().Contains(upperKeyword))));
+        }
         if (q.CheDo == "inbox") query = query.Where(x => x.MaHocKy == null && x.MaMonHoc == null);
         if (q.CheDo is "today" or "upcoming")
         {
