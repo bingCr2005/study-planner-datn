@@ -1,6 +1,8 @@
 # Module 05 — Lịch học và tổng quan
 
-Trạng thái: đặc tả dự thảo, chưa triển khai. Nguồn: [quy ước chung](00-quy-uoc-va-quyet-dinh.md), [ERD](../erd.md), [API — ClassSessions/Calendar/Dashboard](../THIET-KE-API-SWAGGER.md). Giai đoạn 7.
+Trạng thái xác minh ngày 2026-11-06. BE và FE React đã có lịch lớp theo môn, giờ rảnh, lịch ngày/tuần/tháng/danh sách, gợi ý và áp dụng lịch tự học, quản lý phiên tự học. Calendar trả năm loại mục gồm lịch lớp, sự kiện, hạn nhiệm vụ, giờ rảnh và phiên tự học. Trục giờ, chia cột lịch trùng và các luồng tương ứng trong `frontend-preview` được đối chiếu trong [bản ghi chuyển đổi đầy đủ](../history/2026-11-06-chuyen-day-du-frontend-preview-va-sua-bo-loc.md).
+
+Các phần bên dưới giữ nội dung đặc tả ban đầu để đối chiếu. Dashboard là phần việc riêng của team, giao diện và nguồn dữ liệu của trang đó cần được kiểm chứng trong lượt triển khai tương ứng.
 
 ## 1. Mục tiêu và phạm vi
 

@@ -26,3 +26,12 @@ Không sửa bản ghi cũ để làm mất lịch sử. Khi logic thay đổi, 
 
 - [2026-11-04: API học kỳ/môn học, quyền sở hữu và xóa giữ nhiệm vụ](2026-11-04-api-hoc-ky-mon-hoc.md)
 - [2026-11-06: Giải quyết conflict khi gộp main vào nhánh học kỳ/môn học](2026-11-06-giai-quyet-conflict-hoc-ky-mon-hoc.md)
+- [2026-11-06 — Tích hợp FE nhiệm vụ và thời khóa biểu, chọn dữ liệu theo tên](2026-11-06-tich-hop-fe-nhiem-vu-va-thoi-khoa-bieu.md)
+- [2026-11-06 — Chuyển đầy đủ chức năng frontend-preview và sửa bộ lọc ẩn việc cá nhân](2026-11-06-chuyen-day-du-frontend-preview-va-sua-bo-loc.md)
+- [2026-11-06 — Chuyển menu học tập sang hàng dọc](2026-11-06-menu-hoc-tap-hang-doc.md)
+- [2026-11-06 — Đồng bộ CSS và bảng chi tiết theo frontend-preview](2026-11-06-dong-bo-css-voi-frontend-preview.md)
+- [2026-11-06 — Thanh kéo chia chi tiết và đầy đủ mục menu nhiệm vụ](2026-11-06-thanh-keo-va-menu-nhiem-vu-day-du.md)
+- [2026-11-06 — Kịch bản demo nhiệm vụ và thời khóa biểu](2026-11-06-kich-ban-demo-nhiem-vu-va-thoi-khoa-bieu.md)
+- [2026-11-06 — Hộp xác nhận và giải thích giao diện học tập](2026-11-06-hop-xac-nhan-va-giai-thich-giao-dien.md)
+- [2026-11-06 — Thu gọn bộ lọc học tập](2026-11-06-thu-gon-bo-loc-hoc-tap.md)
+- [2026-11-06 — Lựa chọn phạm vi buổi học rõ ràng](2026-11-06-lua-chon-pham-vi-buoi-hoc.md)
