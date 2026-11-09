@@ -128,6 +128,20 @@ public static class IntegrationChecks
             await Write(aClient, HttpMethod.Post, $"/api/v1/courses/{course}/class-sessions", Class("08:00:00", "10:00:00", true), 201);
 
             var taskId = Id(await Write(aClient, HttpMethod.Post, "/api/v1/tasks", TaskBody("Bài làm riêng"), 201));
+            var accentedSearch = Data(await Send(aClient, HttpMethod.Get,
+                "/api/v1/tasks?tuKhoa=" + Uri.EscapeDataString("Bài làm riêng"), null, 200));
+            Check(accentedSearch.GetProperty("danhSach").EnumerateArray().Any(x => x.GetProperty("ma").GetInt32() == taskId),
+                "Vietnamese literal search matches stored text independently of Unicode case conversion in DB collation");
+            const string personalTitle = "Việc cá nhân giữa các học kỳ";
+            var personalId = Id(await Write(aClient, HttpMethod.Post, "/api/v1/tasks",
+                new { tieuDe = personalTitle, loai = "Personal" }, 201));
+            var personalSearch = "/api/v1/tasks?tuKhoa=" + Uri.EscapeDataString(personalTitle);
+            var allScopes = Data(await Send(aClient, HttpMethod.Get, personalSearch, null, 200));
+            Check(allScopes.GetProperty("danhSach").EnumerateArray().Any(x => x.GetProperty("ma").GetInt32() == personalId),
+                "Default task listing includes personal work when academic data exists");
+            var courseScope = Data(await Send(aClient, HttpMethod.Get, personalSearch + "&maMonHoc=" + course, null, 200));
+            Check(courseScope.GetProperty("tongSo").GetInt32() == 0, "Only explicit course filtering excludes personal work");
+            await Write(aClient, HttpMethod.Delete, $"/api/v1/tasks/{personalId}", null, 204);
             await Write(aClient, HttpMethod.Patch, $"/api/v1/tasks/{taskId}/progress", new { tienDo = 25 }, 200);
             await Send(bClient, HttpMethod.Get, $"/api/v1/tasks/{taskId}", null, 404);
             var parentId = Id(await Write(aClient, HttpMethod.Post, "/api/v1/tasks", TaskBody("Báo cáo chia nhỏ", null), 201));
