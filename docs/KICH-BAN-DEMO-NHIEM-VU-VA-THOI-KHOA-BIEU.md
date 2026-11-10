@@ -278,7 +278,7 @@ Phần giao diện và nghiệp vụ đã có kiểm thử ở những lượt t
 
 | Vấn đề | Nguồn BE | Nguồn FE |
 | --- | --- | --- |
-| CRUD và lịch sử | `backend/StudyPlanner.Application/HocTap/NhiemVuService.cs` | `src/hoc-tap/NhiemVuView.tsx` |
+| CRUD và lịch sử | `backend/StudyPlanner.Application/HocTap/NhiemVu/NhiemVuService.cs` | `src/hoc-tap/NhiemVuView.tsx` |
 | Tiến độ, hạn kế thừa, ràng buộc chia nhỏ | `QuyTacCay.cs`, entity `NhiemVu.cs` | Chi tiết, form tiến độ, form thêm bước |
 | Lọc theo hạn/phạm vi | `NhiemVuService.DanhSachAsync` | `HocTapPage.tsx`, `boLoc.ts` |
 | Lịch lớp và giờ rảnh | `LichHocService.cs`, `KhungGioRanhService.cs` | `LichView.tsx` |
