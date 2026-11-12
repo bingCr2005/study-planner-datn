@@ -99,7 +99,7 @@ public sealed class AcademicService(IQuanLyNguoiDungStore store, TimeProvider cl
         var semester = await SemesterAsync(userId, id, ct);
         var courses = await store.LoadAsync<MonHoc>(x => x.MaHocKy == id, ct);
         var courseIds = courses.Select(x => x.Ma).ToArray();
-        var tasks = await store.LoadAsync<NhiemVu>(x => x.MaHocKy == id || (x.MaMonHoc.HasValue && courseIds.Contains(x.MaMonHoc.Value)), ct);
+        var tasks = await store.LoadAsync<NhiemVu>(x => x.MaHocKy == id || (x.MaMonHoc.HasValue && courseIds.Contains(x.MaMonHoc.Value)), ct, includeFiltered: true);
         DetachTasks(userId, tasks, removeSemester: true);
         // Persist history and FK changes before deleting principals. Any failure rolls back all writes.
         await store.SaveAsync(ct);
@@ -111,7 +111,7 @@ public sealed class AcademicService(IQuanLyNguoiDungStore store, TimeProvider cl
     {
         await using var transaction = await store.BeginTransactionAsync(ct);
         var course = await CourseAsync(userId, id, ct);
-        DetachTasks(userId, await store.LoadAsync<NhiemVu>(x => x.MaMonHoc == id, ct), removeSemester: false);
+        DetachTasks(userId, await store.LoadAsync<NhiemVu>(x => x.MaMonHoc == id, ct, includeFiltered: true), removeSemester: false);
         await store.SaveAsync(ct);
         foreach (var session in await store.LoadAsync<LichHoc>(x => x.MaMonHoc == id, ct)) store.Remove(session);
         store.Remove(course); await store.SaveAsync(ct); await transaction.CommitAsync(ct);

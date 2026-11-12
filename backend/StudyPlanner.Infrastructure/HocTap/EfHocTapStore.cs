@@ -9,6 +9,8 @@ namespace StudyPlanner.Infrastructure.HocTap;
 public sealed class EfHocTapStore(ApplicationDbContext db) : IHocTapStore
 {
     public IQueryable<T> TruyVan<T>() where T : class => db.Set<T>();
+    public IQueryable<NhiemVu> NhiemVuTrongThungRac() =>
+        db.DanhSachNhiemVu.IgnoreQueryFilters().Where(x => x.NgayXoa != null);
     public Task<List<T>> DanhSachAsync<T>(IQueryable<T> query, CancellationToken ct) => query.ToListAsync(ct);
     public Task<T?> DauTienAsync<T>(IQueryable<T> query, CancellationToken ct) => query.FirstOrDefaultAsync(ct);
     public Task<int> DemAsync<T>(IQueryable<T> query, CancellationToken ct) => query.CountAsync(ct);
@@ -42,9 +44,9 @@ public sealed class EfHocTapStore(ApplicationDbContext db) : IHocTapStore
         var root = node.Ma;
         var result = await db.DanhSachNhiemVu.FromSqlInterpolated($"""
             WITH RECURSIVE cay AS (
-                SELECT * FROM nhiem_vu WHERE ma = {root} AND ma_nguoi_dung = {chu}
+                SELECT * FROM nhiem_vu WHERE ma = {root} AND ma_nguoi_dung = {chu} AND ngay_xoa IS NULL
                 UNION ALL
-                SELECT n.* FROM nhiem_vu n JOIN cay c ON n.ma_nhiem_vu_cha = c.ma WHERE n.ma_nguoi_dung = {chu}
+                SELECT n.* FROM nhiem_vu n JOIN cay c ON n.ma_nhiem_vu_cha = c.ma WHERE n.ma_nguoi_dung = {chu} AND n.ngay_xoa IS NULL
             ) SELECT * FROM cay LIMIT 1001
             """).ToListAsync(ct);
         QuyTacCay.KiemTra(result); return result;

@@ -25,6 +25,7 @@ public class NhiemVuConfiguration : IEntityTypeConfiguration<NhiemVu>
         builder.Property(x => x.MaNhiemVuCha).HasColumnName("ma_nhiem_vu_cha");
         builder.Property(x => x.TieuDe).HasColumnName("tieu_de");
         builder.Property(x => x.MoTa).HasColumnName("mo_ta");
+        builder.Property(x => x.ChecklistJson).HasColumnName("checklist").HasColumnType("jsonb");
         builder.Property(x => x.Loai).HasColumnName("loai");
         builder.Property(x => x.HanHoanThanh).HasColumnName("han_hoan_thanh");
         builder.Property(x => x.MucDoUuTien).HasColumnName("muc_do_uu_tien");
@@ -33,6 +34,11 @@ public class NhiemVuConfiguration : IEntityTypeConfiguration<NhiemVu>
         builder.Property(x => x.TienDo).HasColumnName("tien_do");
         builder.Property(x => x.NhacTruocGio).HasColumnName("nhac_truoc_gio");
         builder.Property(x => x.NgayHoanThanh).HasColumnName("ngay_hoan_thanh");
+        builder.Property(x => x.NgayXoa).HasColumnName("ngay_xoa");
+        builder.Property(x => x.MaNhomXoa).HasColumnName("ma_nhom_xoa");
+        builder.Property(x => x.MaChaTruocKhiXoa).HasColumnName("ma_cha_truoc_khi_xoa");
+        builder.HasQueryFilter(x => x.NgayXoa == null);
+        builder.HasIndex(x => new { x.MaNguoiDung, x.MaNhomXoa }).HasFilter("ngay_xoa IS NOT NULL");
         builder.Property(x => x.NgayTao).HasColumnName("ngay_tao");
         builder.Property(x => x.NgayCapNhat).HasColumnName("ngay_cap_nhat");
 

@@ -16,4 +16,6 @@ public sealed class DanhSachNhiemVuRequest
     public string SapXep { get; init; } = "due";
     public DateTimeOffset? TuHan { get; init; }
     public DateTimeOffset? DenHan { get; init; }
+    public string? KhoangHoanThanh { get; init; }
+    public DateOnly? NgayHoanThanh { get; init; }
 }

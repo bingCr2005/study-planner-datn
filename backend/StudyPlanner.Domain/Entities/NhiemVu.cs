@@ -13,6 +13,7 @@ public class NhiemVu
     public int? MaNhiemVuCha { get; set; }
     public string TieuDe { get; set; } = string.Empty;
     public string? MoTa { get; set; }
+    public string? ChecklistJson { get; set; }
     public LoaiNhiemVu Loai { get; set; } = LoaiNhiemVu.Personal;
     // HanHoanThanh NULL có thể kế thừa hạn tổ tiên; hạn hiệu lực được tính, không lưu thêm cột.
     public DateTimeOffset? HanHoanThanh { get; set; }
@@ -25,6 +26,9 @@ public class NhiemVu
     public int TienDo { get; set; }
     public int? NhacTruocGio { get; set; }
     public DateTimeOffset? NgayHoanThanh { get; set; }
+    public DateTimeOffset? NgayXoa { get; set; }
+    public int? MaNhomXoa { get; set; }
+    public int? MaChaTruocKhiXoa { get; set; }
     public NguoiDung NguoiDung { get; set; } = null!;
     public MonHoc? MonHoc { get; set; }
     public HocKy? HocKy { get; set; }
