@@ -1,10 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using StudyPlanner.Domain.Enums;
 namespace StudyPlanner.Application.HocTap;
+public sealed record MucChecklist(string TieuDe, bool DaXong);
+
 public sealed class NhiemVuRequest
 {
     [Required, StringLength(200)] public string TieuDe { get; init; } = "";
     [StringLength(20000)] public string? MoTa { get; init; }
+    [MaxLength(100)] public MucChecklist[]? Checklist { get; init; }
     public int? MaHocKy { get; init; }
     public int? MaMonHoc { get; init; }
     public LoaiNhiemVu? Loai { get; init; }

@@ -1,12 +1,12 @@
 # Module 04 — Lịch sử nhiệm vụ
 
-Trạng thái: đặc tả dự thảo, chưa triển khai. Nguồn: [quy ước chung](00-quy-uoc-va-quyet-dinh.md), [ERD](../erd.md), [API — TaskHistory](../THIET-KE-API-SWAGGER.md). Bắt đầu cùng nhiệm vụ lá, không để đến cuối mới thêm ghi lịch sử.
+API đọc lịch sử và màn xem hoạt động của từng nhiệm vụ đã được triển khai. Xem [bản ghi giao diện](../history/2026-11-11-lam-gon-hoat-dong-nhiem-vu.md), [quy ước chung](00-quy-uoc-va-quyet-dinh.md) và [ERD](../erd.md).
 
 ## 1. Mục tiêu và phạm vi
 
 Sinh viên xem nhiệm vụ đã được tạo/sửa/hoàn thành/mở lại/xóa như thế nào. Đây là lịch sử nghiệp vụ, khác log chẩn đoán server. Không phải cơ chế khôi phục nhiệm vụ, event sourcing hoặc nhật ký đăng nhập.
 
-Màn hình: tab lịch sử trong chi tiết nhiệm vụ và danh sách lịch sử có lọc; cần đường xem lịch sử sau khi nhiệm vụ không còn tồn tại.
+Từ chi tiết nhiệm vụ, chọn **⋯ → Hoạt động nhiệm vụ** để xem các thao tác theo ngày. Giao diện tóm tắt những thay đổi như đổi hạn, cập nhật tiến độ và hoàn thành. API hỗ trợ tra cứu theo mã nhiệm vụ đã xóa. Lối mở trên FE hiện nằm trong chi tiết nhiệm vụ còn truy cập được.
 
 ## 2. Dữ liệu và quyền
 
@@ -17,7 +17,7 @@ User chỉ đọc dòng còn liên kết với UserId của mình. Task đã xó
 ## 3. Luồng ghi và đọc
 
 1. Application lấy giá trị trước thay đổi, áp dụng nghiệp vụ và tạo snapshot sau thay đổi trong danh sách trường cho phép.
-2. Chọn Action: Created/Updated/Completed/Reopened/Deleted; Created có OldData NULL, Deleted có NewData NULL.
+2. Ghi hành động `Created`, `Updated`, `Completed`, `Reopened`, `Trashed`, `Restored` hoặc `Deleted`. Tạo mới chỉ có dữ liệu sau. Chuyển vào thùng rác và xóa chỉ có dữ liệu trước.
 3. Lưu TaskHistory cùng giao dịch với nhiệm vụ/tổ tiên/lời nhắc. Nếu ghi lịch sử lỗi, không commit riêng phần nhiệm vụ.
 4. Tính lại tổ tiên hoặc đổi môn cả cây: ghi trước/sau cho những nhiệm vụ thực sự thay đổi. No-op như complete lặp không sinh lịch sử vô ích.
 5. Khi đọc, lọc UserId trước, rồi taskId/action/thời gian và phân trang. Không đòi TaskItem đang tồn tại để đọc history.
@@ -26,7 +26,7 @@ Xóa cây phải chuẩn bị sự kiện Deleted từng node trước cascade. 
 
 ## 4. API và ngoại lệ
 
-GET /api/task-history với taskId, action, from, to, page, pageSize theo hợp đồng API; trả 200 danh sách phân trang. Không có POST/PUT/DELETE lịch sử dành cho client. TaskId là bộ lọc snapshot, không phải bằng chứng người gọi sở hữu mọi dòng có ID đó.
+`GET /api/v1/task-history` nhận `maNhiemVu`, `hanhDong`, `tu`, `den`, `trang`, `kichThuocTrang` và trả danh sách phân trang mới nhất trước. Đây là endpoint đọc, giới hạn bản ghi theo tài khoản trước khi áp dụng các bộ lọc.
 
 Thiếu xác thực trả 401; query sai trả 400. Lọc taskId của người khác không được trả dòng của người đó. GET chi tiết task đã xóa vẫn 404, độc lập với lịch sử còn đọc được.
 

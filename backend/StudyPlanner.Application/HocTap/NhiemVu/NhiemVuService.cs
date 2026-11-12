@@ -15,21 +15,40 @@ public sealed class NhiemVuService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, 
         Validate(q);
         if ((q.Loai.HasValue && !Enum.IsDefined(q.Loai.Value)) || (q.MucDoUuTien.HasValue && !Enum.IsDefined(q.MucDoUuTien.Value)) || (q.TrangThai.HasValue && !Enum.IsDefined(q.TrangThai.Value))) throw Invalid("Giá trị enum bộ lọc không hợp lệ.");
         if (!new[] { "all", "today", "upcoming", "inbox", "completed", "overdue", "undated" }.Contains(q.CheDo) ||
-            !new[] { "due", "priority", "progress", "created" }.Contains(q.SapXep)) throw Invalid("Bộ lọc/sắp xếp không hợp lệ.");
+            !new[] { "due", "priority", "progress", "created", "completed" }.Contains(q.SapXep)) throw Invalid("Bộ lọc/sắp xếp không hợp lệ.");
         if ((long)(q.Trang - 1) * q.KichThuocTrang > int.MaxValue) throw Invalid("Trang quá lớn.");
         if (q.TuHan.HasValue && q.DenHan.HasValue && q.TuHan >= q.DenHan) throw Invalid("Khoảng hạn không hợp lệ.");
+        if (q.KhoangHoanThanh is not (null or "today" or "yesterday" or "last7") ||
+            (q.NgayHoanThanh.HasValue && q.KhoangHoanThanh is not null) ||
+            (q.CheDo != "completed" && (q.NgayHoanThanh.HasValue || q.KhoangHoanThanh is not null)))
+            throw Invalid("Bộ lọc ngày hoàn thành không hợp lệ.");
+        if (q.NgayHoanThanh is { } requestedDate &&
+            (requestedDate <= DateOnly.MinValue || requestedDate >= DateOnly.MaxValue.AddDays(-1)))
+            throw Invalid("Ngày hoàn thành nằm ngoài khoảng hỗ trợ.");
         await using var tx = await dieuPhoi.MoAsync(chu, null, false, ct); var now = clock.GetUtcNow();
         await PhamViAsync(chu, q.MaHocKy, q.MaMonHoc, ct);
         var query = store.TruyVan<NhiemVu>().Where(x => x.MaNguoiDung == chu);
-        var leaves = q.ChiLa || q.CheDo is "today" or "upcoming" or "completed" or "overdue" or "undated";
-        query = leaves ? query.Where(x => !x.DanhSachNhiemVuCon.Any()) : query.Where(x => x.MaNhiemVuCha == null);
+        var leaves = q.ChiLa || q.CheDo is "today" or "upcoming" or "overdue" or "undated";
+        if (leaves) query = query.Where(x => !x.DanhSachNhiemVuCon.Any());
+        else if (q.CheDo != "completed" && q.TrangThai != TrangThaiNhiemVu.Completed)
+            query = query.Where(x => x.MaNhiemVuCha == null || x.NhiemVuCha!.TrangThai == TrangThaiNhiemVu.Completed);
         if (q.MaHocKy.HasValue) query = query.Where(x => x.MaHocKy == q.MaHocKy);
         if (q.MaMonHoc.HasValue) query = query.Where(x => x.MaMonHoc == q.MaMonHoc);
         if (q.Loai.HasValue) query = query.Where(x => x.Loai == q.Loai);
         if (q.MucDoUuTien.HasValue) query = query.Where(x => x.MucDoUuTien == q.MucDoUuTien);
         if (q.CheDo == "completed") query = query.Where(x => x.TrangThai == TrangThaiNhiemVu.Completed);
         else if (q.TrangThai.HasValue) query = query.Where(x => x.TrangThai == q.TrangThai);
-        else query = q.CheDo == "completed" ? query.Where(x => x.TrangThai == TrangThaiNhiemVu.Completed) : query.Where(x => x.TrangThai != TrangThaiNhiemVu.Completed);
+        else query = query.Where(x => x.TrangThai != TrangThaiNhiemVu.Completed);
+        if (q.NgayHoanThanh.HasValue || q.KhoangHoanThanh is not null)
+        {
+            var zone = QuyTacThoiGian.MuiGio(tx.NguoiDung.MuiGio);
+            var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, zone).DateTime);
+            var last = q.NgayHoanThanh ?? (q.KhoangHoanThanh == "yesterday" ? today.AddDays(-1) : today);
+            var first = q.KhoangHoanThanh == "last7" ? last.AddDays(-6) : last;
+            var from = QuyTacThoiGian.Utc(first, TimeOnly.MinValue, zone);
+            var until = QuyTacThoiGian.Utc(last.AddDays(1), TimeOnly.MinValue, zone);
+            query = query.Where(x => x.NgayHoanThanh >= from && x.NgayHoanThanh < until);
+        }
         var keyword = q.TuKhoa?.Trim();
         if (!string.IsNullOrEmpty(keyword))
         {
@@ -55,6 +74,7 @@ public sealed class NhiemVuService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, 
             "priority" => query.OrderByDescending(x => x.MucDoUuTien == MucDoUuTienNhiemVu.High ? 2 : x.MucDoUuTien == MucDoUuTienNhiemVu.Medium ? 1 : 0),
             "progress" => query.OrderByDescending(x => x.TienDo),
             "created" => query.OrderByDescending(x => x.NgayTao),
+            "completed" => query.OrderByDescending(x => x.NgayHoanThanh.HasValue).ThenByDescending(x => x.NgayHoanThanh),
             _ => query.OrderBy(QuyTacCay.BieuThucHan)
         };
         var page = await store.DanhSachAsync(ordered.ThenBy(x => x.Ma).Skip((q.Trang - 1) * q.KichThuocTrang).Take(q.KichThuocTrang), ct);
@@ -81,7 +101,7 @@ public sealed class NhiemVuService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, 
         KiemTra(r); await using var tx = await dieuPhoi.MoAsync(chu, version, true, ct);
         var scope = await PhamViAsync(chu, r.MaHocKy, r.MaMonHoc, ct); var now = clock.GetUtcNow();
         var n = new NhiemVu { MaNguoiDung = chu, NgayTao = now, NgayCapNhat = now };
-        Gan(n, r, scope); store.Them(n); await store.LuuAsync(ct);
+        Gan(n, r, scope); GanChecklist(n, r.Checklist, now); store.Them(n); await store.LuuAsync(ct);
         // New timed events may also invalidate existing planned sessions.
         var changed = await PhienBiAnhHuongAsync(chu, [n], [], [n.Ma], now, ct, new HashSet<int>{n.Ma});
         await XuLyPhienAsync(changed, r.HuyPhienLienQuan, false, now, ct);
@@ -126,6 +146,7 @@ public sealed class NhiemVuService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, 
     {
         await using var tx = await dieuPhoi.MoAsync(chu, version, !preview, ct); var now = clock.GetUtcNow();
         var nodes = await store.CayAsync(chu, ma, ct); var node = nodes.Single(x => x.Ma == ma);
+        var wasCompleted = node.TrangThai == TrangThaiNhiemVu.Completed;
         if (action == "parent" && ((ChaNhiemVuRequest)input).MaNhiemVuCha is int target)
             nodes = nodes.Concat(await store.CayAsync(chu, target, ct)).DistinctBy(x => x.Ma).ToList();
         var before = nodes.ToDictionary(x => x.Ma, Snapshot);
@@ -138,7 +159,7 @@ public sealed class NhiemVuService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, 
                 var update = (NhiemVuRequest)input; KiemTra(update); confirm = update.HuyPhienLienQuan;
                 if (update.MaMonHoc != node.MaMonHoc || (update.MaHocKy.HasValue && update.MaHocKy != node.MaHocKy)) throw new HocTapException(409,"TASK_SCOPE_ACTION_REQUIRED","Đổi học kỳ/môn qua thao tác đổi phạm vi của nhiệm vụ gốc.");
                 if (nodes.Any(x => x.MaNhiemVuCha == ma) && update.ThoiLuongDuKienPhut.HasValue) throw new HocTapException(409,"TASK_ESTIMATE_IS_DERIVED","Cha lấy thời lượng từ các lá.");
-                Gan(node,update,(node.MaHocKy,node.MaMonHoc)); break;
+                Gan(node,update,(node.MaHocKy,node.MaMonHoc)); GanChecklist(node, update.Checklist, now); break;
             case "children":
                 var children = (ThemNhiemVuConRequest)input; Validate(children); confirm = children.HuyPhienLienQuan;
                 foreach (var r in children.DanhSach)
@@ -146,16 +167,15 @@ public sealed class NhiemVuService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, 
                     KiemTra(r);
                     if ((r.MaHocKy.HasValue && r.MaHocKy != node.MaHocKy) || (r.MaMonHoc.HasValue && r.MaMonHoc != node.MaMonHoc)) throw Invalid("Con phải cùng học kỳ/môn với cha.");
                     var child = new NhiemVu { Ma = -1 - added.Count, MaNguoiDung = chu, MaNhiemVuCha = ma, NgayTao = now, NgayCapNhat = now };
-                    Gan(child,r,(node.MaHocKy,node.MaMonHoc)); added.Add(child); nodes.Add(child);
+                    Gan(child,r,(node.MaHocKy,node.MaMonHoc)); GanChecklist(child, r.Checklist, now); added.Add(child); nodes.Add(child);
                 }
-                node.ThoiLuongDuKienPhut = null; break;
+                break;
             case "progress": case "complete": case "reopen":
                 var progress = (TienDoNhiemVuRequest)input; Validate(progress); confirm = progress.HuyPhienLienQuan;
-                if (nodes.Any(x => x.MaNhiemVuCha == ma)) throw new HocTapException(409,"TASK_PROGRESS_IS_DERIVED","Tiến độ cha được tính từ con; hãy cập nhật nhiệm vụ lá.");
+                if (node.ChecklistJson is not null) throw new HocTapException(409,"TASK_PROGRESS_IS_DERIVED","Tiến độ được tính từ checklist của nhiệm vụ.");
                 var value = action == "complete" ? 100 : progress.TienDo;
                 if (action == "reopen" && value == 100) throw Invalid("Mở lại nhận tiến độ 0–99.");
-                node.TienDo = value; node.TrangThai = value == 100 ? TrangThaiNhiemVu.Completed : value == 0 ? TrangThaiNhiemVu.NotStarted : TrangThaiNhiemVu.InProgress;
-                node.NgayHoanThanh = value == 100 ? node.NgayHoanThanh ?? now : null; break;
+                GanTienDo(node, value, now); break;
             case "parent":
                 var parent = (ChaNhiemVuRequest)input; confirm = parent.HuyPhienLienQuan;
                 if (parent.MaNhiemVuCha is int pid)
@@ -169,11 +189,12 @@ public sealed class NhiemVuService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, 
                 if (node.MaNhiemVuCha.HasValue) throw new HocTapException(409,"TASK_ROOT_REQUIRED","Chỉ đổi phạm vi từ nhiệm vụ gốc.");
                 var scope = await PhamViAsync(chu,scopeRequest.MaHocKy,scopeRequest.MaMonHoc,ct);
                 foreach (var n in nodes) { n.MaHocKy = scope.HocKy; n.MaMonHoc = scope.MonHoc; } break;
+            case "trash":
             case "delete":
                 confirm = ((TienDoNhiemVuRequest)input).HuyPhienLienQuan; deleted = Nhanh(nodes,ma).ToList(); nodes.RemoveAll(x => deleted.Contains(x)); break;
             default: throw Invalid("Thao tác không hợp lệ.");
         }
-        KiemTraRung(nodes); QuyTacCay.TinhLai(nodes,now);
+        KiemTraRung(nodes); QuyTacCay.BoUocLuongCha(nodes);
         var changedSchedule = nodes.Where(x => !beforeSchedule.TryGetValue(x.Ma,out var old) || DauVetLapLich(x,nodes) != old).Select(x => x.Ma).ToArray();
         var changedEvents = nodes.Where(x => !beforeEvents.TryGetValue(x.Ma,out var old) || old != (x.BatDauSuKien,x.KetThucSuKien)).Select(x => x.Ma).ToHashSet();
         var affected = await PhienBiAnhHuongAsync(chu,nodes,deleted,changedSchedule,now,ct,changedEvents);
@@ -188,26 +209,142 @@ public sealed class NhiemVuService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, 
         if (preview) return new(tx.NguoiDung.PhienBanLapLich, impact);
         if (affected.Count > 0 && !confirm) throw new HocTapException(409,"SCHEDULE_CHANGE_CONFIRMATION_REQUIRED","Thao tác cần hủy các phiên dự kiến liên quan. Hãy xem trước và xác nhận.",new { anhHuong = impact });
         await XuLyPhienAsync(affected,confirm,false,now,ct);
+        if (action == "trash")
+        {
+            await DungLichCuaNhiemVuTrongThungRacAsync(chu, deletedIds, now, ct);
+            node.MaChaTruocKhiXoa = node.MaNhiemVuCha;
+            node.MaNhiemVuCha = null;
+        }
         foreach (var n in added) { n.Ma = 0; store.Them(n); }
         foreach (var n in nodes.Where(x => x.Ma > 0 && changedIds.Contains(x.Ma))) n.NgayCapNhat = now;
         foreach (var n in deleted)
         {
-            GhiLichSu(n,before[n.Ma],null,HanhDongLichSuNhiemVu.Deleted,"User",now);
-            store.Xoa(n);
+            if (action == "trash")
+            {
+                n.NgayXoa = now;
+                n.MaNhomXoa = ma;
+                GhiLichSu(n, before[n.Ma], null, HanhDongLichSuNhiemVu.Trashed, "User", now);
+            }
+            else
+            {
+                GhiLichSu(n,before[n.Ma],null,HanhDongLichSuNhiemVu.Deleted,"User",now);
+                store.Xoa(n);
+            }
         }
         await store.LuuAsync(ct);
         foreach (var n in added) GhiLichSu(n,null,Snapshot(n),HanhDongLichSuNhiemVu.Created,"User",now);
         foreach (var n in nodes.Where(x => changedIds.Contains(x.Ma)))
         {
             var old = before[n.Ma]; var after = Snapshot(n);
-            var historyAction = n.Ma == ma && action == "complete" ? HanhDongLichSuNhiemVu.Completed : n.Ma == ma && action == "reopen" ? HanhDongLichSuNhiemVu.Reopened : HanhDongLichSuNhiemVu.Updated;
+            var isCompleted = n.TrangThai == TrangThaiNhiemVu.Completed;
+            var checklistChangedStatus = action == "update" && wasCompleted != isCompleted;
+            var historyAction = n.Ma == ma && (action == "complete" || checklistChangedStatus && isCompleted) ? HanhDongLichSuNhiemVu.Completed
+                : n.Ma == ma && (action == "reopen" || checklistChangedStatus && !isCompleted) ? HanhDongLichSuNhiemVu.Reopened
+                : HanhDongLichSuNhiemVu.Updated;
             GhiLichSu(n,old,after,historyAction,n.Ma == ma ? "User" : "System",now);
         }
         var changed = changedIds.Length > 0 || added.Count > 0 || deleted.Count > 0 || affected.Count > 0;
         if (changed) await DongBoNhacAsync(chu,nodes,now,ct);
         await tx.CommitAsync(changed,ct);
-        object data = action == "delete" ? impact : action == "children" ? added.Select(x => Dto(x,nodes,now)).ToArray() : Dto(node,nodes,now);
+        object data = action is "delete" or "trash" ? impact : action == "children" ? added.Select(x => Dto(x,nodes,now)).ToArray() : Dto(node,nodes,now);
         return new(tx.NguoiDung.PhienBanLapLich,data);
+    }
+
+    public async Task<HocTapResponse<PhanTrangResponse<NhiemVuTrongThungRacResponse>>> ThungRacAsync(int chu, int trang, CancellationToken ct)
+    {
+        const int pageSize = 20;
+        if (trang < 1 || (long)(trang - 1) * pageSize > int.MaxValue) throw Invalid("Trang không hợp lệ.");
+        await using var tx = await dieuPhoi.MoAsync(chu, null, false, ct);
+        var deleted = store.NhiemVuTrongThungRac().Where(n => n.MaNguoiDung == chu);
+        var roots = deleted.Where(n => n.Ma == n.MaNhomXoa);
+        var count = await store.DemAsync(roots, ct);
+        var items = await store.DanhSachAsync(roots.OrderByDescending(n => n.NgayXoa).ThenByDescending(n => n.Ma)
+            .Skip((trang - 1) * pageSize).Take(pageSize)
+            .Select(n => new NhiemVuTrongThungRacResponse(n.Ma, n.TieuDe, n.MoTa, n.NgayXoa!.Value, n.HanHoanThanh,
+                deleted.Count(child => child.MaNhomXoa == n.Ma))), ct);
+        await tx.CommitAsync(false, ct);
+        return new(tx.NguoiDung.PhienBanLapLich, new(items, trang, pageSize, count));
+    }
+
+    public async Task<long> XuLyThungRacAsync(int chu, int ma, long version, bool xoaVinhVien, CancellationToken ct)
+    {
+        await using var tx = await dieuPhoi.MoAsync(chu, version, true, ct);
+        var now = clock.GetUtcNow();
+        var group = await store.DanhSachAsync(store.NhiemVuTrongThungRac().Where(n => n.MaNguoiDung == chu && n.MaNhomXoa == ma), ct);
+        var root = group.SingleOrDefault(n => n.Ma == ma) ?? throw NotFound();
+        if (xoaVinhVien)
+        {
+            foreach (var task in group)
+            {
+                GhiLichSu(task, Snapshot(task), null, HanhDongLichSuNhiemVu.Deleted, "User", now);
+                store.Xoa(task);
+            }
+        }
+        else
+        {
+            var before = group.ToDictionary(n => n.Ma, Snapshot);
+            var existing = new List<NhiemVu>();
+            if (root.MaChaTruocKhiXoa is int parentId &&
+                await store.DauTienAsync(store.TruyVan<NhiemVu>().Where(n => n.Ma == parentId && n.MaNguoiDung == chu), ct) is not null)
+            {
+                existing = await store.CayAsync(chu, parentId, ct);
+                root.MaNhiemVuCha = parentId;
+                try { KiemTraRung([.. existing, .. group]); }
+                catch (HocTapException e) when (e.Code is "TASK_SCOPE_CONFLICT" or "TASK_TREE_LIMIT" or "TASK_DEADLINE_CONFLICT")
+                {
+                    root.MaNhiemVuCha = null;
+                    existing.Clear();
+                }
+            }
+            var beforeExisting = existing.ToDictionary(n => n.Ma, Snapshot);
+            List<NhiemVu> tree = [.. existing, .. group];
+            KiemTraRung(tree);
+            QuyTacCay.BoUocLuongCha(tree);
+            var changed = existing.Where(n => beforeExisting[n.Ma] != Snapshot(n) || n.Ma == root.MaNhiemVuCha).ToList();
+            var events = group.Where(n => n.BatDauSuKien.HasValue).Select(n => n.Ma).ToHashSet();
+            var affected = await PhienBiAnhHuongAsync(chu, tree, [], changed.Select(n => n.Ma).ToArray(), now, ct, events);
+            if (affected.Count > 0)
+                throw new HocTapException(409, "RESTORE_SCHEDULE_CONFLICT", "Khôi phục sẽ ảnh hưởng phiên tự học đã lên lịch. Hãy điều chỉnh phiên liên quan rồi thử lại.");
+            foreach (var task in group)
+            {
+                task.NgayXoa = null;
+                task.MaNhomXoa = null;
+                task.MaChaTruocKhiXoa = null;
+                task.NgayCapNhat = now;
+                GhiLichSu(task, before[task.Ma], Snapshot(task), HanhDongLichSuNhiemVu.Restored, "User", now);
+            }
+            foreach (var task in changed.Where(n => beforeExisting[n.Ma] != Snapshot(n)))
+            {
+                task.NgayCapNhat = now;
+                GhiLichSu(task, beforeExisting[task.Ma], Snapshot(task), HanhDongLichSuNhiemVu.Updated, "System", now);
+            }
+            await DongBoNhacAsync(chu, tree, now, ct);
+        }
+        await tx.CommitAsync(true, ct);
+        return tx.NguoiDung.PhienBanLapLich;
+    }
+
+    private async Task DungLichCuaNhiemVuTrongThungRacAsync(int chu, int[] ids, DateTimeOffset now, CancellationToken ct)
+    {
+        var sessions = await store.DanhSachAsync(store.TruyVan<PhienTuHoc>().Where(x =>
+            x.MaNguoiDung == chu && ids.Contains(x.MaNhiemVu) && x.TrangThai == TrangThaiPhienTuHoc.Planned), ct);
+        foreach (var session in sessions) { session.TrangThai = TrangThaiPhienTuHoc.Cancelled; session.NgayCapNhat = now; }
+        var reminders = await store.DanhSachAsync(store.TruyVan<LichNhac>().Where(x =>
+            x.MaNguoiDung == chu && ids.Contains(x.MaNhiemVu) && (x.TrangThai == TrangThaiLichNhac.Pending || x.TrangThai == TrangThaiLichNhac.Failed)), ct);
+        foreach (var reminder in reminders)
+        {
+            reminder.TrangThai = TrangThaiLichNhac.Cancelled;
+            reminder.NgayPhat = reminder.LanThuTiepTheoLuc = null;
+            reminder.NgayCapNhat = now;
+        }
+        var notifications = await store.DanhSachAsync(store.TruyVan<ThongBao>().Where(x =>
+            x.MaNguoiDung == chu && ids.Contains(x.MaNhiemVu) && (x.TrangThaiPhat == TrangThaiPhatThongBao.Pending || x.TrangThaiPhat == TrangThaiPhatThongBao.Failed)), ct);
+        foreach (var notification in notifications)
+        {
+            notification.TrangThaiPhat = TrangThaiPhatThongBao.Cancelled;
+            notification.NgayPhat = notification.LanThuTiepTheoLuc = null;
+            notification.NgayCapNhat = now;
+        }
     }
     private async Task<List<PhienTuHoc>> PhienBiAnhHuongAsync(int chu, IReadOnlyList<NhiemVu> nodes, IReadOnlyList<NhiemVu> deleted, IReadOnlyList<int> relevant, DateTimeOffset now, CancellationToken ct, IReadOnlySet<int>? changedEvents = null)
     {
@@ -287,6 +424,26 @@ public sealed class NhiemVuService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, 
         if (string.IsNullOrWhiteSpace(r.TieuDe) || !Enum.IsDefined(r.MucDoUuTien) || (r.Loai.HasValue && !Enum.IsDefined(r.Loai.Value))) throw Invalid("Tiêu đề/loại/ưu tiên không hợp lệ.");
         if (r.BatDauSuKien.HasValue != r.KetThucSuKien.HasValue || (r.BatDauSuKien.HasValue && r.KetThucSuKien <= r.BatDauSuKien)) throw Invalid("Giờ sự kiện cần đủ hai đầu và kết thúc sau bắt đầu.");
     }
+    private static MucChecklist[] DocChecklist(NhiemVu task) => task.ChecklistJson is { } json
+        ? JsonSerializer.Deserialize<MucChecklist[]>(json, Json) ?? [] : [];
+
+    private static void GanChecklist(NhiemVu task, MucChecklist[]? items, DateTimeOffset now)
+    {
+        if (items is null) return;
+        if (items.Any(item => item is null || string.IsNullOrWhiteSpace(item.TieuDe) || item.TieuDe.Trim().Length > 200))
+            throw Invalid("Mỗi mục checklist cần tiêu đề từ 1 đến 200 ký tự.");
+        if (items.Length == 0) { task.ChecklistJson = null; return; }
+        var normalized = items.Select(item => item with { TieuDe = item.TieuDe.Trim() }).ToArray();
+        if (!normalized.SequenceEqual(DocChecklist(task))) task.ChecklistJson = JsonSerializer.Serialize(normalized, Json);
+        GanTienDo(task, normalized.Count(item => item.DaXong) * 100 / normalized.Length, now);
+    }
+
+    private static void GanTienDo(NhiemVu task, int value, DateTimeOffset now)
+    {
+        task.TienDo = value;
+        task.TrangThai = value == 100 ? TrangThaiNhiemVu.Completed : value == 0 ? TrangThaiNhiemVu.NotStarted : TrangThaiNhiemVu.InProgress;
+        task.NgayHoanThanh = value == 100 ? task.NgayHoanThanh ?? now : null;
+    }
     private static void Validate(object r)
     {
         var errors = new List<ValidationResult>(); if (!Validator.TryValidateObject(r,new ValidationContext(r),errors,true)) throw Invalid(string.Join(" ",errors.Select(x => x.ErrorMessage)));
@@ -318,9 +475,10 @@ public sealed class NhiemVuService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, 
         var leaves = branch.Where(x => !tree.Any(c => c.MaNhiemVuCha == x.Ma)).ToArray(); var missing = leaves.Any(x => !x.ThoiLuongDuKienPhut.HasValue);
         var estimate = missing ? (int?)null : checked(leaves.Sum(x => x.ThoiLuongDuKienPhut!.Value));
         var remaining = missing ? (int?)null : checked(leaves.Sum(x => x.ThoiLuongConLaiPhut!.Value));
-        return new(n.Ma,n.MaHocKy,n.MaMonHoc,n.MaNhiemVuCha,n.TieuDe,n.MoTa,n.Loai,n.MucDoUuTien,n.HanHoanThanh,han.Han,han.Nguon,n.BatDauSuKien,n.KetThucSuKien,n.TrangThai,n.TienDo,estimate,remaining,missing,branch.Count>1,n.TienDo<100 && han.Han.HasValue && han.Han<now,n.NhacTruocGio,n.NgayHoanThanh,n.NgayTao,n.NgayCapNhat);
+        return new(n.Ma,n.MaHocKy,n.MaMonHoc,n.MaNhiemVuCha,n.TieuDe,n.MoTa,n.Loai,n.MucDoUuTien,n.HanHoanThanh,han.Han,han.Nguon,n.BatDauSuKien,n.KetThucSuKien,n.TrangThai,n.TienDo,estimate,remaining,missing,branch.Count>1,n.TienDo<100 && han.Han.HasValue && han.Han<now,n.NhacTruocGio,n.NgayHoanThanh,n.NgayTao,n.NgayCapNhat)
+        { Checklist = DocChecklist(n) };
     }
-    private static string Snapshot(NhiemVu n) => JsonSerializer.Serialize(new { n.TieuDe,n.MoTa,n.MaNhiemVuCha,n.MaHocKy,n.MaMonHoc,n.Loai,n.MucDoUuTien,n.HanHoanThanh,n.BatDauSuKien,n.KetThucSuKien,n.TienDo,n.TrangThai,n.ThoiLuongDuKienPhut,n.NhacTruocGio,n.NgayHoanThanh },Json);
+    private static string Snapshot(NhiemVu n) => JsonSerializer.Serialize(new { n.TieuDe,n.MoTa,Checklist = DocChecklist(n),n.MaNhiemVuCha,n.MaHocKy,n.MaMonHoc,n.Loai,n.MucDoUuTien,n.HanHoanThanh,n.BatDauSuKien,n.KetThucSuKien,n.TienDo,n.TrangThai,n.ThoiLuongDuKienPhut,n.NhacTruocGio,n.NgayHoanThanh },Json);
     private static string DauVetLapLich(NhiemVu n,IReadOnlyList<NhiemVu> nodes) => JsonSerializer.Serialize(new
     {
         n.MaNhiemVuCha,n.MaHocKy,n.MaMonHoc,n.TienDo,n.ThoiLuongDuKienPhut,n.BatDauSuKien,n.KetThucSuKien,

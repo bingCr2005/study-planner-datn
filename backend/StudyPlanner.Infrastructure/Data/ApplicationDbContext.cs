@@ -40,5 +40,10 @@ public class ApplicationDbContext : DbContext
         // không tạo bảng hoặc áp dụng migration khi ứng dụng khởi động.
         modelBuilder.ApplyConfigurationsFromAssembly(
             typeof(ApplicationDbContext).Assembly);
+        modelBuilder.Entity<PhienTuHoc>().HasQueryFilter(x => x.NhiemVu.NgayXoa == null);
+        modelBuilder.Entity<DoanThucHoc>().HasQueryFilter(x => x.NhiemVu.NgayXoa == null);
+        modelBuilder.Entity<LichNhac>().HasQueryFilter(x => x.NhiemVu.NgayXoa == null);
+        modelBuilder.Entity<ThongBao>().HasQueryFilter(x => x.NhiemVu.NgayXoa == null);
+        modelBuilder.Entity<TepDinhKemNhiemVu>().HasQueryFilter(x => x.NhiemVu.NgayXoa == null);
     }
 }

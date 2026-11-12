@@ -45,6 +45,31 @@ public sealed class NhiemVuController(NhiemVuService service) : HocTapController
     [HttpDelete("{id:int}"),ProducesResponseType(204)]
     public async Task<IActionResult> Xoa(int id,bool huyPhienLienQuan,CancellationToken ct)
     { var r = await Doi(id,"delete",new TienDoNhiemVuRequest {HuyPhienLienQuan=huyPhienLienQuan},ct); GanPhienBan(r.PhienBan); return NoContent(); }
+    [HttpPost("{id:int}/trash")]
+    public async Task<HocTapResponse<AnhHuongNhiemVuResponse>> ChuyenVaoThungRac(int id, TienDoNhiemVuRequest request, CancellationToken ct)
+    {
+        var result = await Doi(id, "trash", request, ct);
+        return new(result.PhienBan, (AnhHuongNhiemVuResponse)result.DuLieu);
+    }
+    [HttpGet("trash")]
+    public async Task<HocTapResponse<PhanTrangResponse<NhiemVuTrongThungRacResponse>>> ThungRac(int trang = 1, CancellationToken ct = default)
+    {
+        var result = await service.ThungRacAsync(Chu, trang, ct);
+        GanPhienBan(result.PhienBan);
+        return result;
+    }
+    [HttpPost("trash/{id:int}/restore")]
+    public async Task<IActionResult> KhoiPhuc(int id, CancellationToken ct)
+    {
+        GanPhienBan(await service.XuLyThungRacAsync(Chu, id, PhienBanYeuCau(), false, ct));
+        return NoContent();
+    }
+    [HttpDelete("trash/{id:int}")]
+    public async Task<IActionResult> XoaVinhVien(int id, CancellationToken ct)
+    {
+        GanPhienBan(await service.XuLyThungRacAsync(Chu, id, PhienBanYeuCau(), true, ct));
+        return NoContent();
+    }
     private async Task<HocTapResponse<object>> Doi(int id,string action,object request,CancellationToken ct)
     { var r = await service.ThayDoiAsync(Chu,id,PhienBanYeuCau(),action,request,false,ct); GanPhienBan(r.PhienBan); return r; }
     private async Task<HocTapResponse<NhiemVuResponse>> DoiNhiemVu(int id,string action,object request,CancellationToken ct)
