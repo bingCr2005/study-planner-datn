@@ -35,3 +35,5 @@ Không sửa bản ghi cũ để làm mất lịch sử. Khi logic thay đổi, 
 - [2026-11-06 — Hộp xác nhận và giải thích giao diện học tập](2026-11-06-hop-xac-nhan-va-giai-thich-giao-dien.md)
 - [2026-11-06 — Thu gọn bộ lọc học tập](2026-11-06-thu-gon-bo-loc-hoc-tap.md)
 - [2026-11-06 — Lựa chọn phạm vi buổi học rõ ràng](2026-11-06-lua-chon-pham-vi-buoi-hoc.md)
+
+- [2026-11-10 — Hộp thông báo nhắc hạn](2026-11-10-thong-bao-nhac-han.md)

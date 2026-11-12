@@ -1,3 +1,4 @@
+using StudyPlanner.Api.CanhBao;
 using Microsoft.EntityFrameworkCore;
 using StudyPlanner.Infrastructure.Data;
 using Microsoft.OpenApi;
@@ -42,6 +43,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 //đăng ký controller (dky các dịch vụ hỗ trợ controller)
 builder.Services.AddQuanTri();
 builder.Services.AddHocTap();
+builder.Services.AddThongBao();
 builder.Services.AddAcademic();
 builder.Services.AddStudyPlannerXacThuc(builder.Configuration, builder.Environment);
 
