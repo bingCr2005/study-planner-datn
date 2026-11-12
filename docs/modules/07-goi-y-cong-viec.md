@@ -62,3 +62,7 @@ Chuẩn bị bộ ví dụ kỳ vọng và so sánh phương án nâng cao với
 ## 6. Điểm cần chốt và điều kiện hoàn thành
 
 Chốt Q11, công thức nâng cao, cách giải thích và tiêu chí đánh giá; Q12 giữ ranh giới phạm vi đã ghi nhận, chỉ mở lại nếu có yêu cầu mở rộng. Hoàn thành bản cơ sở khi có unit test bộ xếp hạng, kiểm tra quyền truy vấn, ví dụ kiểm chứng và UI nêu rõ giới hạn. Không cần chọn xong thuật toán nâng cao để bắt đầu Auth/CRUD.
+
+## Implementation 2026-11-12
+
+Admin priority configuration and Today ranking are implemented. The original draft above is historical; see [current behavior and validation](../history/2026-11-12-quan-ly-quy-tac-uu-tien.md).

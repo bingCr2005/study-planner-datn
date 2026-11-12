@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using StudyPlanner.Application.Auth;
 using StudyPlanner.Domain.Entities;
@@ -51,6 +52,7 @@ public static class XacThucRegistration
         if (minutes is < 1 or > 60) throw new InvalidOperationException("Auth:AccessTokenMinutes từ 1 đến 60.");
         var tokens = new JwtTokenIssuer(key, issuer, audience, minutes);
         services.AddSingleton(tokens);
+        services.TryAddSingleton<KenhPhienDangNhap>();
         services.AddSingleton<IAccessTokenIssuer>(tokens);
         services.AddScoped<XacThucService>();
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
@@ -71,6 +73,11 @@ public static class XacThucRegistration
                     { context.Fail("Invalid account"); return; }
                     var db = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
                     var user = await db.DanhSachNguoiDung.AsNoTracking().SingleOrDefaultAsync(x => x.Ma == id, context.HttpContext.RequestAborted);
+                    if (user is not null && !user.DangHoatDong)
+                    {
+                        context.HttpContext.Items["AccountDisabled"] = true;
+                        context.Fail("Account disabled"); return;
+                    }
                     if (user is null || !user.DangHoatDong || context.Principal?.FindFirstValue("pwd") != tokens.Stamp(user))
                     { context.Fail("Invalid account"); return; }
                     // Luôn dùng role hiện tại, không tin quyền cũ trong token.
@@ -81,6 +88,8 @@ public static class XacThucRegistration
                 OnChallenge = context =>
                 {
                     context.HandleResponse(); context.Response.Headers.WWWAuthenticate = "Bearer";
+                    if (context.HttpContext.Items.ContainsKey("AccountDisabled"))
+                        return WriteProblem(context.HttpContext, 401, "ACCOUNT_DISABLED", "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.");
                     return WriteProblem(context.HttpContext, 401, "UNAUTHORIZED", "Cần đăng nhập hoặc phiên đã hết hiệu lực.");
                 },
                 OnForbidden = context => WriteProblem(context.HttpContext, 403, "FORBIDDEN", "Bạn không có quyền thực hiện thao tác.")

@@ -72,3 +72,12 @@ Không sửa bản ghi cũ để làm mất lịch sử. Khi logic thay đổi, 
 - [2026-11-11 — Thiết kế thẻ riêng cho Bảng trạng thái](2026-11-11-thiet-ke-bang-trang-thai.md)
 - [2026-11-11 — Kịch bản kiểm thử tự học từ tạo việc đến hoàn thành](2026-11-11-kiem-thu-luong-tu-hoc-dau-cuoi.md)
 - [2026-11-12 — Giải quyết conflict mục lục lịch sử của PR 12](2026-11-12-giai-quyet-conflict-lich-su-pr-12.md)
+- [2026-11-12 - Quan ly quy tac uu tien](2026-11-12-quan-ly-quy-tac-uu-tien.md)
+
+- [2026-11-12 - Tong quan admin](2026-11-12-tong-quan-admin.md)
+
+- [2026-11-12 — Admin mở Tổng quan sau đăng nhập](2026-11-12-trang-mac-dinh-admin.md)
+
+- [2026-11-12 - Thoat phien khi khoa tai khoan](2026-11-12-thoat-phien-khi-khoa.md)
+
+- [2026-11-12 — Gộp main vào nhánh quy tắc ưu tiên](2026-11-12-gop-main-vao-quy-tac-uu-tien.md)
