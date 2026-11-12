@@ -37,3 +37,11 @@ Không sửa bản ghi cũ để làm mất lịch sử. Khi logic thay đổi, 
 - [2026-11-06 — Lựa chọn phạm vi buổi học rõ ràng](2026-11-06-lua-chon-pham-vi-buoi-hoc.md)
 
 - [2026-11-10 — Hộp thông báo nhắc hạn](2026-11-10-thong-bao-nhac-han.md)
+
+- [2026-11-12 - Quan ly quy tac uu tien](2026-11-12-quan-ly-quy-tac-uu-tien.md)
+
+- [2026-11-12 - Tong quan admin](2026-11-12-tong-quan-admin.md)
+
+- [2026-11-12 — Admin mở Tổng quan sau đăng nhập](2026-11-12-trang-mac-dinh-admin.md)
+
+- [2026-11-12 - Thoat phien khi khoa tai khoan](2026-11-12-thoat-phien-khi-khoa.md)

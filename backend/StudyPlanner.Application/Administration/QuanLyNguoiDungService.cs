@@ -13,8 +13,13 @@ public sealed class QuanLyNguoiDungService(IQuanLyNguoiDungStore store, INguoiDu
     public async Task<PhanTrangResponse<NguoiDungResponse>> LayDanhSachAsync(DanhSachNguoiDungRequest query, CancellationToken ct)
     {
         QuyTacTaiNguyen.Validate(query);
+        if (query.TaoTu.HasValue && query.TaoDen.HasValue && query.TaoTu > query.TaoDen)
+            throw new QuanTriException(LoaiLoiNghiepVu.InvalidInput, "VALIDATION_ERROR", "Khoảng ngày đăng ký không hợp lệ.");
         var q = query.TuKhoa?.Trim().ToUpperInvariant() ?? "";
         var result = await store.ListAsync<NguoiDung>(x => (!query.DangHoatDong.HasValue || x.DangHoatDong == query.DangHoatDong) &&
+            (!query.VaiTro.HasValue || x.VaiTro == query.VaiTro.Value) &&
+            (!query.TaoTu.HasValue || x.NgayTao >= query.TaoTu.Value) &&
+            (!query.TaoDen.HasValue || x.NgayTao <= query.TaoDen.Value) &&
             (q == "" || x.HoTen.ToUpper().Contains(q) || x.EmailChuanHoa.Contains(q) ||
              (x.MaSoSinhVien != null && x.MaSoSinhVien.ToUpper().Contains(q))), query.Trang, query.KichThuocTrang, ct);
         return QuyTacTaiNguyen.Map(result, Dto);

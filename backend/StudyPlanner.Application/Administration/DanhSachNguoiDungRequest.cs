@@ -9,5 +9,8 @@ public sealed class DanhSachNguoiDungRequest
     [Range(1, int.MaxValue)] public int Trang { get; init; } = 1;
     [Range(1, 100)] public int KichThuocTrang { get; init; } = 20;
     public bool? DangHoatDong { get; init; }
+    [EnumDataType(typeof(VaiTroNguoiDung))] public VaiTroNguoiDung? VaiTro { get; init; }
+    public DateTimeOffset? TaoTu { get; init; }
+    public DateTimeOffset? TaoDen { get; init; }
 }
 
