@@ -71,3 +71,7 @@ Chỉ cho đọc dữ liệu của mình; read không được biến Pending th
 ## 7. Điểm cần chốt và điều kiện hoàn thành
 
 Chốt Q04, Q06, Q07; bổ sung hợp đồng read chưa Delivered. Lập lịch nhắc là một phần giao dịch nhiệm vụ từ đầu; worker đến sau. Hoàn thành khi kiểm thử cạnh tranh/khởi động lại/thử lại đạt và UI phân biệt đã phát với đã đọc.
+
+## Triển khai ngày 2026-11-10
+
+Đã bổ sung API hộp thư, đọc/đọc tất cả và worker nhắc hạn/quá hạn. Phần trên là đặc tả dự thảo cũ; khác biệt và giới hạn thực tế được ghi tại [bản ghi triển khai](../history/2026-11-10-thong-bao-nhac-han.md). Dùng route /api/v1/notifications và DTO tiếng Việt trong code hiện hành.

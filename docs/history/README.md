@@ -63,6 +63,7 @@ Không sửa bản ghi cũ để làm mất lịch sử. Khi logic thay đổi, 
 - [2026-11-10 — Rút gọn chữ trên toast và biểu mẫu nhiệm vụ](2026-11-10-rut-gon-chu-toast-va-bieu-mau-nhiem-vu.md)
 - [2026-11-10 — Làm gọn giao diện danh sách và chi tiết nhiệm vụ](2026-11-10-lam-gon-giao-dien-nhiem-vu.md)
 - [2026-11-10 — Chuyển mô tả và checklist trong chi tiết nhiệm vụ](2026-11-10-chuyen-mo-ta-va-checklist.md)
+- [2026-11-10 — Hộp thông báo nhắc hạn](2026-11-10-thong-bao-nhac-han.md)
 - [2026-11-11 — Cải tiến chế độ xem thời khóa biểu](2026-11-11-cai-tien-thoi-khoa-bieu.md)
 - [2026-11-11 — Đưa hoạt động nhiệm vụ vào menu chi tiết](2026-11-11-lam-gon-hoat-dong-nhiem-vu.md)
 - [2026-11-11 — Căn thẳng thanh điều khiển thời khóa biểu](2026-11-11-can-thang-thanh-dieu-khien-lich.md)
@@ -70,3 +71,4 @@ Không sửa bản ghi cũ để làm mất lịch sử. Khi logic thay đổi, 
 - [2026-11-11 — Bỏ lời mô tả ở mục Chưa phân loại](2026-11-11-bo-mo-ta-chua-phan-loai.md)
 - [2026-11-11 — Thiết kế thẻ riêng cho Bảng trạng thái](2026-11-11-thiet-ke-bang-trang-thai.md)
 - [2026-11-11 — Kịch bản kiểm thử tự học từ tạo việc đến hoàn thành](2026-11-11-kiem-thu-luong-tu-hoc-dau-cuoi.md)
+- [2026-11-12 — Giải quyết conflict mục lục lịch sử của PR 12](2026-11-12-giai-quyet-conflict-lich-su-pr-12.md)
