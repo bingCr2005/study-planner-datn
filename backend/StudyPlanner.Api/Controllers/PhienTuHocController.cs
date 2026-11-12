@@ -8,9 +8,10 @@ namespace StudyPlanner.Api.Controllers;
 public sealed class PhienTuHocController(PhienTuHocService service) : HocTapControllerBase
 {
     [HttpGet]
-    public async Task<HocTapResponse<IReadOnlyList<PhienTuHocResponse>>> DanhSach(DateTimeOffset tu, DateTimeOffset den, int? maNhiemVu, CancellationToken ct)
+    public async Task<HocTapResponse<IReadOnlyList<PhienTuHocResponse>>> DanhSach(
+        DateTimeOffset? tu, DateTimeOffset? den, int? maNhiemVu, int? maLanApDung, CancellationToken ct)
     {
-        var result = await service.DanhSachAsync(Chu, tu, den, maNhiemVu, ct); GanPhienBan(result.PhienBan); return result;
+        var result = await service.DanhSachAsync(Chu, tu, den, maNhiemVu, ct, maLanApDung); GanPhienBan(result.PhienBan); return result;
     }
 
     [HttpGet("{id:int}")]

@@ -5,6 +5,7 @@ namespace StudyPlanner.Application.HocTap;
 public interface IHocTapStore
 {
     IQueryable<T> TruyVan<T>() where T : class;
+    IQueryable<NhiemVu> NhiemVuTrongThungRac();
     Task<List<T>> DanhSachAsync<T>(IQueryable<T> query, CancellationToken ct);
     Task<T?> DauTienAsync<T>(IQueryable<T> query, CancellationToken ct);
     Task<int> DemAsync<T>(IQueryable<T> query, CancellationToken ct);

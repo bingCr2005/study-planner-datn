@@ -6,6 +6,8 @@ public enum HanhDongLichSuNhiemVu
     Updated = 1,
     Completed = 2,
     Reopened = 3,
-    Deleted = 4
+    Deleted = 4,
+    Trashed = 5,
+    Restored = 6
 }
 

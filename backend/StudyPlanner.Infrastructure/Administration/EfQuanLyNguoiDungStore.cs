@@ -16,8 +16,8 @@ public sealed class EfQuanLyNguoiDungStore(ApplicationDbContext db) : IQuanLyNgu
         db.Set<T>().AnyAsync(predicate, ct);
     public Task<int> CountAsync<T>(Expression<Func<T, bool>> predicate, CancellationToken ct) where T : class =>
         db.Set<T>().CountAsync(predicate, ct);
-    public Task<List<T>> LoadAsync<T>(Expression<Func<T, bool>> predicate, CancellationToken ct) where T : class =>
-        db.Set<T>().Where(predicate).ToListAsync(ct);
+    public Task<List<T>> LoadAsync<T>(Expression<Func<T, bool>> predicate, CancellationToken ct, bool includeFiltered = false) where T : class =>
+        (includeFiltered ? db.Set<T>().IgnoreQueryFilters() : db.Set<T>()).Where(predicate).ToListAsync(ct);
     public async Task<PhanTrangResponse<T>> ListAsync<T>(Expression<Func<T, bool>> predicate, int page, int pageSize,
         CancellationToken ct) where T : class
     {

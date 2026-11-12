@@ -59,20 +59,9 @@ public static class QuyTacCay
                 throw new HocTapException(409, "TASK_DEADLINE_CONFLICT", "Hạn nhiệm vụ con không được muộn hơn hạn của cha.", new { maNhiemVu = n.Ma });
         }
     }
-    public static void TinhLai(IReadOnlyList<NhiemVu> nodes, DateTimeOffset now)
+    public static void BoUocLuongCha(IReadOnlyList<NhiemVu> nodes)
     {
-        var children = nodes.Where(x => x.MaNhiemVuCha.HasValue).ToLookup(x => x.MaNhiemVuCha!.Value);
-        var roots = nodes.Where(x => !x.MaNhiemVuCha.HasValue).ToArray();
-        void Visit(NhiemVu n)
-        {
-            var direct = children[n.Ma].ToArray(); foreach (var child in direct) Visit(child);
-            if (direct.Length == 0) return;
-            var progress = direct.All(x => x.TienDo == 100) ? 100 : direct.All(x => x.TienDo == 0) ? 0 : Math.Clamp((int)direct.Average(x => x.TienDo), 1, 99);
-            if (n.TienDo != progress) n.NgayCapNhat = now;
-            n.TienDo = progress; n.ThoiLuongDuKienPhut = null;
-            n.TrangThai = progress == 100 ? TrangThaiNhiemVu.Completed : progress == 0 ? TrangThaiNhiemVu.NotStarted : TrangThaiNhiemVu.InProgress;
-            n.NgayHoanThanh = progress == 100 ? n.NgayHoanThanh ?? now : null;
-        }
-        foreach (var root in roots) Visit(root);
+        var parents = nodes.Where(x => x.MaNhiemVuCha.HasValue).Select(x => x.MaNhiemVuCha!.Value).ToHashSet();
+        foreach (var parent in nodes.Where(x => parents.Contains(x.Ma))) parent.ThoiLuongDuKienPhut = null;
     }
 }

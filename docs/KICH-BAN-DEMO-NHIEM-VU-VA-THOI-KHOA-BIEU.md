@@ -2,6 +2,8 @@
 
 Ngày đối chiếu 06/11/2026. Thời lượng gợi ý 12–15 phút cho luồng chính, thêm 3–5 phút nếu trình bày các tình huống mở rộng.
 
+Dùng [kịch bản kiểm thử tự học đầu cuối](history/2026-11-11-kiem-thu-luong-tu-hoc-dau-cuoi.md) để kiểm tra với dữ liệu cụ thể từ lúc tạo nhiệm vụ đến khi xem lại kết quả đã lưu.
+
 ## 1. Phạm vi đã đối chiếu
 
 Đã kiểm tra [commit gộp PR #8](https://github.com/bingCr2005/study-planner-datn/commit/fd670fd6c506f1cf797319e9575c629e2766955f), các service/DTO BE và mã React trong `C:/Users/ADMIN/Desktop/Study_Planner_FE` hiện có.
@@ -12,12 +14,12 @@ Commit trên chứa nền BE và giao diện `frontend-preview`. FE React, menu 
 | --- | --- |
 | Nhiệm vụ | Thêm nhanh, tạo/sửa/xóa, việc cá nhân hoặc gắn học kỳ/môn, hạn, loại, ưu tiên, ước lượng, thời gian sự kiện |
 | Chia nhỏ | Thêm một/nhiều bước cùng lần, chia tiếp nhiều cấp, chuyển vào nhiệm vụ khác, tách riêng, đổi phạm vi từ nhiệm vụ lớn nhất |
-| Tiến độ | Cập nhật từng việc chưa chia nhỏ, hoàn thành/mở lại, tổng hợp tiến độ lên nhiệm vụ lớn |
+| Tiến độ | Tiến độ độc lập theo nhiệm vụ. Có checklist thì tính theo số mục đã đánh dấu |
 | Tra cứu | Tìm tên/nội dung, lọc học kỳ/môn/loại/ưu tiên/trạng thái, sắp xếp, phân trang, các danh sách theo hạn |
-| Lịch sử | Hành động, thời điểm, nguồn thay đổi và dữ liệu trước/sau |
+| Hoạt động nhiệm vụ | Thao tác theo ngày, thời điểm và nhãn thay đổi dễ đọc |
 | Lịch lớp | Thêm/sửa/xóa mẫu buổi học theo môn, lặp theo thứ trong phạm vi ngày, xác nhận trùng lớp |
 | Giờ rảnh | Thêm/sửa/xóa, bật/tắt mẫu giờ rảnh và xem ảnh hưởng tới các phiên đã đặt |
-| Thời khóa biểu | Ngày, tuần, tháng, danh sách, bật/tắt năm lớp dữ liệu, mở mục lịch để xem/sửa |
+| Thời khóa biểu | Ngày, 3 ngày, tuần, 2 tuần, tháng, danh sách 7 ngày, bật/tắt năm nhóm dữ liệu, mở mục lịch để xem/sửa |
 | Gợi ý lịch | Xem trước theo hạn/ưu tiên/khối lượng/giờ rảnh, lý do và phần chưa xếp được, chọn toàn bộ hoặc một phần để áp dụng |
 | Phiên tự học | Đặt tay, dời, hủy, bắt đầu, kết thúc, xác nhận đã học xong hoặc bỏ lỡ theo điều kiện thời gian |
 | Tương tác FE | Chi tiết bên phải, thanh kéo đổi độ rộng, sao chép liên kết nhiệm vụ và giữ lựa chọn màn trên URL |
@@ -50,7 +52,7 @@ Trước buổi demo, chạy BE và FE React, dùng tài khoản demo có dữ l
 
 ### Bước 1 — Nhận phần trình bày từ bạn trong team, khoảng 30 giây
 
-Mở mục Nhiệm vụ với tài khoản đang đăng nhập. Dùng dữ liệu học kỳ/môn đã tạo ở phần trước. Từ đây thao tác ở menu dọc bên trong Nhiệm vụ, gồm Hôm nay, 7 ngày tới, Tất cả nhiệm vụ và nhóm Lập kế hoạch. Mục Hôm nay/Thời khóa biểu ở thanh bên ngoài thuộc điều hướng chung của ứng dụng; không chuyển sang đó thay cho màn module đang demo nếu chưa đối chiếu tích hợp.
+Mở mục Nhiệm vụ với tài khoản đang đăng nhập và dùng dữ liệu học kỳ, môn đã tạo ở phần trước. Menu dọc bên trong Nhiệm vụ có Hôm nay, 7 ngày tới, Tất cả nhiệm vụ và nhóm Lập kế hoạch. Có thể mở cùng màn Thời khóa biểu từ thanh bên ngoài. Trong Thời khóa biểu, bấm Công cụ học tập để hiện lại menu dọc và chuyển sang Lịch học theo môn, Giờ rảnh hoặc Gợi ý lịch học.
 
 > Tiếp theo, em trình bày phần quản lý nhiệm vụ, chia nhỏ nhiệm vụ và thời khóa biểu. Từ tài khoản, học kỳ và môn học vừa được tạo, sinh viên có thể ghi lại việc cần làm, chia thành các bước nhỏ, theo dõi tiến độ và sắp lịch tự học phù hợp với thời gian của mình.
 
@@ -85,18 +87,16 @@ Thử nhập hạn riêng D+4 cho một bước rồi lưu để minh họa bị
 
 1. Đánh dấu Đọc yêu cầu đã hoàn thành.
 2. Mở Thiết kế thuật toán, chọn Cập nhật tiến độ, nhập 50%.
-3. Giữ bước cuối ở 0%, quay về nhiệm vụ lớn.
+3. Giữ bước cuối ở 0%, quay về nhiệm vụ lớn. Thêm ba mục checklist và đánh dấu một mục.
 
-> Tiến độ được nhập ở từng việc chưa chia nhỏ. Khi ba bước lần lượt là 100%, 50% và 0%, nhiệm vụ lớn được tính thành 50%. Hiện hệ thống lấy trung bình tiến độ của các bước trực tiếp. Thời lượng còn lại lại được tính theo ước lượng của từng việc, nên hai thông tin này có ý nghĩa riêng.
-
-Nếu chỉ hoàn thành bước đầu, nhiệm vụ lớn hiển thị 33% do phần trung bình được lấy về số nguyên. Khi cả ba bước đạt 100%, nhiệm vụ lớn tự hoàn thành. Mở lại một bước sẽ khiến tiến độ lớn được tính lại.
+> Checklist 1/3 cho tiến độ 33% của nhiệm vụ lớn. Kéo tiến độ một bước con sẽ thay đổi tiến độ của riêng bước đó. Thời lượng còn lại của cả nhánh vẫn được tổng hợp từ các bước cuối cùng để phục vụ lập lịch.
 
 ### Bước 5 — Tra cứu và lịch sử, khoảng 1 phút
 
 1. Tìm theo tên thực hành, chọn Mở bộ lọc để lọc theo môn hoặc ưu tiên rồi xóa bộ lọc.
 2. Mở 7 ngày tới và Không có hạn để minh họa danh sách theo hạn.
 3. Thêm nhanh một việc cá nhân Chuẩn bị tài liệu học, mở Chưa phân loại.
-4. Mở lịch sử của bước Thiết kế thuật toán, xem trước/sau thay đổi.
+4. Mở chi tiết bước Thiết kế thuật toán, chọn **⋯ → Hoạt động nhiệm vụ** để xem thời điểm và nội dung thay đổi tóm tắt.
 
 > Các danh sách này dùng cùng dữ liệu nhiệm vụ nhưng chọn theo điều kiện khác nhau. Chưa phân loại hiện gồm các việc chưa gắn học kỳ và môn. Không có hạn dựa trên hạn thực sự đang được sử dụng, kể cả hạn kế thừa. Lịch sử cho biết thao tác đã thay đổi thông tin nào và lúc nào, giúp sinh viên kiểm tra lại quá trình thực hiện.
 
@@ -104,7 +104,7 @@ Lưu ý Tất cả nhiệm vụ mặc định hiển thị các nhiệm vụ l�
 
 ### Bước 6 — Khai báo lịch lớp, khoảng 1 phút
 
-1. Chọn Lịch học theo môn, chọn Mở bộ lọc rồi chọn tên học kỳ và tên môn. Dòng “Chọn tên môn học ở bộ lọc phía trên để quản lý các buổi học của môn” trong ảnh là hướng dẫn chọn phạm vi, chưa phải lỗi tải dữ liệu.
+1. Mở Lịch học theo môn, chọn học kỳ và môn ngay dưới tiêu đề.
 2. Thêm buổi học vào thứ của D+1, từ 19 giờ đến 20 giờ, phòng A101.
 3. Giữ lựa chọn Áp dụng suốt học kỳ, hoặc bỏ chọn để nhập ngày bắt đầu và kết thúc nằm trong học kỳ.
 4. Mở Thời khóa biểu, xem ngày/tuần chứa D+1.
@@ -125,19 +125,19 @@ Khoảng không có lịch cũng cần được khai báo là giờ rảnh nếu
 
 1. Chọn Gợi ý lịch học ở menu dọc. Tiêu đề trên ảnh hiện ghi Gợi ý lịch tự học; đây là cùng màn lập lịch.
 2. Chọn ngày bắt đầu D+1 và 7 ngày.
-3. Chọn nhiệm vụ lớn Hoàn thành bài thực hành lập trình, rồi Tạo gợi ý lịch học.
-4. Chỉ vào giờ đề xuất, lý do, số phút và cảnh báo nếu có.
+3. Bấm Chọn nhiệm vụ, đánh dấu nhiệm vụ lớn Hoàn thành bài thực hành lập trình, rồi bấm Tạo gợi ý lịch học.
+4. Xem các phiên theo ngày, giờ đề xuất, số phút và cảnh báo nếu có.
 
 > Hệ thống xét những bước chưa hoàn thành, có ước lượng và còn thời gian để thực hiện trước hạn. Việc có hạn gần được xét trước, tiếp theo là mức ưu tiên rồi thời lượng cần xếp. Các phiên được đặt trong giờ rảnh sau khi trừ lịch lớp, sự kiện và các phiên đã có. Phần xem trước này cho sinh viên kiểm tra phương án trước khi lưu.
 
 > Trong ví dụ, một bước đã xong, một bước còn 25 phút và một bước còn 50 phút, tổng cộng cần xếp thêm 75 phút. Phiên thường dài 25 đến 50 phút, giữa các phiên có khoảng nghỉ ít nhất 10 phút. Nếu không đủ chỗ trước hạn, hệ thống thông báo số phút còn thiếu để sinh viên điều chỉnh kế hoạch.
 
-Chọn nhiệm vụ lớn khi xem gợi ý sẽ xét các bước của nhiệm vụ đó. Nếu bỏ trống lựa chọn, hệ thống xét theo phạm vi học kỳ/môn đang chọn.
+Chọn nhiệm vụ lớn khi xem gợi ý sẽ xét các bước của nhiệm vụ đó. Chọn Tất cả nhiệm vụ phù hợp để xét theo phạm vi học kỳ và môn đang chọn.
 
 ### Bước 9 — Áp dụng và xem lịch, khoảng 1 phút
 
 1. Giữ các phiên muốn sử dụng, chọn Áp dụng và xác nhận.
-2. Mở Phiên tự học hoặc Thời khóa biểu để thấy kết quả.
+2. Sau khi lưu, giao diện tự mở các phiên vừa áp dụng. Bấm **Xem trên thời khóa biểu** để mở tuần có phiên đầu tiên.
 3. Chuyển ngày/tuần/tháng/danh sách và bật/tắt một lớp lịch.
 
 > Sau khi kiểm tra, sinh viên chọn những phiên phù hợp và bấm áp dụng. Trước khi lưu, hệ thống kiểm tra lại dữ liệu để phát hiện thay đổi về hạn, giờ rảnh hoặc lịch bận. Các phiên đã được lưu sẽ xuất hiện cùng lịch lớp và hạn nhiệm vụ trên thời khóa biểu.
@@ -154,11 +154,11 @@ Nếu bị hỏi về mất mạng khi áp dụng.
 
 > Khi sinh viên đặt tay hoặc dời phiên, hệ thống vẫn kiểm tra cùng các điều kiện như lịch tự động. Phiên phải nằm trong giờ rảnh, tránh lịch lớp và sự kiện, phù hợp hạn nhiệm vụ, đủ khoảng nghỉ và không vượt phần việc còn cần sắp xếp.
 
-Chỉ dời hoặc hủy phiên dự kiến chưa đến giờ bắt đầu. Khi vào đúng khoảng giờ, nút Bắt đầu học xuất hiện. Phiên đang học có thể kết thúc. Phiên dự kiến đã hết giờ có thể xác nhận đã học xong hoặc bỏ lỡ.
+Chỉ dời hoặc hủy phiên dự kiến chưa đến giờ bắt đầu. Khi vào đúng khoảng giờ, bấm **Bắt đầu học** để chạy đồng hồ. Mở tài liệu ở tab khác nếu cần. Bấm **Kết thúc phiên** để lưu thời gian đã bấm giờ và mở bước **Cập nhật tiến độ nhiệm vụ**. Phiên dự kiến đã hết giờ có thể xác nhận đã học xong hoặc bỏ lỡ. Khi bỏ lỡ, có thể bấm **Tạo gợi ý mới** để xếp lại phần việc còn lại.
 
 > Trạng thái phiên cho biết sinh viên xử lý buổi học như thế nào. Sau buổi học, sinh viên cập nhật phần trăm nhiệm vụ theo kết quả thực tế. Ví dụ học xong một phiên vẫn có thể chưa giải xong toàn bộ bài lập trình.
 
-Nếu cần demo Bắt đầu/Kết thúc, chuẩn bị một nhiệm vụ riêng có ước lượng 25 phút và một phiên 25 phút bắt đầu gần thời điểm trình bày bước này, nằm trong giờ rảnh hợp lệ. Không cần chờ phiên 50 phút của D+1. Nêu rõ đây là tài khoản/dữ liệu demo và việc bấm kết thúc là xác nhận của người dùng, chưa phải số giờ được bộ đếm thực học đo lại.
+Nếu cần demo Bắt đầu/Kết thúc, chuẩn bị một nhiệm vụ riêng có ước lượng 25 phút và một phiên 25 phút bắt đầu gần thời điểm trình bày bước này, nằm trong giờ rảnh hợp lệ. Không cần chờ phiên 50 phút của D+1. Dán một URL tài liệu trên một dòng riêng trong nội dung nhiệm vụ để minh họa nút **Mở tài liệu**. Kết thúc sau một khoảng ngắn và chỉ ra sự khác biệt giữa thời lượng dự kiến, thời gian bấm giờ và phần trăm hoàn thành.
 
 ### Bước 11 — Thay đổi có ảnh hưởng và kết thúc, khoảng 1 phút
 
@@ -181,7 +181,7 @@ Nếu cần demo Bắt đầu/Kết thúc, chuẩn bị một nhiệm vụ riên
 | Phân cấp | Cùng học kỳ/môn, không chuyển vào chính mình hoặc bước thuộc mình, tối đa 10 cấp và 1.000 nhiệm vụ trong một nhóm |
 | Thêm theo nhóm | Tối đa 100 bước mỗi request. Một bước không hợp lệ thì cả lần thêm không được lưu |
 | Hạn | Có thể để trống. Ưu tiên hạn riêng, nếu thiếu dùng hạn gần nhất ở phía nhiệm vụ lớn. Bước nhỏ không có hạn muộn hơn hạn đang áp dụng cho nhiệm vụ lớn |
-| Tiến độ | 0% chưa bắt đầu, 1–99% đang thực hiện, 100% hoàn thành. Tiến độ nhiệm vụ lớn lấy trung bình các bước trực tiếp và tính tiếp lên các cấp |
+| Tiến độ | 0% chưa bắt đầu, 1–99% đang thực hiện, 100% hoàn thành. Có checklist thì lấy tỷ lệ mục đã đánh dấu, còn lại nhập phần trăm riêng cho từng nhiệm vụ |
 | Thời lượng còn lại | Mỗi việc chưa chia nhỏ tính ước lượng × phần trăm còn lại, làm tròn lên phút. Nhiệm vụ lớn tổng hợp các việc cuối nhánh. Thiếu một ước lượng thì tổng chưa đầy đủ |
 | Chuyển/tách | Chuyển sang việc cùng học kỳ/môn, hạn được kiểm tra lại. Đổi học kỳ/môn cho toàn nhóm thực hiện từ nhiệm vụ lớn nhất |
 | Lịch lớp | Giờ kết thúc sau bắt đầu trong cùng ngày. Phạm vi nằm trong học kỳ và có ít nhất một ngày đúng thứ. Hai ngày áp dụng nhập cùng nhau hoặc để trống cả hai |
@@ -196,7 +196,7 @@ Nếu cần demo Bắt đầu/Kết thúc, chuẩn bị một nhiệm vụ riên
 | Kết thúc/bỏ lỡ | Phiên đang học được kết thúc. Phiên dự kiến đã hết giờ có thể xác nhận hoàn thành hoặc bỏ lỡ |
 | Chỉnh lịch có ảnh hưởng | Có preview và xác nhận hủy các phiên tương lai không còn hợp lệ. Phiên đang học hoặc đã tới giờ cần xử lý trước khi sửa lịch liên quan |
 | Đồng thời | Dữ liệu cũ trả xung đột, yêu cầu tải lại. Các bước ghi liên quan được thực hiện trong giao dịch |
-| Xóa nhiệm vụ | Xóa nhiệm vụ và các bước thuộc nó, có số liệu ảnh hưởng và dữ liệu liên quan. Lịch sử được giữ. Chưa có thùng rác/khôi phục |
+| Thùng rác nhiệm vụ | Chuyển nhiệm vụ và các bước vào Thùng rác. Tại đó có thể khôi phục hoặc xác nhận xóa vĩnh viễn. Lịch sử thao tác được giữ. |
 
 ## 5. Những câu hỏi dễ gặp và câu trả lời ngắn
 
@@ -206,7 +206,7 @@ Nếu cần demo Bắt đầu/Kết thúc, chuẩn bị một nhiệm vụ riên
 
 **Tiến độ lớn có tính theo số phút không?**
 
-> Phiên bản hiện tại lấy trung bình phần trăm các bước trực tiếp. Thời lượng còn lại được tính riêng theo ước lượng của các việc chưa chia tiếp. Với nhóm nhiều cấp, mỗi nhiệm vụ lớn tổng hợp các bước trực tiếp của nó.
+> Mỗi nhiệm vụ có tiến độ riêng, nhập tay hoặc tính từ checklist của chính nó. Thời lượng còn lại của cả nhánh được tổng hợp theo ước lượng và tiến độ của các việc chưa chia tiếp.
 
 **Sao hoàn thành một phiên chưa đánh dấu xong nhiệm vụ?**
 
@@ -270,7 +270,7 @@ Các tên thử như `aaa`, `bbbb`, `ky01` có thể dùng để kiểm tra kỹ
 
 ## 8. Phạm vi nên trình bày đúng mức đã có
 
-Những chức năng đã có ở FE/BE được liệt kê trong phần 1. Worker phát nhắc hạn tự động, bộ đếm đo giờ thực học, đính kèm, thùng rác, nhiệm vụ lặp, kéo thả thẻ giữa cột và Dashboard thống kê tích hợp đầy đủ thuộc các phần chưa được triển khai hoặc nghiệm thu trong lượt core này. Chỉ trao đổi các giới hạn này khi hội đồng hỏi về phạm vi hoặc hướng phát triển.
+Những chức năng đã có ở FE/BE được liệt kê trong phần 1. Worker phát nhắc hạn tự động, tải tệp đính kèm, nhiệm vụ lặp, kéo thả thẻ giữa cột và Dashboard thống kê tích hợp đầy đủ thuộc các phần chưa được triển khai hoặc nghiệm thu trong lượt core này. Chỉ trao đổi các giới hạn này khi hội đồng hỏi về phạm vi hoặc hướng phát triển.
 
 Phần giao diện và nghiệp vụ đã có kiểm thử ở những lượt triển khai trước. Tài liệu này là kết quả đối chiếu mã nguồn và soạn kịch bản, chưa phải xác nhận buổi demo trên dữ liệu cụ thể của người dùng đã chạy thành công.
 
@@ -320,22 +320,23 @@ Không chỉ đọc tên nút hoặc báo thao tác thành công. Khi mở mỗi
 - Hạn là mốc cần hoàn thành. Giờ sự kiện là khoảng diễn ra ca thi/hoạt động, dùng làm lịch bận. Ước lượng là khối lượng cần học, chưa phải một buổi tự học đã được đặt.
 - Chi tiết bên phải hiển thị trạng thái, mô tả, hạn hiệu lực, tiến độ, ưu tiên, loại, ước lượng và còn lại dự kiến. Thanh chia cho phép chỉnh độ rộng khi màn hình đủ lớn.
 - Chỉnh sửa đổi thông tin; Thêm bước nhỏ chia việc; Cập nhật tiến độ chỉ dùng với việc chưa chia tiếp; Chuyển vào nhiệm vụ lớn/tách riêng đổi cách tổ chức; Đổi học kỳ hoặc môn đổi phạm vi cả nhóm từ nhiệm vụ lớn nhất; Sao chép liên kết để mở lại đúng việc; Xem phiên học nối sang lịch của việc đó.
-- Các bước nhỏ thể hiện cấu trúc công việc, lịch sử thể hiện việc đã thay đổi. Tiến độ lớn tổng hợp trung bình các bước trực tiếp; ước lượng và còn lại tổng hợp từ những bước cuối cùng.
+- Các bước nhỏ thể hiện cấu trúc công việc. Checklist của từng nhiệm vụ điều khiển tiến độ nhiệm vụ đó. Ước lượng và thời lượng còn lại tổng hợp từ những bước cuối cùng.
 
 > Khi chọn một nhiệm vụ, em xem được nội dung cần làm, thời hạn và mức hoàn thành. Em chia việc lớn thành các bước có thể thực hiện và cập nhật kết quả ở từng bước. Hệ thống tổng hợp lại để sinh viên theo dõi toàn bộ bài tập.
 
 ### 10.4. Bảng trạng thái
 
-- Gom kết quả theo các cột Chưa bắt đầu, Đang thực hiện và Đã hoàn thành; phản ánh cùng tiến độ và trạng thái của nhiệm vụ.
-- Vẫn chịu bộ lọc và trang đang xem. Muốn xem việc hoàn thành phải chọn danh sách/trạng thái tương ứng vì mặc định tập trung việc chưa xong.
+- Gom kết quả theo các cột Chưa bắt đầu, Đang thực hiện và Đã hoàn thành. Thẻ tách tên việc, môn học, hạn và tiến độ để dễ đọc trong cột hẹp.
+- Số đếm trên cột tính theo trang và bộ lọc hiện tại. Bảng mặc định tập trung việc chưa xong. Dùng **Xem danh sách đã hoàn thành** trong cột tương ứng để xem các việc đã xong theo ngày.
 - Không giới thiệu kéo thả chuyển cột vì module này chưa có thao tác đó.
 
 > Cùng dữ liệu nhiệm vụ có thể xem theo bảng trạng thái để thấy việc nào chưa làm, đang làm và đã hoàn thành. Trạng thái được gắn với tiến độ, nên khi em cập nhật phần trăm thì bảng và danh sách dùng cùng kết quả.
 
 ### 10.5. Thời khóa biểu
 
-- Có ngày đang xem, nút về trước/về sau, Hôm nay và chế độ ngày/tuần/tháng/danh sách. Đây là cách quan sát cùng nguồn dữ liệu.
-- Năm ô chọn bật/tắt Học trên lớp, Sự kiện, Hạn hoàn thành, Tự học và Giờ rảnh. Bỏ chọn một lớp chỉ ẩn nó, không xóa hay tắt nguồn dữ liệu.
+- Chọn Ngày, 3 ngày hoặc Tuần để xem theo giờ. Lưới ưu tiên cuộn đến buổi của ngày đang chọn và đặt mốc hạn ở đầu mỗi cột ngày. Chọn 2 tuần hoặc Tháng để xem tổng quan, rồi bấm ngày hoặc số mục còn lại để mở lịch ngày. Danh sách 7 ngày gom các mục theo ngày có lịch.
+- Dùng nút trước, sau hoặc Hôm nay để đổi khoảng xem. Năm nút màu bật/tắt Học trên lớp, Sự kiện, Hạn nộp, Tự học và Giờ rảnh trên lịch.
+- Bấm mục lịch để mở chi tiết tương ứng. Với phiên tự học, chi tiết cho biết việc cần làm, giờ dự kiến và thao tác bắt đầu khi đã đến giờ.
 - Học trên lớp đến từ mẫu lịch môn; Sự kiện đến từ giờ diễn ra sự kiện trong nhiệm vụ; Hạn hoàn thành là mốc; Tự học là phiên đã lưu; Giờ rảnh là khoảng sinh viên cho phép xếp học.
 - Hạn hoàn thành không tự chiếm cả khoảng thời gian học. Sự kiện và lịch lớp mới tạo khoảng bận; giờ rảnh cũng không có nghĩa mọi phút trong đó đều dùng được.
 
@@ -343,7 +344,7 @@ Không chỉ đọc tên nút hoặc báo thao tác thành công. Khi mở mỗi
 
 ### 10.6. Lịch học theo môn và giờ rảnh
 
-- Lịch học theo môn cần chọn một môn, có nút Thêm buổi học; mỗi dòng thể hiện thứ, giờ, phòng và thao tác chỉnh/xóa. Một mẫu lặp theo tuần trong phạm vi ngày, không phải mỗi lần xuất hiện là một bản ghi mới.
+- Lịch học theo môn có ô chọn học kỳ và môn ngay trên trang. Dùng Thêm buổi học để tạo một mẫu lặp theo tuần. Mỗi dòng thể hiện thứ, giờ, phòng, phạm vi áp dụng và thao tác chỉnh/xóa.
 - Biểu mẫu buổi học mặc định chọn Áp dụng suốt học kỳ. Bỏ chọn để nhập khoảng ngày riêng; cả hai ngày khi đó đều bắt buộc. Giao diện không còn hướng dẫn người dùng bỏ trống ngày để suy ra phạm vi.
 - Giờ rảnh có thứ, khoảng giờ, ngày bắt đầu/kết thúc, trạng thái đang sử dụng/đã tắt và thao tác chỉnh/xóa. Đây là lịch của sinh viên, không được nhân lên theo môn.
 - Lịch lớp trùng có cảnh báo và xác nhận; phiên tự học trùng lịch bận bị từ chối. Các khung rảnh trùng nhau được hợp nhất khi tính thời gian, không cộng lặp.
@@ -352,26 +353,24 @@ Không chỉ đọc tên nút hoặc báo thao tác thành công. Khi mở mỗi
 
 ### 10.7. Gợi ý lịch học
 
-- Ngày bắt đầu và số ngày muốn lập lịch xác định khoảng cần xét. Ô tìm nhiệm vụ giúp tìm tên trong lựa chọn; có thể chọn nhiều nhiệm vụ, chọn nhiệm vụ lớn bao gồm các bước. Bỏ trống lựa chọn xét theo bộ lọc học kỳ/môn.
+- Ngày bắt đầu và số ngày xác định khoảng cần xét. Chọn Tất cả nhiệm vụ phù hợp để dùng phạm vi học kỳ/môn hoặc Chọn nhiệm vụ để tìm và đánh dấu từng việc. Chọn nhiệm vụ lớn bao gồm các bước.
 - Tạo gợi ý chỉ tính phương án, chưa lưu phiên. Thứ tự xét là hạn gần, ưu tiên cao, lượng phút cần đặt ít hơn, rồi mã để ổn định kết quả. Thuật toán dùng quy tắc, không phải AI.
-- Cần xếp thêm là phần còn cần đặt; Đã dành chỗ là thời lượng trong phiên còn hiệu lực; Mới đề xuất là số phút trong phương án; Còn thiếu là phần có thể tính được nhưng chưa tìm đủ chỗ. Đọc cảnh báo thiếu ước lượng riêng, không hiểu số 0 là mọi việc đều đã xong.
-- Mỗi đề xuất có việc cần học, bắt đầu/kết thúc và lý do. Chọn tất cả/Bỏ chọn/Áp dụng cho phép sinh viên quyết định phương án. Gợi ý có hạn dùng 10 phút; áp dụng kiểm tra lại dữ liệu và điều kiện.
+- Cần xếp là phần còn cần đặt. Đã đặt là thời lượng trong phiên còn hiệu lực. Đề xuất là số phút trong phương án. Chưa xếp là phần đã tính được thời lượng nhưng còn thiếu chỗ. Thiếu ước lượng được liệt kê riêng.
+- Đề xuất được nhóm theo ngày và cho biết việc cần học, giờ bắt đầu và kết thúc. Dùng Chọn tất cả, Bỏ chọn hoặc chọn từng phiên trước khi áp dụng. Gợi ý có hạn dùng 10 phút. Khi áp dụng, API kiểm tra lại các điều kiện đặt lịch.
 
-> Màn gợi ý chuyển lượng công việc còn lại thành phương án học cụ thể trong giờ rảnh. Sinh viên xem các phiên và lý do trước khi chọn áp dụng. Nếu thiếu dữ liệu hoặc thiếu thời gian, em đọc cảnh báo để biết cần bổ sung gì.
+> Màn gợi ý chuyển lượng công việc còn lại thành phương án học cụ thể trong giờ rảnh. Sinh viên xem giờ và chọn phiên muốn lưu. Mục Việc chưa xếp được giải thích trường hợp thiếu dữ liệu hoặc thiếu thời gian.
 
 ### 10.8. Phiên tự học
 
-- Có nút Đặt phiên tự học, khoảng ngày đang xem, chế độ xem và danh sách các phiên đã lưu. Mỗi dòng gồm tên nhiệm vụ, giờ bắt đầu/kết thúc, trạng thái và Xem và cập nhật.
+- Có nút Đặt phiên tự học, khoảng ngày và chế độ xem trên cùng thanh. Danh sách nhóm theo ngày. Mỗi dòng có tên nhiệm vụ, giờ, nhãn trạng thái và nút Mở phiên.
 - Phiên có thể do đặt tay hoặc áp dụng gợi ý. Cả hai cùng chịu kiểm tra giờ rảnh, lịch bận, hạn, khoảng nghỉ và lượng việc chưa được đặt.
 - Planned là đã lên lịch; InProgress là đang học; Completed là đã xác nhận hoàn thành buổi; Missed là bỏ lỡ; Cancelled là đã hủy. Nút thao tác phụ thuộc trạng thái và thời gian hiện tại.
-- Hoàn thành buổi học không tự tăng phần trăm nhiệm vụ và chưa phải số phút thực học do bộ đếm đo.
+- Bắt đầu và kết thúc qua đồng hồ sẽ lưu thời gian bấm giờ. Với phiên qua giờ chỉ được xác nhận thủ công, hệ thống ghi nhận trạng thái và để trống thời lượng bấm giờ. Sinh viên cập nhật phần trăm nhiệm vụ từ bước kế tiếp.
 
 > Phiên tự học là buổi đã được lưu vào kế hoạch, gắn với một nhiệm vụ cụ thể. Sinh viên có thể dời hoặc hủy phiên tương lai, bắt đầu khi đến giờ và xác nhận kết quả buổi học. Kết quả bài làm vẫn được theo dõi qua tiến độ nhiệm vụ.
 
-### 10.9. Xác nhận xóa và thông báo kết quả
+### 10.9. Thùng rác nhiệm vụ
 
-- Hộp trong giao diện hiển thị tên nhiệm vụ, số nhiệm vụ/bước bị xóa và những dữ liệu liên quan có ảnh hưởng; không dùng hộp mặc định mang tên localhost.
-- Nút Hủy và dấu đóng/Esc hủy thao tác trước khi gửi xóa. Nút Xóa nhiệm vụ màu đỏ thể hiện hành động; khi gửi thì hiển thị Đang xóa và khóa bấm lặp.
-- Thành công mới đóng hộp và hiện thông báo Đã xóa nhiệm vụ. Lỗi giữ hộp cùng nội dung lỗi để người dùng xử lý. Nhiệm vụ và các bước bị xóa, lịch sử vẫn được giữ, không có khôi phục/thùng rác trong phạm vi này.
-
-> Trước khi xóa, hệ thống cho sinh viên biết phạm vi ảnh hưởng để kiểm tra lại. Khi xác nhận, máy chủ kiểm tra và thực hiện xóa; giao diện chỉ báo thành công sau khi nhận được kết quả. Lịch sử được giữ để truy vết những gì đã xảy ra.
+- Chọn **Chuyển vào thùng rác** để đưa nhiệm vụ và các bước vào Thùng rác. Nếu thao tác ảnh hưởng đến phiên tự học dự kiến, giao diện hỏi xác nhận hủy phiên. Phiên đang học chặn thao tác.
+- Mở **Thùng rác** ở sidebar và chọn một nhiệm vụ để khôi phục cả nhánh hoặc xóa vĩnh viễn. Hộp xác nhận xóa vĩnh viễn hiển thị tên và số nhiệm vụ/bước bị xóa.
+- Giao diện báo thành công sau khi máy chủ xử lý. Lịch sử lưu thao tác chuyển vào thùng rác, khôi phục và xóa vĩnh viễn.

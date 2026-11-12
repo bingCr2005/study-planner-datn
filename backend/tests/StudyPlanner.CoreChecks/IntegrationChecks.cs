@@ -155,8 +155,19 @@ public static class IntegrationChecks
             var childRead = Data(await Send(aClient, HttpMethod.Get, $"/api/v1/tasks/{child1}", null, 200));
             Check(childRead.GetProperty("hanHieuLuc").GetDateTimeOffset() == DateTimeOffset.Parse("2026-11-06T23:59:00+07:00"), "Child inherits effective deadline");
             await Write(aClient, HttpMethod.Patch, $"/api/v1/tasks/{child1}/progress", new { tienDo = 60 }, 200);
-            Check(Data(await Send(aClient, HttpMethod.Get, $"/api/v1/tasks/{parentId}", null, 200)).GetProperty("tienDo").GetInt32() == 30, "Parent averages direct child progress");
-            await Write(aClient, HttpMethod.Patch, $"/api/v1/tasks/{parentId}/progress", new { tienDo = 20 }, 409);
+            var parentPath = $"/api/v1/tasks/{parentId}";
+            Check(Data(await Send(aClient, HttpMethod.Get, parentPath, null, 200)).GetProperty("tienDo").GetInt32() == 0, "Parent progress is independent from children");
+            await Write(aClient, HttpMethod.Patch, parentPath + "/progress", new { tienDo = 20 }, 200);
+            object ParentChecklist(bool allDone) => new { tieuDe = "Bài lớn", maMonHoc = course, hanHoanThanh = "2026-11-06T23:59:00+07:00",
+                checklist = new[] { new { tieuDe = "Một", daXong = true }, new { tieuDe = "Hai", daXong = allDone }, new { tieuDe = "Ba", daXong = allDone } } };
+            var partial = Data(await Write(aClient, HttpMethod.Put, parentPath, ParentChecklist(false), 200));
+            Check(partial.GetProperty("tienDo").GetInt32() == 33 && partial.GetProperty("checklist").GetArrayLength() == 3, "One of three checklist items is 33 percent");
+            await Write(aClient, HttpMethod.Patch, parentPath + "/progress", new { tienDo = 20 }, 409);
+            var complete = Data(await Write(aClient, HttpMethod.Put, parentPath, ParentChecklist(true), 200));
+            Check(complete.GetProperty("trangThai").GetString() == "Completed", "Completing own checklist completes the parent");
+            var activeList = Data(await Send(aClient, HttpMethod.Get, "/api/v1/tasks?cheDo=all", null, 200)).GetProperty("danhSach");
+            Check(activeList.EnumerateArray().Any(task => task.GetProperty("ma").GetInt32() == child1), "Unfinished child stays visible after parent completion");
+            await Write(aClient, HttpMethod.Put, parentPath, ParentChecklist(false), 200);
             await Write(aClient, HttpMethod.Patch, $"/api/v1/tasks/{parentId}/parent", new { maNhiemVuCha = child1 }, 409);
             var stale = await Revision(aClient);
             await Write(aClient, HttpMethod.Patch, $"/api/v1/tasks/{child2}/progress", new { tienDo = 10 }, 200);
@@ -236,15 +247,30 @@ public static class IntegrationChecks
                 var active = await db.DanhSachPhienTuHoc.Where(x => x.MaNguoiDung == owner && x.TrangThai != TrangThaiPhienTuHoc.Cancelled).OrderBy(x => x.BatDauDuKien).ToListAsync();
                 Check(active.Count == 1, "Exactly one racing session persisted");
                 var s = active[0]; clock.Set(s.BatDauDuKien);
-                await Write(aClient, HttpMethod.Post, $"/api/v1/study-sessions/{s.Ma}/start", null, 200);
-                var repeatedStart = await Write(aClient, HttpMethod.Post, $"/api/v1/study-sessions/{s.Ma}/start", null, 200);
-                Check(Data(repeatedStart).GetProperty("trangThai").GetString() == "InProgress", "Repeated start is idempotent");
+                var batchPath = $"/api/v1/study-sessions?maLanApDung={s.MaLanApDung}";
+                var batch = Data(await Send(aClient, HttpMethod.Get, batchPath, null, 200));
+                Check(batch.GetArrayLength() == 1 && batch[0].GetProperty("ma").GetInt32() == s.Ma, "Batch view returns the sessions of the applied plan");
+                await Send(bClient, HttpMethod.Get, batchPath, null, 404);
+                var sessionPath = $"/api/v1/study-sessions/{s.Ma}";
+                var started = Data(await Write(aClient, HttpMethod.Post, sessionPath + "/start", null, 200));
+                Check(started.GetProperty("batDauBamGio").GetDateTimeOffset() == s.BatDauDuKien, "Starting stores the server time");
+                clock.Advance(TimeSpan.FromMinutes(5));
+                var repeatedStart = Data(await Write(aClient, HttpMethod.Post, sessionPath + "/start", null, 200));
+                Check(repeatedStart.GetProperty("trangThai").GetString() == "InProgress" &&
+                    repeatedStart.GetProperty("batDauBamGio").GetDateTimeOffset() == s.BatDauDuKien, "Repeated start keeps the original stopwatch");
+                var running = Data(await Send(aClient, HttpMethod.Get, sessionPath, null, 200));
+                Check(running.GetProperty("batDauBamGio").GetDateTimeOffset() == s.BatDauDuKien, "Session details restore the running stopwatch");
                 var metadata=Data(await Send(aClient,HttpMethod.Get,$"/api/v1/tasks/{taskId}",null,200));
                 await Write(aClient,HttpMethod.Put,$"/api/v1/tasks/{taskId}",TaskBody("Chỉ đổi tiêu đề khi đang học"),200);
                 var versionBeforeNoop=await Revision(aClient);
                 await Write(aClient,HttpMethod.Put,$"/api/v1/tasks/{taskId}",TaskBody("Chỉ đổi tiêu đề khi đang học"),200);
                 Check(await Revision(aClient)==versionBeforeNoop,"No-op task edit leaves revision unchanged even during active session");
-                await Write(aClient, HttpMethod.Post, $"/api/v1/study-sessions/{s.Ma}/finish", null, 200);
+                var finished = Data(await Write(aClient, HttpMethod.Post, sessionPath + "/finish", null, 200));
+                Check(finished.GetProperty("soGiayDaHoc").GetInt64() == 300 &&
+                    finished.GetProperty("batDauBamGio").ValueKind == JsonValueKind.Null, "Finishing stops the stopwatch and records elapsed seconds");
+                clock.Advance(TimeSpan.FromSeconds(1));
+                var repeatedFinish = Data(await Write(aClient, HttpMethod.Post, sessionPath + "/finish", null, 200));
+                Check(repeatedFinish.GetProperty("soGiayDaHoc").GetInt64() == 300, "Repeated finish preserves recorded duration");
                 Check(Data(await Send(aClient, HttpMethod.Get, $"/api/v1/tasks/{taskId}", null, 200)).GetProperty("tienDo").GetInt32() == 25, "Finishing session does not silently advance task progress");
             }
             var estimateTask=Id(await Write(aClient,HttpMethod.Post,"/api/v1/tasks",TaskBody("Bỏ ước lượng cần hủy phiên",50,"2026-12-30T23:59:00+07:00"),201));
@@ -297,6 +323,7 @@ internal sealed class LoiSauLuuStore(IHocTapStore inner, IHttpContextAccessor co
 {
     private int saveCount;
     public IQueryable<T> TruyVan<T>() where T : class => inner.TruyVan<T>();
+    public IQueryable<NhiemVu> NhiemVuTrongThungRac() => inner.NhiemVuTrongThungRac();
     public Task<List<T>> DanhSachAsync<T>(IQueryable<T> query, CancellationToken ct) => inner.DanhSachAsync(query, ct);
     public Task<T?> DauTienAsync<T>(IQueryable<T> query, CancellationToken ct) => inner.DauTienAsync(query, ct);
     public Task<int> DemAsync<T>(IQueryable<T> query, CancellationToken ct) => inner.DemAsync(query, ct);

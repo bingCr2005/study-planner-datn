@@ -6,26 +6,39 @@ namespace StudyPlanner.Application.HocTap;
 public sealed class PhienTuHocService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, QuyTacDatPhien datPhien, TimeProvider clock)
 {
     public async Task<HocTapResponse<IReadOnlyList<PhienTuHocResponse>>> DanhSachAsync(int chu,
-        DateTimeOffset tu, DateTimeOffset den, int? maNhiemVu, CancellationToken ct)
+        DateTimeOffset? tu, DateTimeOffset? den, int? maNhiemVu, CancellationToken ct, int? maLanApDung = null)
     {
-        QuyTacThoiGian.KiemTraKhoang(tu, den);
+        if (tu is DateTimeOffset start && den is DateTimeOffset end)
+            QuyTacThoiGian.KiemTraKhoang(start, end);
+        else if (maLanApDung is null || tu.HasValue || den.HasValue)
+            throw new HocTapException(400, "VALIDATION_ERROR", "Cần nhập đủ khoảng ngày hoặc chọn một lần áp dụng lịch.");
         await using var session = await dieuPhoi.MoAsync(chu, null, false, ct);
         if (maNhiemVu is int id && await store.DemAsync(store.TruyVan<NhiemVu>().Where(t => t.Ma == id && t.MaNguoiDung == chu), ct) == 0)
             throw KhongTimThay();
-        var rows = await store.DanhSachAsync(store.TruyVan<PhienTuHoc>().Where(p => p.MaNguoiDung == chu &&
-            (!maNhiemVu.HasValue || p.MaNhiemVu == maNhiemVu) && p.BatDauDuKien < den && p.KetThucDuKien > tu)
-            .OrderBy(p => p.BatDauDuKien).ThenBy(p => p.Ma).Take(5001), ct);
+        var query = store.TruyVan<PhienTuHoc>().Where(p => p.MaNguoiDung == chu && (!maNhiemVu.HasValue || p.MaNhiemVu == maNhiemVu));
+        if (maLanApDung is int batch)
+        {
+            if (await store.DemAsync(store.TruyVan<LanApDungLich>().Where(b => b.Ma == batch && b.MaNguoiDung == chu), ct) == 0)
+                throw KhongTimThay();
+            query = query.Where(p => p.MaLanApDung == batch);
+        }
+        if (tu.HasValue && den.HasValue)
+            query = query.Where(p => p.BatDauDuKien < den.Value && p.KetThucDuKien > tu.Value);
+        var rows = await store.DanhSachAsync(query.OrderBy(p => p.BatDauDuKien).ThenBy(p => p.Ma).Take(5001)
+            .Select(p => new { Phien = p, p.NhiemVu.TieuDe, p.NhiemVu.MaHocKy, p.NhiemVu.MaMonHoc }), ct);
         if (rows.Count > 5000) throw new HocTapException(400, "QUERY_LIMIT", "Có quá 5.000 phiên; hãy thu hẹp khoảng ngày.");
         await session.CommitAsync(false, ct);
-        return new(session.NguoiDung.PhienBanLapLich, rows.Select(PhienTuHocResponse.Tu).ToList());
+        return new(session.NguoiDung.PhienBanLapLich, rows.Select(r => PhienTuHocResponse.Tu(r.Phien) with
+        { TieuDeNhiemVu = r.TieuDe, MaHocKy = r.MaHocKy, MaMonHoc = r.MaMonHoc }).ToList());
     }
 
     public async Task<HocTapResponse<PhienTuHocResponse>> ChiTietAsync(int chu, int id, CancellationToken ct)
     {
         await using var session = await dieuPhoi.MoAsync(chu, null, false, ct);
         var row = await TimAsync(chu, id, ct);
+        var doan = await DocDoanThucHocAsync(chu, id, ct);
         await session.CommitAsync(false, ct);
-        return new(session.NguoiDung.PhienBanLapLich, PhienTuHocResponse.Tu(row));
+        return new(session.NguoiDung.PhienBanLapLich, PhienTuHocResponse.Tu(row, doan));
     }
 
     public async Task<HocTapResponse<PhienTuHocResponse>> ThemAsync(int chu, long expected, PhienTuHocRequest request, CancellationToken ct)
@@ -75,6 +88,8 @@ public sealed class PhienTuHocService(IHocTapStore store, HocTapDieuPhoi dieuPho
             "miss" => TrangThaiPhienTuHoc.Missed, "cancel" => TrangThaiPhienTuHoc.Cancelled,
             _ => throw new HocTapException(400, "VALIDATION_ERROR", "Thao tác phiên không hợp lệ.")
         };
+        var doan = await DocDoanThucHocAsync(chu, id, ct);
+        var dangChay = doan.SingleOrDefault(x => x.KetThucThucTe is null);
         var changed = row.TrangThai != target;
         if (changed)
         {
@@ -86,11 +101,22 @@ public sealed class PhienTuHocService(IHocTapStore store, HocTapDieuPhoi dieuPho
                     throw TrangThaiSai("Đang có phiên khác chưa kết thúc.");
                 if (await store.DemAsync(store.TruyVan<NhiemVu>().Where(t => t.MaNguoiDung == chu && t.Ma == row.MaNhiemVu && t.TrangThai == TrangThaiNhiemVu.Completed), ct) > 0)
                     throw TrangThaiSai("Nhiệm vụ đã hoàn thành.");
+                if (await store.DemAsync(store.TruyVan<DoanThucHoc>().Where(x => x.MaNguoiDung == chu && x.KetThucThucTe == null), ct) > 0)
+                    throw TrangThaiSai("Cần kết thúc đồng hồ của phiên đang chạy trước.");
+                var moi = new DoanThucHoc { MaNguoiDung = chu, MaNhiemVu = row.MaNhiemVu, MaPhienTuHoc = id, BatDauThucTe = now };
+                store.Them(moi);
+                doan.Add(moi);
             }
             else if (action == "finish")
             {
                 if (row.TrangThai != TrangThaiPhienTuHoc.InProgress && !(row.TrangThai == TrangThaiPhienTuHoc.Planned && now >= row.KetThucDuKien))
                     throw TrangThaiSai("Chỉ kết thúc phiên đang học hoặc xác nhận phiên Planned đã qua giờ.");
+                if (dangChay is not null)
+                {
+                    // PostgreSQL lưu timestamp theo microsecond và yêu cầu kết thúc sau bắt đầu.
+                    var ketThucToiThieu = dangChay.BatDauThucTe.AddTicks(10);
+                    dangChay.KetThucThucTe = now < ketThucToiThieu ? ketThucToiThieu : now;
+                }
             }
             else if (action == "miss")
             {
@@ -99,14 +125,16 @@ public sealed class PhienTuHocService(IHocTapStore store, HocTapDieuPhoi dieuPho
             }
             else if (row.TrangThai != TrangThaiPhienTuHoc.Planned || now >= row.BatDauDuKien)
                 throw TrangThaiSai("Chỉ hủy phiên Planned chưa bắt đầu.");
-            if (await store.DemAsync(store.TruyVan<DoanThucHoc>().Where(f => f.MaNguoiDung == chu && f.MaPhienTuHoc == id && f.KetThucThucTe == null), ct) > 0)
+            if (dangChay is not null && (action is "miss" or "cancel"))
                 throw TrangThaiSai("Cần đóng đoạn thực học trước khi chuyển trạng thái phiên.");
             row.TrangThai = target; row.NgayCapNhat = now;
         }
-        // Đây chỉ là trạng thái người dùng báo; không tạo DoanThucHoc hay tự sửa tiến độ task.
         await session.CommitAsync(changed, ct);
-        return new(session.NguoiDung.PhienBanLapLich, PhienTuHocResponse.Tu(row));
+        return new(session.NguoiDung.PhienBanLapLich, PhienTuHocResponse.Tu(row, doan));
     }
+
+    private Task<List<DoanThucHoc>> DocDoanThucHocAsync(int chu, int id, CancellationToken ct) =>
+        store.DanhSachAsync(store.TruyVan<DoanThucHoc>().Where(x => x.MaNguoiDung == chu && x.MaPhienTuHoc == id), ct);
 
     private async Task<PhienTuHoc> TimAsync(int chu, int id, CancellationToken ct) =>
         await store.DauTienAsync(store.TruyVan<PhienTuHoc>().Where(p => p.Ma == id && p.MaNguoiDung == chu), ct) ?? throw KhongTimThay();

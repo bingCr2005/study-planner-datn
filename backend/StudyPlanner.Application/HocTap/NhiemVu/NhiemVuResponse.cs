@@ -6,4 +6,7 @@ public sealed record NhiemVuResponse(int Ma, int? MaHocKy, int? MaMonHoc, int? M
     DateTimeOffset? BatDauSuKien, DateTimeOffset? KetThucSuKien,
     TrangThaiNhiemVu TrangThai, int TienDo, int? ThoiLuongDuKienPhut, int? ThoiLuongConLaiPhut,
     bool ThieuUocLuong, bool CoNhiemVuCon, bool QuaHan, int? NhacTruocGio,
-    DateTimeOffset? NgayHoanThanh, DateTimeOffset NgayTao, DateTimeOffset NgayCapNhat);
+    DateTimeOffset? NgayHoanThanh, DateTimeOffset NgayTao, DateTimeOffset NgayCapNhat)
+{
+    public IReadOnlyList<MucChecklist> Checklist { get; init; } = [];
+}
