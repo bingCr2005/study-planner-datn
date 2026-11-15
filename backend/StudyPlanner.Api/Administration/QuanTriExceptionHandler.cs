@@ -21,7 +21,9 @@ public sealed class QuanTriExceptionHandler : IExceptionHandler
         }
         if (exception is StudyPlanner.Application.Auth.XacThucException)
         {
-            await Auth.XacThucRegistration.WriteProblem(context, 401, "INVALID_CREDENTIALS", "Thông tin xác thực không hợp lệ.");
+            var isLogin = string.Equals(context.Request.Path.Value?.TrimEnd('/'), "/api/v1/auth/login", StringComparison.OrdinalIgnoreCase);
+            await Auth.XacThucRegistration.WriteProblem(context, 401, "INVALID_CREDENTIALS",
+                isLogin ? "Sai tài khoản hoặc mật khẩu." : "Thông tin xác thực không hợp lệ.");
             return true;
         }
         var failure = exception as QuanTriException;

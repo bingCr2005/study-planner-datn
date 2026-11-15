@@ -113,4 +113,13 @@ Không sửa bản ghi cũ để làm mất lịch sử. Khi logic thay đổi, 
 - [2026-11-14 — Đổi tên trang thành Danh mục môn học & học kỳ](2026-11-14-doi-ten-danh-muc-mon-hoc-hoc-ky.md)
 
 - [2026-11-14 — Dùng chung logo giữa sinh viên và admin](2026-11-14-dung-chung-logo-sinh-vien-admin.md)
+
+- [2026-11-15 — Kiểm tra dữ liệu đăng nhập ở frontend và backend](2026-11-15-kiem-tra-du-lieu-dang-nhap.md)
+
+- [2026-11-15 — Thông báo lỗi đăng nhập rõ ràng theo trường](2026-11-15-thong-bao-loi-dang-nhap-ro-rang.md)
+
+- [2026-11-15 — Đồng bộ quy tắc mật khẩu đăng nhập và mật khẩu mới](2026-11-15-dong-bo-quy-tac-mat-khau.md)
+
 - [2026-11-15 — Đồng bộ main BE/FE và giải quyết xung đột PR](2026-11-15-dong-bo-main-be-fe.md)
+
+- [2026-11-15 — Giải quyết conflict phần kiểm tra đăng nhập với main](2026-11-15-giai-quyet-conflict-kiem-tra-dang-nhap.md)

@@ -1,6 +1,6 @@
     # Module 01 — Tài khoản và hồ sơ
 
-    Trạng thái: đặc tả dự thảo, chưa có code nghiệp vụ. Nguồn: [quy ước chung](00-quy-uoc-va-quyet-dinh.md), [ERD](../erd.md), [API — Auth/Profile](../THIET-KE-API-SWAGGER.md). Giai đoạn 3 của kế hoạch.
+    Trạng thái: đã có code tài khoản và hồ sơ. Mục đăng nhập bên dưới được đối chiếu với code ngày 2026-11-15; các mục khác vẫn giữ đặc tả ban đầu, có những chi tiết cũ về route, trường hồ sơ và lưu phiên, không dùng để kết luận trạng thái triển khai. Nguồn: [quy ước chung](00-quy-uoc-va-quyet-dinh.md), [ERD](../erd.md), [API — Auth/Profile](../THIET-KE-API-SWAGGER.md).
 
     ## 1. Mục tiêu và phạm vi
 
@@ -25,10 +25,12 @@
 
     ### Đăng nhập và sử dụng phiên
 
-    1. Chuẩn hóa email; kiểm tra mật khẩu và IsActive.
-    2. Trả token, expiresAt và hồ sơ theo đề xuất API; sai thông tin trả lỗi chung không tiết lộ email có tồn tại.
-    3. Request bảo vệ kiểm tra phiên và trạng thái tài khoản. Token hết hạn thì giao diện đưa người dùng về đăng nhập.
-    4. Đăng xuất bản đầu xóa token ở client; không khẳng định token đã bị thu hồi trên server. Lưu token trong bộ nhớ theo đề xuất hiện tại nên tải lại có thể cần đăng nhập lại.
+    1. Frontend nhận email hoặc MSSV tại /login. Cả hai ô bắt buộc; tài khoản tối đa 320 ký tự, bỏ khoảng trắng đầu/cuối. Email kiểm tra định dạng và nhận dấu chấm, gạch dưới, gạch ngang, dấu cộng; MSSV nhận chữ, số và dấu _. Tài khoản không nhận dấu nháy hoặc khoảng trắng ở giữa. Chưa có username riêng nên không ép email/MSSV vào giới hạn username 5–30 ký tự. Mật khẩu đăng nhập chỉ bắt buộc và tối đa 128 ký tự; không bị trim hoặc tự lọc ký tự, cho phép dấu nháy, ký tự đặc biệt và khoảng trắng.
+    2. AuthPage hiển thị lỗi dưới từng ô khi rời ô hoặc submit; khi submit focus ô lỗi đầu tiên và không gửi dữ liệu lỗi. AuthProvider và loginAccount cũng kiểm tra trước khi tiếp nhận phiên hoặc gửi POST /api/v1/auth/login. Backend kiểm tra DangNhapRequest tại HTTP và Application, trả 400/VALIDATION_ERROR khi vi phạm; cả hai trường cùng sai đều có lỗi. FE ánh xạ errors.TaiKhoan/MatKhau từ API vào đúng ô.
+    3. Dữ liệu hợp lệ được đối chiếu email không phân biệt hoa/thường hoặc MSSV giữ số 0 đầu và hoa/thường; không chọn tài khoản khi có nhiều kết quả khớp. Kiểm tra mật khẩu băm và DangHoatDong; sai thông tin hoặc bị khóa trả 401/INVALID_CREDENTIALS với thông báo Sai tài khoản hoặc mật khẩu. FE chuẩn hóa lỗi 401 của riêng POST đăng nhập để backend cũ cũng có thông báo rõ; lỗi mạng, khóa có mã ACCOUNT_DISABLED và lỗi xác minh hồ sơ sau đăng nhập vẫn dùng thông báo riêng.
+    4. API trả tokenTruyCap, hetHanLuc và nguoiDung. Frontend xác minh qua GET /api/v1/users/me rồi lưu JWT/hạn phiên trong sessionStorage; admin vào /admin/overview, sinh viên vào /today. Không lưu mật khẩu.
+    5. Mật khẩu mới khi đăng ký/đổi mật khẩu bắt buộc 8–128 ký tự, không chỉ gồm khoảng trắng và xác nhận khớp ở FE. Không ép đủ nhóm ký tự; hỗ trợ chữ thường/hoa, số, dấu nháy, các ký tự đặc biệt và khoảng trắng nguyên văn. Tài khoản cũ dùng mật khẩu ngắn vẫn tới được bước xác thực. Các ô mật khẩu ở đăng nhập/đăng ký/đổi mật khẩu mặc định ẩn và có nút Hiện/Ẩn độc lập, không submit form. Không thay đổi hash hoặc dữ liệu tài khoản đã lưu.
+    6. Request bảo vệ kiểm tra phiên và trạng thái tài khoản. SSE và API phát hiện tài khoản bị khóa/hết phiên; đăng xuất xóa credential phía client. Xem bản ghi 2026-11-12-thoat-phien-khi-khoa.md về giới hạn thu hồi token.
 
     ### Sửa hồ sơ và đổi mật khẩu
 
