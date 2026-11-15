@@ -18,6 +18,8 @@ using StudyPlanner.Domain.Entities;
 using StudyPlanner.Domain.Enums;
 using StudyPlanner.Infrastructure.Data;
 
+if (args.Contains("--login-validation-only")) { await LoginValidationChecks.RunAsync(); return; }
+
 var supplied = Environment.GetEnvironmentVariable("STUDYPLANNER_TEST_POSTGRES");
 if (string.IsNullOrWhiteSpace(supplied)) throw new InvalidOperationException("Use isolated local test PostgreSQL.");
 var config = new NpgsqlConnectionStringBuilder(supplied);
@@ -366,7 +368,7 @@ try
     var login = await Send(HttpMethod.Post, "/api/v1/auth/login", new { taiKhoan = " FIRST@EXAMPLE.TEST ", matKhau = password }, 200);
     var byCode = await Send(HttpMethod.Post, "/api/v1/auth/login", new { taiKhoan = " 0306000001 ", matKhau = password }, 200);
     Check(byCode.GetProperty("nguoiDung").GetProperty("ma").GetInt32() == id, "Email and student-code login identify the same user");
-    await Send(HttpMethod.Post, "/api/v1/auth/login", new { taiKhoan = "0306000001", matKhau = "wrong" }, 401);
+    await Send(HttpMethod.Post, "/api/v1/auth/login", new { taiKhoan = "0306000001", matKhau = "wrong-password" }, 401);
     await Send(HttpMethod.Post, "/api/v1/auth/login", new { taiKhoan = "306000001", matKhau = password }, 401);
     var token = login.GetProperty("tokenTruyCap").GetString()!;
     Check(login.GetProperty("nguoiDung").GetProperty("ma").GetInt32() == id &&
