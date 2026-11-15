@@ -10,8 +10,13 @@ public class NguoiDungConfiguration : IEntityTypeConfiguration<NguoiDung>
     public void Configure(EntityTypeBuilder<NguoiDung> builder)
     {
         builder.Property(x => x.PhienBanLapLich).HasColumnName("phien_ban_lap_lich").HasDefaultValue(0L);
+        builder.Property(x => x.PhienHocPhut).HasColumnName("phien_hoc_phut").HasDefaultValue(25);
+        builder.Property(x => x.NghiGiuaPhienPhut).HasColumnName("nghi_giua_phien_phut").HasDefaultValue(5);
+        builder.Property(x => x.GioiHanHocMoiNgayPhut).HasColumnName("gioi_han_hoc_moi_ngay_phut").HasDefaultValue(180);
+        builder.ToTable("nguoi_dung", t => t.HasCheckConstraint("CK_nguoi_dung_cau_hinh_hoc",
+            "phien_hoc_phut BETWEEN 15 AND 50 AND nghi_giua_phien_phut BETWEEN 1 AND 30 AND gioi_han_hoc_moi_ngay_phut BETWEEN 15 AND 720"));
         builder.ToTable("nguoi_dung", t => t.HasCheckConstraint("CK_nguoi_dung_revision", "phien_ban_lap_lich >= 0"));
-        // Tên bảng/cột tiếng Việt; giữ tên constraint/index cũ để migration chỉ rename bảng.
+        // Tên bảng/cột tiếng Việt; giữ tên ràng buộc/chỉ mục cũ để bản chuyển đổi chỉ đổi tên bảng.
         builder.Property(x => x.Ma).HasColumnName("ma");
         builder.Property(x => x.Email).HasColumnName("email");
         builder.Property(x => x.EmailChuanHoa).HasColumnName("email_chuan_hoa");
@@ -20,7 +25,7 @@ public class NguoiDungConfiguration : IEntityTypeConfiguration<NguoiDung>
         builder.Property(x => x.MaSoSinhVien).HasColumnName("ma_so_sinh_vien");
         builder.Property(x => x.TenTruong).HasColumnName("ten_truong");
         builder.Property(x => x.TenLop).HasColumnName("ten_lop");
-        // Legacy: cột/FK cũ còn trong model để nâng cấp không làm mất dữ liệu tổ chức.
+        // Giữ cột/khóa ngoại cũ trong mô hình để nâng cấp không làm mất dữ liệu tổ chức.
         builder.Property(x => x.MaLop).HasColumnName("ma_lop");
         builder.Property(x => x.NganhHoc).HasColumnName("nganh_hoc");
         builder.Property(x => x.VaiTro).HasColumnName("vai_tro");
@@ -57,19 +62,19 @@ public class NguoiDungConfiguration : IEntityTypeConfiguration<NguoiDung>
         builder.Property(x => x.VaiTro).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(x => x.NgayTao).HasColumnType("timestamp with time zone");
         builder.Property(x => x.NgayCapNhat).HasColumnType("timestamp with time zone");
-        // Application phải trim/chuẩn hóa email thống nhất trước khi lưu và khi đăng nhập.
+        // Tầng ứng dụng phải bỏ khoảng trắng và chuẩn hóa email thống nhất trước khi lưu và khi đăng nhập.
         builder.HasIndex(x => x.EmailChuanHoa).IsUnique();
         // Theo giả định ERD: mã SV duy nhất trong đơn vị triển khai, không phải toàn cầu.
         builder.HasIndex(x => x.MaSoSinhVien).IsUnique().HasFilter("\"ma_so_sinh_vien\" IS NOT NULL");
-        // VaiTro phải do server kiểm soát; mặc định database không thay thế phân quyền API.
+        // VaiTro phải do máy chủ kiểm soát; mặc định cơ sở dữ liệu không thay thế phân quyền API.
         builder.Property(x => x.VaiTro).HasDefaultValue(VaiTroNguoiDung.Student);
         builder.Property(x => x.DangHoatDong).HasDefaultValue(true);
         builder.Property(x => x.MuiGio).HasDefaultValue("Asia/Ho_Chi_Minh");
-        // 0 nghĩa là nhắc đúng hạn, không phải chưa gán; không để DB default 24 ghi đè.
+        // 0 nghĩa là nhắc đúng hạn, không phải chưa gán; không để giá trị mặc định 24 của cơ sở dữ liệu ghi đè.
         builder.Property(x => x.NhacTruocGio).HasDefaultValue(24).HasSentinel(24);
-        // Legacy ngoài scope cốt lõi; giữ nguyên FK để tương thích/backfill trước khi xét loại bỏ.
+        // Liên kết cũ ngoài phạm vi cốt lõi; giữ khóa ngoại để tương thích và chuyển dữ liệu trước khi xét loại bỏ.
         builder.HasOne(x => x.LopSinhVien).WithMany(x => x.DanhSachNguoiDung).HasForeignKey(x => x.MaLop).HasConstraintName("FK_users_student_classes_ClassId").OnDelete(DeleteBehavior.SetNull);
-        // Giữ tên index hiện có để migration chỉ đổi tên cột.
+        // Giữ tên chỉ mục hiện có để bản chuyển đổi chỉ đổi tên cột.
         builder.HasIndex(x => x.MaLop).HasDatabaseName("IX_users_ClassId");
         builder.HasIndex(x => x.EmailChuanHoa).HasDatabaseName("IX_users_NormalizedEmail");
         builder.HasIndex(x => x.MaSoSinhVien).HasDatabaseName("IX_users_StudentCode");

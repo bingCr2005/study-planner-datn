@@ -6,7 +6,7 @@ public sealed class ThoiKhoaBieuService(IHocTapStore store, HocTapDieuPhoi dieuP
 {
     internal const int GioiHanNguon = 10000;
 
-    // Không mở transaction lồng: scheduler gọi hàm này trong snapshot/giao dịch do caller quản lý.
+    // Không mở giao dịch lồng: bộ xếp lịch gọi hàm này trong ảnh chụp dữ liệu/giao dịch do bên gọi quản lý.
     public async Task<NguonThoiKhoaBieu> LayNguonAsync(int chu, DateTimeOffset tu, DateTimeOffset den, CancellationToken ct)
     {
         QuyTacThoiGian.KiemTraKhoang(tu, den);
@@ -18,13 +18,14 @@ public sealed class ThoiKhoaBieuService(IHocTapStore store, HocTapDieuPhoi dieuP
             (x.NgayApDungTu ?? x.MonHoc.HocKy.NgayBatDau) <= ngayDen && (x.NgayApDungDen ?? x.MonHoc.HocKy.NgayKetThuc) >= ngayTu)
             .Select(x => new DuLieuLichHoc(x, x.MonHoc, x.MonHoc.HocKy)), ct);
         var ranh = await TaiCoGioiHanAsync(store.TruyVan<KhungGioRanh>().Where(x => x.MaNguoiDung == chu && x.DangSuDung && x.NgayBatDau <= ngayDen && x.NgayKetThuc >= ngayTu), ct);
+        var exceptions = await TaiCoGioiHanAsync(store.TruyVan<NgoaiLeGioRanh>().Where(x => x.MaNguoiDung == chu && x.Ngay >= ngayTu && x.Ngay <= ngayDen), ct);
         var suKien = await TaiCoGioiHanAsync(store.TruyVan<NhiemVu>().Where(x => x.MaNguoiDung == chu &&
             x.BatDauSuKien != null && x.KetThucSuKien > tu && x.BatDauSuKien < den), ct);
         var phien = await TaiCoGioiHanAsync(store.TruyVan<PhienTuHoc>().Where(x => x.MaNguoiDung == chu &&
             x.KetThucDuKien > tu && x.BatDauDuKien < den), ct);
         return new(user,
             lich.SelectMany(x => QuyTacThoiGian.SinhLichHoc(x.Lich, x.HocKy, zone, tu, den)).ToArray(),
-            QuyTacThoiGian.HopNhat(ranh.SelectMany(x => QuyTacThoiGian.SinhGioRanh(x, zone, tu, den))),
+            QuyTacGioRanh.Sinh(ranh, exceptions, zone, tu, den),
             suKien.Select(x => new KhoangThoiGian(x.BatDauSuKien!.Value, x.KetThucSuKien!.Value)).ToArray(), phien);
     }
 
@@ -64,7 +65,7 @@ public sealed class ThoiKhoaBieuService(IHocTapStore store, HocTapDieuPhoi dieuP
         // Lọc hạn kế thừa trong SQL trước khi tải các cây cần hiển thị.
         var matchedDeadlines = QuyTacCay.LocHan(deadlineQuery, tu, den).OrderBy(x => x.Ma);
         var deadlines = await TaiCoGioiHanAsync(matchedDeadlines.Select(x => new { x.Ma, x.MaMonHoc, x.MaHocKy, x.TieuDe, x.TrangThai }), ct);
-        // Hai SELECT cùng snapshot/thứ tự: dùng biểu thức SQL chung, không N+1 tải từng cây để tính hạn.
+        // Hai SELECT cùng ảnh chụp dữ liệu/thứ tự: dùng biểu thức SQL chung, tránh tải từng cây để tính hạn.
         var dates = await TaiCoGioiHanAsync(matchedDeadlines.Select(QuyTacCay.BieuThucHan), ct);
         for (var i = 0; i < deadlines.Count; i++)
         {
@@ -84,8 +85,9 @@ public sealed class ThoiKhoaBieuService(IHocTapStore store, HocTapDieuPhoi dieuP
             events.Add(new($"session-{x.Phien.Ma}", "PhienTuHoc", x.Phien.Ma, x.MaMonHoc, x.MaHocKy, x.TieuDe,
                 x.Phien.BatDauDuKien, x.Phien.KetThucDuKien, x.MauSac, x.Phien.TrangThai.ToString(), x.Phien.TrangThai == TrangThaiPhienTuHoc.Planned));
         var ranh = await TaiCoGioiHanAsync(store.TruyVan<KhungGioRanh>().Where(x => x.MaNguoiDung == chu && x.DangSuDung && x.NgayBatDau <= ngayDen && x.NgayKetThuc >= ngayTu), ct);
+        var exceptions = await TaiCoGioiHanAsync(store.TruyVan<NgoaiLeGioRanh>().Where(x => x.MaNguoiDung == chu && x.Ngay >= ngayTu && x.Ngay <= ngayDen), ct);
         foreach (var x in ranh)
-            foreach (var k in QuyTacThoiGian.SinhGioRanh(x, zone, tu, den))
+            foreach (var k in QuyTacGioRanh.Sinh([x], exceptions, zone, tu, den))
                 events.Add(new($"free-{x.Ma}-{k.BatDau:yyyyMMddTHHmmssZ}", "GioRanh", x.Ma, null, null, "Giờ rảnh", k.BatDau, k.KetThuc, null, null, true));
         if (events.Count > GioiHanNguon) throw new HocTapException(400, "CALENDAR_RESULT_LIMIT", "Lịch có quá nhiều sự kiện. Hãy thu hẹp khoảng ngày hoặc bộ lọc.");
         await session.CommitAsync(false, ct);

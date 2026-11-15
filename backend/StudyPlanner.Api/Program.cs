@@ -10,8 +10,8 @@ using StudyPlanner.Api.HocTap;
 using StudyPlanner.Api.Academic;
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// Đăng ký các dịch vụ vào bộ chứa phụ thuộc.
+// Hướng dẫn cấu hình Swagger/OpenAPI: https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 //đăng ký dịch vụ sinh tài liệu OpenAPI
 builder.Services.AddSwaggerGen(options =>
@@ -78,7 +78,7 @@ if (!string.IsNullOrWhiteSpace(bootstrapEmail))
 }
 app.UseExceptionHandler();
 
-// Configure the HTTP request pipeline.
+// Cấu hình chuỗi xử lý yêu cầu HTTP.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

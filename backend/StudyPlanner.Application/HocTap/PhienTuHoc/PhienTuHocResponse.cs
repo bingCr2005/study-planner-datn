@@ -16,7 +16,7 @@ public sealed record PhienTuHocResponse(int Ma, int MaNhiemVu, int? MaLanApDung,
     public static PhienTuHocResponse Tu(PhienTuHoc p) => new(p.Ma, p.MaNhiemVu, p.MaLanApDung,
         p.BatDauDuKien, p.KetThucDuKien, p.TrangThai, p.GhiChu, p.NgayTao, p.NgayCapNhat);
 
-    public static PhienTuHocResponse Tu(PhienTuHoc p, IReadOnlyList<DoanThucHoc> doan) => Tu(p) with
+    public static PhienTuHocResponse Tu(PhienTuHoc p, IReadOnlyList<KhoangThoiGianHoc> doan) => Tu(p) with
     {
         BatDauBamGio = doan.SingleOrDefault(x => x.KetThucThucTe is null)?.BatDauThucTe,
         SoGiayDaHoc = doan.Count == 0 ? null : doan.Where(x => x.KetThucThucTe.HasValue)

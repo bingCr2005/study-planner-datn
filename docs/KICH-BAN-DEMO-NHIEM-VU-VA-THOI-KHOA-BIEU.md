@@ -154,11 +154,13 @@ Nếu bị hỏi về mất mạng khi áp dụng.
 
 > Khi sinh viên đặt tay hoặc dời phiên, hệ thống vẫn kiểm tra cùng các điều kiện như lịch tự động. Phiên phải nằm trong giờ rảnh, tránh lịch lớp và sự kiện, phù hợp hạn nhiệm vụ, đủ khoảng nghỉ và không vượt phần việc còn cần sắp xếp.
 
-Chỉ dời hoặc hủy phiên dự kiến chưa đến giờ bắt đầu. Khi vào đúng khoảng giờ, bấm **Bắt đầu học** để chạy đồng hồ. Mở tài liệu ở tab khác nếu cần. Bấm **Kết thúc phiên** để lưu thời gian đã bấm giờ và mở bước **Cập nhật tiến độ nhiệm vụ**. Phiên dự kiến đã hết giờ có thể xác nhận đã học xong hoặc bỏ lỡ. Khi bỏ lỡ, có thể bấm **Tạo gợi ý mới** để xếp lại phần việc còn lại.
+Chỉ dời hoặc hủy phiên còn ở trạng thái dự kiến và chưa đến giờ bắt đầu. Có thể bấm **Bắt đầu ngay** trước giờ dự kiến, hoặc **Bắt đầu học** khi đã tới giờ nhưng chưa hết giờ phiên. Nút này mở màn **Tập trung** riêng ở chế độ đếm lên, gắn với nhiệm vụ của phiên. Đồng hồ ghi giờ bắt đầu thực tế, giữ nguyên khoảng giờ dự kiến để đối chiếu. Dùng **Tạm dừng / Tiếp tục** khi nghỉ, rồi **Kết thúc → Lưu và kết thúc** để lưu thời gian. Có thể **Bỏ phiên** sau xác nhận; thời gian bị bỏ không cộng vào lịch sử. Sau khi lưu, chọn **Cập nhật tiến độ nhiệm vụ** để mở nhiệm vụ; người dùng cập nhật theo kết quả hoặc để sau, không cần vừa học vừa chỉnh phần trăm. Với nhiệm vụ có checklist, tick các mục đã làm. Kết thúc đồng hồ không tự tăng tiến độ, không tự hoàn thành nhiệm vụ. Phiên dự kiến đã hết giờ mà chưa bắt đầu vẫn có thể xác nhận đã học xong hoặc bỏ lỡ.
 
 > Trạng thái phiên cho biết sinh viên xử lý buổi học như thế nào. Sau buổi học, sinh viên cập nhật phần trăm nhiệm vụ theo kết quả thực tế. Ví dụ học xong một phiên vẫn có thể chưa giải xong toàn bộ bài lập trình.
 
-Nếu cần demo Bắt đầu/Kết thúc, chuẩn bị một nhiệm vụ riêng có ước lượng 25 phút và một phiên 25 phút bắt đầu gần thời điểm trình bày bước này, nằm trong giờ rảnh hợp lệ. Không cần chờ phiên 50 phút của D+1. Dán một URL tài liệu trên một dòng riêng trong nội dung nhiệm vụ để minh họa nút **Mở tài liệu**. Kết thúc sau một khoảng ngắn và chỉ ra sự khác biệt giữa thời lượng dự kiến, thời gian bấm giờ và phần trăm hoàn thành.
+Nếu cần demo Bắt đầu/Kết thúc, có thể mở phiên tương lai và bấm **Bắt đầu ngay**, không cần chờ tới giờ dự kiến. Dán một URL tài liệu trên một dòng riêng trong nội dung nhiệm vụ để minh họa nút **Mở tài liệu**. Kết thúc sau một khoảng ngắn và chỉ ra sự khác biệt giữa thời lượng dự kiến, thời gian bấm giờ và phần trăm hoàn thành. Xác minh giờ dự kiến không đổi, mở lại phiên vẫn khôi phục đồng hồ, và tiến độ chỉ đổi sau thao tác cập nhật của người dùng.
+
+Để demo độc lập với lịch dự kiến, vào **Tập trung** trên menu chính. Chọn Pomodoro hoặc Đếm lên, chọn nhiệm vụ học tập/cá nhân hoặc Tập trung tự do, bắt đầu và nhập ghi chú. Chuyển sang Nhiệm vụ để thấy thanh quay lại đồng hồ, rồi trở lại, tạm dừng, tiếp tục và kết thúc. Có thể thêm một bản ghi đã học từ dấu **+** trong Lịch sử tập trung. Xem [module đồng hồ](modules/09-dong-ho-tap-trung.md) để chuẩn bị cài đặt, migration và các kiểm tra.
 
 ### Bước 11 — Thay đổi có ảnh hưởng và kết thúc, khoảng 1 phút
 
@@ -192,7 +194,7 @@ Nếu cần demo Bắt đầu/Kết thúc, chuẩn bị một nhiệm vụ riên
 | Phiên | Tối đa 50 phút, thông thường tối thiểu 25 phút, nghỉ giữa phiên ít nhất 10 phút. Phần cuối dưới 25 phút chỉ được dùng để xếp hết lượng còn cần đặt của việc đó |
 | Giới hạn khối lượng | Phần cần xếp dựa trên ước lượng còn lại và trừ thời gian đã dành trong những phiên còn hiệu lực, tránh đặt vượt lượng việc |
 | Hiệu lực gợi ý | 10 phút. Áp dụng lần mới kiểm tra lại phiên bản và các điều kiện. Dữ liệu thay đổi thì cần tạo gợi ý mới |
-| Bắt đầu phiên | Phiên đang dự kiến và hiện tại đã tới giờ bắt đầu nhưng chưa hết giờ, nhiệm vụ chưa xong, mỗi tài khoản tối đa một phiên đang học |
+| Bắt đầu phiên | Phiên đang dự kiến và chưa hết giờ; có thể bắt đầu sớm bằng Bắt đầu ngay, nhiệm vụ chưa xong, mỗi tài khoản tối đa một phiên đang học |
 | Kết thúc/bỏ lỡ | Phiên đang học được kết thúc. Phiên dự kiến đã hết giờ có thể xác nhận hoàn thành hoặc bỏ lỡ |
 | Chỉnh lịch có ảnh hưởng | Có preview và xác nhận hủy các phiên tương lai không còn hợp lệ. Phiên đang học hoặc đã tới giờ cần xử lý trước khi sửa lịch liên quan |
 | Đồng thời | Dữ liệu cũ trả xung đột, yêu cầu tải lại. Các bước ghi liên quan được thực hiện trong giao dịch |
@@ -336,7 +338,7 @@ Không chỉ đọc tên nút hoặc báo thao tác thành công. Khi mở mỗi
 
 - Chọn Ngày, 3 ngày hoặc Tuần để xem theo giờ. Lưới ưu tiên cuộn đến buổi của ngày đang chọn và đặt mốc hạn ở đầu mỗi cột ngày. Chọn 2 tuần hoặc Tháng để xem tổng quan, rồi bấm ngày hoặc số mục còn lại để mở lịch ngày. Danh sách 7 ngày gom các mục theo ngày có lịch.
 - Dùng nút trước, sau hoặc Hôm nay để đổi khoảng xem. Năm nút màu bật/tắt Học trên lớp, Sự kiện, Hạn nộp, Tự học và Giờ rảnh trên lịch.
-- Bấm mục lịch để mở chi tiết tương ứng. Với phiên tự học, chi tiết cho biết việc cần làm, giờ dự kiến và thao tác bắt đầu khi đã đến giờ.
+- Bấm mục lịch để mở chi tiết tương ứng. Với phiên tự học, chi tiết cho biết việc cần làm, giờ dự kiến và thao tác Bắt đầu ngay trước giờ hoặc Bắt đầu học khi đã tới giờ, miễn là phiên chưa hết giờ.
 - Học trên lớp đến từ mẫu lịch môn; Sự kiện đến từ giờ diễn ra sự kiện trong nhiệm vụ; Hạn hoàn thành là mốc; Tự học là phiên đã lưu; Giờ rảnh là khoảng sinh viên cho phép xếp học.
 - Hạn hoàn thành không tự chiếm cả khoảng thời gian học. Sự kiện và lịch lớp mới tạo khoảng bận; giờ rảnh cũng không có nghĩa mọi phút trong đó đều dùng được.
 
@@ -367,7 +369,7 @@ Không chỉ đọc tên nút hoặc báo thao tác thành công. Khi mở mỗi
 - Planned là đã lên lịch; InProgress là đang học; Completed là đã xác nhận hoàn thành buổi; Missed là bỏ lỡ; Cancelled là đã hủy. Nút thao tác phụ thuộc trạng thái và thời gian hiện tại.
 - Bắt đầu và kết thúc qua đồng hồ sẽ lưu thời gian bấm giờ. Với phiên qua giờ chỉ được xác nhận thủ công, hệ thống ghi nhận trạng thái và để trống thời lượng bấm giờ. Sinh viên cập nhật phần trăm nhiệm vụ từ bước kế tiếp.
 
-> Phiên tự học là buổi đã được lưu vào kế hoạch, gắn với một nhiệm vụ cụ thể. Sinh viên có thể dời hoặc hủy phiên tương lai, bắt đầu khi đến giờ và xác nhận kết quả buổi học. Kết quả bài làm vẫn được theo dõi qua tiến độ nhiệm vụ.
+> Phiên tự học là buổi đã được lưu vào kế hoạch, gắn với một nhiệm vụ cụ thể. Sinh viên có thể dời hoặc hủy phiên tương lai chưa bắt đầu, bắt đầu sớm khi sẵn sàng và xác nhận kết quả buổi học. Đồng hồ ghi thời gian thực học; kết quả bài làm được cập nhật qua tiến độ nhiệm vụ sau phiên hoặc để sau.
 
 ### 10.9. Thùng rác nhiệm vụ
 

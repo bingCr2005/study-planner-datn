@@ -72,6 +72,16 @@ Không sửa bản ghi cũ để làm mất lịch sử. Khi logic thay đổi, 
 - [2026-11-11 — Thiết kế thẻ riêng cho Bảng trạng thái](2026-11-11-thiet-ke-bang-trang-thai.md)
 - [2026-11-11 — Kịch bản kiểm thử tự học từ tạo việc đến hoàn thành](2026-11-11-kiem-thu-luong-tu-hoc-dau-cuoi.md)
 - [2026-11-12 — Giải quyết conflict mục lục lịch sử của PR 12](2026-11-12-giai-quyet-conflict-lich-su-pr-12.md)
+- [2026-11-12 — Bắt đầu phiên ngay và cập nhật tiến độ sau khi học](2026-11-12-bat-dau-phien-ngay-va-tien-do-sau-hoc.md)
+- [2026-11-12 — Màn đồng hồ Tập trung riêng theo ảnh tham khảo](2026-11-12-man-dong-ho-tap-trung-rieng.md)
+- [2026-11-12 — Xem nhiệm vụ và thống kê tập trung cơ bản](2026-11-12-xem-nhiem-vu-va-thong-ke-tap-trung.md)
+- [2026-11-12 — Sửa nhiệm vụ ngay tại trang Tập trung](2026-11-12-sua-nhiem-vu-tai-trang-tap-trung.md)
+- [2026-11-13 — Tổng hợp tiến độ nhiệm vụ từ con lên cha](2026-11-13-tong-hop-tien-do-nhiem-vu.md)
+- [2026-11-14 — Đối chiếu luồng lập kế hoạch tự học](2026-11-14-doi-chieu-luong-lap-ke-hoach.md)
+- [2026-11-14 — Cải tiến lập kế hoạch theo năm mức ưu tiên](2026-11-14-cai-tien-lap-ke-hoach.md)
+- [2026-11-14 — Đổi tên khoảng thời gian học](2026-11-14-doi-ten-khoang-thoi-gian-hoc.md)
+- [2026-11-14 — Gộp thiết lập nhắc hạn vào hộp thông báo](2026-11-14-gop-thiet-lap-vao-thong-bao.md)
+- [2026-11-14 — Áp dụng migration vào database Development](2026-11-14-ap-dung-migration-database.md)
 - [2026-11-12 - Quan ly quy tac uu tien](2026-11-12-quan-ly-quy-tac-uu-tien.md)
 
 - [2026-11-12 - Tong quan admin](2026-11-12-tong-quan-admin.md)
@@ -109,3 +119,7 @@ Không sửa bản ghi cũ để làm mất lịch sử. Khi logic thay đổi, 
 - [2026-11-15 — Thông báo lỗi đăng nhập rõ ràng theo trường](2026-11-15-thong-bao-loi-dang-nhap-ro-rang.md)
 
 - [2026-11-15 — Đồng bộ quy tắc mật khẩu đăng nhập và mật khẩu mới](2026-11-15-dong-bo-quy-tac-mat-khau.md)
+
+- [2026-11-15 — Đồng bộ main BE/FE và giải quyết xung đột PR](2026-11-15-dong-bo-main-be-fe.md)
+
+- [2026-11-15 — Giải quyết conflict phần kiểm tra đăng nhập với main](2026-11-15-giai-quyet-conflict-kiem-tra-dang-nhap.md)

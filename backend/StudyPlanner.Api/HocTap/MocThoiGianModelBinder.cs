@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 namespace StudyPlanner.Api.HocTap;
 
-// Query binding otherwise silently accepts server-local datetimes with no explicit offset.
+// Bộ gán truy vấn mặc định chấp nhận cả thời điểm không có độ lệch múi giờ và hiểu theo giờ máy chủ.
 public sealed class MocThoiGianModelBinder : IModelBinder
 {
     public Task BindModelAsync(ModelBindingContext context)

@@ -45,7 +45,8 @@ public static class IntegrationChecks
                 NguoiDung User(string email) => new()
                 {
                     Email = email, EmailChuanHoa = email.ToUpperInvariant(), HoTen = email, DangHoatDong = true,
-                    MuiGio = "Asia/Ho_Chi_Minh", NgayTao = clock.GetUtcNow(), NgayCapNhat = clock.GetUtcNow()
+                    MuiGio = "Asia/Ho_Chi_Minh", PhienHocPhut = 50, NghiGiuaPhienPhut = 10, GioiHanHocMoiNgayPhut = 720,
+                    NgayTao = clock.GetUtcNow(), NgayCapNhat = clock.GetUtcNow()
                 };
                 var a = User("core-a@example.test"); var b = User("core-b@example.test"); b.VaiTro=VaiTroNguoiDung.Admin;
                 var hasher = new PasswordHasher<NguoiDung>();
@@ -68,7 +69,7 @@ public static class IntegrationChecks
             builder.Services.AddStudyPlannerXacThuc(builder.Configuration, builder.Environment);
             builder.Services.AddSingleton<TimeProvider>(clock);
             builder.Services.AddHttpContextAccessor();
-            // Chỉ host kiểm thử có điểm chèn lỗi; code API sản phẩm không đọc header này.
+            // Chỉ máy chủ kiểm thử có điểm chèn lỗi; API sản phẩm không đọc tiêu đề yêu cầu này.
             builder.Services.AddScoped<IHocTapStore>(sp => new LoiSauLuuStore(new EfHocTapStore(sp.GetRequiredService<ApplicationDbContext>()), sp.GetRequiredService<IHttpContextAccessor>()));
             builder.Services.AddEndpointsApiExplorer(); builder.Services.AddSwaggerGen(o => { o.OperationFilter<MoTaSwagger>(); o.SchemaFilter<MoTaSwagger>(); });
             app = builder.Build(); app.UseExceptionHandler();
@@ -156,18 +157,24 @@ public static class IntegrationChecks
             Check(childRead.GetProperty("hanHieuLuc").GetDateTimeOffset() == DateTimeOffset.Parse("2026-11-06T23:59:00+07:00"), "Child inherits effective deadline");
             await Write(aClient, HttpMethod.Patch, $"/api/v1/tasks/{child1}/progress", new { tienDo = 60 }, 200);
             var parentPath = $"/api/v1/tasks/{parentId}";
-            Check(Data(await Send(aClient, HttpMethod.Get, parentPath, null, 200)).GetProperty("tienDo").GetInt32() == 0, "Parent progress is independent from children");
-            await Write(aClient, HttpMethod.Patch, parentPath + "/progress", new { tienDo = 20 }, 200);
+            Check(Data(await Send(aClient, HttpMethod.Get, parentPath, null, 200)).GetProperty("tienDo").GetInt32() == 30, "Parent progress is the mean of all immediate children");
+            var derivedError = await Write(aClient, HttpMethod.Patch, parentPath + "/progress", new { tienDo = 20 }, 409);
+            Check(derivedError.GetProperty("code").GetString() == "TASK_PROGRESS_IS_DERIVED", "A group cannot override progress derived from children");
+            await Write(aClient, HttpMethod.Post, parentPath + "/complete", new { }, 409);
+            await Write(aClient, HttpMethod.Post, parentPath + "/reopen", new { tienDo = 0 }, 409);
             object ParentChecklist(bool allDone) => new { tieuDe = "Bài lớn", maMonHoc = course, hanHoanThanh = "2026-11-06T23:59:00+07:00",
                 checklist = new[] { new { tieuDe = "Một", daXong = true }, new { tieuDe = "Hai", daXong = allDone }, new { tieuDe = "Ba", daXong = allDone } } };
-            var partial = Data(await Write(aClient, HttpMethod.Put, parentPath, ParentChecklist(false), 200));
-            Check(partial.GetProperty("tienDo").GetInt32() == 33 && partial.GetProperty("checklist").GetArrayLength() == 3, "One of three checklist items is 33 percent");
-            await Write(aClient, HttpMethod.Patch, parentPath + "/progress", new { tienDo = 20 }, 409);
-            var complete = Data(await Write(aClient, HttpMethod.Put, parentPath, ParentChecklist(true), 200));
-            Check(complete.GetProperty("trangThai").GetString() == "Completed", "Completing own checklist completes the parent");
+            var checklistError = await Write(aClient, HttpMethod.Put, parentPath, ParentChecklist(false), 409);
+            Check(checklistError.GetProperty("code").GetString() == "TASK_CHECKLIST_REQUIRES_LEAF", "A parent cannot have a second checklist-based progress source");
+            await Write(aClient, HttpMethod.Post, $"/api/v1/tasks/{child1}/complete", new { }, 200);
+            Check(Data(await Send(aClient, HttpMethod.Get, parentPath, null, 200)).GetProperty("tienDo").GetInt32() == 50, "Completed children are still included in group progress");
+            var complete = Data(await Write(aClient, HttpMethod.Post, $"/api/v1/tasks/{child2}/complete", new { }, 200));
+            Check(Data(await Send(aClient, HttpMethod.Get, parentPath, null, 200)).GetProperty("trangThai").GetString() == "Completed", "A group completes only after all children complete");
+            await Write(aClient, HttpMethod.Post, $"/api/v1/tasks/{child1}/reopen", new { tienDo = 60 }, 200);
+            var reopenedParent = Data(await Send(aClient, HttpMethod.Get, parentPath, null, 200));
+            Check(reopenedParent.GetProperty("tienDo").GetInt32() == 80 && reopenedParent.GetProperty("ngayHoanThanh").ValueKind == JsonValueKind.Null, "Reopening a child clears the parent's completion state and timestamp");
             var activeList = Data(await Send(aClient, HttpMethod.Get, "/api/v1/tasks?cheDo=all", null, 200)).GetProperty("danhSach");
-            Check(activeList.EnumerateArray().Any(task => task.GetProperty("ma").GetInt32() == child1), "Unfinished child stays visible after parent completion");
-            await Write(aClient, HttpMethod.Put, parentPath, ParentChecklist(false), 200);
+            Check(activeList.EnumerateArray().Any(task => task.GetProperty("ma").GetInt32() == parentId), "Reopened parent returns to the active list");
             await Write(aClient, HttpMethod.Patch, $"/api/v1/tasks/{parentId}/parent", new { maNhiemVuCha = child1 }, 409);
             var stale = await Revision(aClient);
             await Write(aClient, HttpMethod.Patch, $"/api/v1/tasks/{child2}/progress", new { tienDo = 10 }, 200);
@@ -175,6 +182,115 @@ public static class IntegrationChecks
             var calendar = Data(await Send(aClient, HttpMethod.Get, "/api/v1/calendar?tu=2026-11-04T00:00:00%2B07:00&den=2026-11-08T00:00:00%2B07:00", null, 200));
             Check(calendar.GetProperty("suKien").EnumerateArray().Any(e => e.GetProperty("loai").GetString() == "HanNhiemVu" && e.GetProperty("maNguon").GetInt32() == child1), "Calendar renders inherited leaf deadline through SQL projection");
             Check(!calendar.GetProperty("suKien").EnumerateArray().Any(e => e.GetProperty("loai").GetString() == "HanNhiemVu" && e.GetProperty("maNguon").GetInt32() == parentId), "Calendar hides parent deadlines by default");
+
+            async Task<JsonElement> ReadTask(int id) => Data(await Send(aClient, HttpMethod.Get, $"/api/v1/tasks/{id}", null, 200));
+            async Task<int> NewTask(string title, int? estimate = null) => Id(await Write(aClient, HttpMethod.Post, "/api/v1/tasks", TaskBody(title, estimate, null), 201));
+            object AddTasks(bool confirm, params string[] titles) => new { danhSach = titles.Select(title => TaskBody(title, null, null)).ToArray(), xacNhanDoiCauTruc = confirm };
+            async Task<JsonElement> AddChildren(int id, bool confirm, params string[] titles) => Data(await Write(aClient, HttpMethod.Post, $"/api/v1/tasks/{id}/children", AddTasks(confirm, titles), 201));
+            static int NamedId(JsonElement children, string title) => children.EnumerateArray().Single(task => task.GetProperty("tieuDe").GetString() == title).GetProperty("ma").GetInt32();
+            async Task CompleteTask(int id) => await Write(aClient, HttpMethod.Post, $"/api/v1/tasks/{id}/complete", new { }, 200);
+            bool ContainsId(JsonElement array, int id) => array.EnumerateArray().Any(item => item.GetInt32() == id);
+            var thesisId = await NewTask("Đồ án nhiều cấp");
+            var thesisChildren = await AddChildren(thesisId, false, "Slide", "Báo cáo");
+            var slideId = NamedId(thesisChildren, "Slide"); var reportId = NamedId(thesisChildren, "Báo cáo");
+            var slideChildren = await AddChildren(slideId, false, "Nội dung", "Thiết kế");
+            var contentId = NamedId(slideChildren, "Nội dung"); var designId = NamedId(slideChildren, "Thiết kế");
+            await CompleteTask(contentId);
+            Check((await ReadTask(slideId)).GetProperty("tienDo").GetInt32() == 50 && (await ReadTask(thesisId)).GetProperty("tienDo").GetInt32() == 25,
+                "Updating a grandchild recalculates both intermediate and root progress");
+            await CompleteTask(reportId); await CompleteTask(designId);
+            Check((await ReadTask(thesisId)).GetProperty("trangThai").GetString() == "Completed", "All descendant work completes the root");
+            var structuralBody = AddTasks(false, "Tập thuyết trình");
+            var structuralRevision = await Revision(aClient);
+            var structuralPreview = Data(await Send(aClient, HttpMethod.Post, $"/api/v1/tasks/{slideId}/change-preview", new { thaoTac = "children", noiDung = structuralBody }, 200));
+            Check(ContainsId(structuralPreview.GetProperty("maNhiemVuMoLai"), slideId) && ContainsId(structuralPreview.GetProperty("maNhiemVuMoLai"), thesisId),
+                "Preview identifies every completed ancestor that adding work will reopen");
+            Check(await Revision(aClient) == structuralRevision && (await ReadTask(thesisId)).GetProperty("tienDo").GetInt32() == 100,
+                "Structural preview never persists reopening or bumps revision");
+            var missingConfirmation = await Write(aClient, HttpMethod.Post, $"/api/v1/tasks/{slideId}/children", structuralBody, 409);
+            Check(missingConfirmation.GetProperty("code").GetString() == "TASK_STRUCTURE_CONFIRMATION_REQUIRED", "Adding work to completed tasks requires explicit confirmation");
+            Check(await Revision(aClient) == structuralRevision && Data(await Send(aClient, HttpMethod.Get, $"/api/v1/tasks/{slideId}/tree", null, 200)).GetArrayLength() == 3,
+                "Unconfirmed structure change leaves tree and revision unchanged");
+            var practiceId = NamedId(await AddChildren(slideId, true, "Tập thuyết trình"), "Tập thuyết trình");
+            Check((await ReadTask(slideId)).GetProperty("tienDo").GetInt32() == 66 && (await ReadTask(thesisId)).GetProperty("tienDo").GetInt32() == 83,
+                "Confirmed added work lowers progress through all ancestor levels");
+            Check((await ReadTask(thesisId)).GetProperty("ngayHoanThanh").ValueKind == JsonValueKind.Null, "Confirmed expansion clears stale root completion timestamp");
+            await Write(aClient, HttpMethod.Post, $"/api/v1/tasks/{practiceId}/trash", new { }, 200);
+            Check((await ReadTask(thesisId)).GetProperty("tienDo").GetInt32() == 100, "Trashing pending work recalculates active ancestors");
+            await Write(aClient, HttpMethod.Post, $"/api/v1/tasks/trash/{practiceId}/restore", null, 204);
+            Check((await ReadTask(thesisId)).GetProperty("tienDo").GetInt32() == 83 && (await ReadTask(slideId)).GetProperty("tienDo").GetInt32() == 66,
+                "Restoring pending work reopens and recalculates the original ancestor chain");
+            await CompleteTask(practiceId);
+            Check((await ReadTask(thesisId)).GetProperty("tienDo").GetInt32() == 100, "Recompleted descendants complete ancestors again");
+            await using (var db = new ApplicationDbContext(options))
+                Check(await db.DanhSachLichSuNhiemVu.AnyAsync(entry => entry.MaNhiemVu == thesisId && entry.NguonThayDoi == "System"), "Ancestor progress changes have system-authored history");
+
+            var checklistRoot = Id(await Write(aClient, HttpMethod.Post, "/api/v1/tasks", new {
+                tieuDe = "Checklist cần chia nhỏ", maMonHoc = course, thoiLuongDuKienPhut = 120,
+                checklist = new[] { new { tieuDe = "Đã đọc tài liệu", daXong = true }, new { tieuDe = "Còn luyện tập", daXong = false } }
+            }, 201));
+            Check((await ReadTask(checklistRoot)).GetProperty("tienDo").GetInt32() == 50, "Leaf progress still comes from its checklist");
+            await Write(aClient, HttpMethod.Patch, $"/api/v1/tasks/{checklistRoot}/progress", new { tienDo = 80 }, 409);
+            var checklistPreview = Data(await Send(aClient, HttpMethod.Post, $"/api/v1/tasks/{checklistRoot}/change-preview", new { thaoTac = "children", noiDung = AddTasks(false, "Bài thực hành") }, 200));
+            Check(ContainsId(checklistPreview.GetProperty("maChecklistChuyenThanhBuoc"), checklistRoot), "Preview discloses preserving a leaf checklist in a child");
+            await Write(aClient, HttpMethod.Post, $"/api/v1/tasks/{checklistRoot}/children", AddTasks(false, "Bài thực hành"), 409);
+            var checklistChildren = await AddChildren(checklistRoot, true, "Bài thực hành");
+            var preservedChecklistId = NamedId(checklistChildren, "Công việc chung");
+            var preservedChecklist = await ReadTask(preservedChecklistId);
+            Check(preservedChecklist.GetProperty("checklist").GetArrayLength() == 2 && preservedChecklist.GetProperty("checklist")[0].GetProperty("daXong").GetBoolean()
+                && !preservedChecklist.GetProperty("checklist")[1].GetProperty("daXong").GetBoolean(), "Checklist conversion preserves every label and completion flag");
+            Check(preservedChecklist.GetProperty("thoiLuongDuKienPhut").GetInt32() == 120 && (await ReadTask(checklistRoot)).GetProperty("tienDo").GetInt32() == 25
+                && (await ReadTask(checklistRoot)).GetProperty("checklist").GetArrayLength() == 0, "Converted checklist has one progress source and retains its estimate");
+            await Send(bClient, HttpMethod.Get, $"/api/v1/tasks/{preservedChecklistId}", null, 404);
+            await Send(bClient, HttpMethod.Post, $"/api/v1/tasks/{checklistRoot}/children", AddTasks(true, "Không được thêm"), 404, await Revision(bClient));
+
+            var manualRoot = await NewTask("Việc đã làm một phần", 90);
+            await Write(aClient, HttpMethod.Patch, $"/api/v1/tasks/{manualRoot}/progress", new { tienDo = 60 }, 200);
+            var manualPreview = Data(await Send(aClient, HttpMethod.Post, $"/api/v1/tasks/{manualRoot}/change-preview", new { thaoTac = "children", noiDung = AddTasks(false, "Phần mới") }, 200));
+            Check(ContainsId(manualPreview.GetProperty("maTienDoChuyenThanhBuoc"), manualRoot), "Preview discloses preserving manually recorded progress before first split");
+            await Write(aClient, HttpMethod.Post, $"/api/v1/tasks/{manualRoot}/children", AddTasks(false, "Phần mới"), 409);
+            var manualChildren = await AddChildren(manualRoot, true, "Phần mới");
+            var preservedWork = await ReadTask(NamedId(manualChildren, "Phần việc đã thực hiện"));
+            Check(preservedWork.GetProperty("tienDo").GetInt32() == 60 && preservedWork.GetProperty("thoiLuongDuKienPhut").GetInt32() == 90
+                && (await ReadTask(manualRoot)).GetProperty("tienDo").GetInt32() == 30, "First split preserves prior manual work instead of resetting or double counting it");
+
+            var rollbackRoot = Id(await Write(aClient, HttpMethod.Post, "/api/v1/tasks", new { tieuDe = "Không mất checklist khi lỗi", maMonHoc = course,
+                checklist = new[] { new { tieuDe = "Giữ nguyên", daXong = true } } }, 201));
+            var rollbackRevision = await Revision(aClient);
+            await Write(aClient, HttpMethod.Post, $"/api/v1/tasks/{rollbackRoot}/children", AddTasks(true, "Phải rollback"), 500, 1);
+            var afterFailedSplit = await ReadTask(rollbackRoot);
+            Check(afterFailedSplit.GetProperty("checklist").GetArrayLength() == 1 && afterFailedSplit.GetProperty("tienDo").GetInt32() == 100
+                && !afterFailedSplit.GetProperty("coNhiemVuCon").GetBoolean() && await Revision(aClient) == rollbackRevision,
+                "Failure after persisted structural conversion rolls back checklist, children, completion and revision");
+
+            var oldRoot = await NewTask("Nhánh nguồn"); var newRoot = await NewTask("Nhánh đích");
+            var movingChildren = await AddChildren(oldRoot, false, "Chuyển việc đã xong", "Việc còn lại");
+            var movingId = NamedId(movingChildren, "Chuyển việc đã xong");
+            await CompleteTask(movingId);
+            await Write(aClient, HttpMethod.Patch, $"/api/v1/tasks/{movingId}/parent", new { maNhiemVuCha = newRoot }, 200);
+            Check((await ReadTask(oldRoot)).GetProperty("tienDo").GetInt32() == 0 && (await ReadTask(newRoot)).GetProperty("tienDo").GetInt32() == 100,
+                "Reparenting recalculates both source and destination trees");
+            var pendingMove = await NewTask("Chuyển việc chưa xong");
+            var reparentError = await Write(aClient, HttpMethod.Patch, $"/api/v1/tasks/{pendingMove}/parent", new { maNhiemVuCha = newRoot }, 409);
+            Check(reparentError.GetProperty("code").GetString() == "TASK_STRUCTURE_CONFIRMATION_REQUIRED", "Reparenting pending work into a completed group requires confirmation");
+            await Write(aClient, HttpMethod.Patch, $"/api/v1/tasks/{pendingMove}/parent", new { maNhiemVuCha = newRoot, xacNhanDoiCauTruc = true }, 200);
+            Check((await ReadTask(newRoot)).GetProperty("tienDo").GetInt32() == 50 && (await ReadTask(newRoot)).GetProperty("ngayHoanThanh").ValueKind == JsonValueKind.Null,
+                "Confirmed reparent reopens completed destination groups");
+            var lastRoot = await NewTask("Xóa bước cuối"); var lastChild = NamedId(await AddChildren(lastRoot, false, "Bước duy nhất"), "Bước duy nhất");
+            await CompleteTask(lastChild); await Write(aClient, HttpMethod.Delete, $"/api/v1/tasks/{lastChild}", null, 204);
+            var emptyGroup = await ReadTask(lastRoot);
+            Check(emptyGroup.GetProperty("tienDo").GetInt32() == 0 && emptyGroup.GetProperty("trangThai").GetString() == "NotStarted"
+                && !emptyGroup.GetProperty("coNhiemVuCon").GetBoolean(), "Deleting the last child clears former derived progress rather than leaving false completion");
+
+            var restoreRoot = await NewTask("Khôi phục vào cha đã có phần việc riêng");
+            var restoreChild = NamedId(await AddChildren(restoreRoot, false, "Bước khôi phục"), "Bước khôi phục");
+            await Write(aClient, HttpMethod.Post, $"/api/v1/tasks/{restoreChild}/trash", new { }, 200);
+            await Write(aClient, HttpMethod.Patch, $"/api/v1/tasks/{restoreRoot}/progress", new { tienDo = 40 }, 200);
+            await Write(aClient, HttpMethod.Post, $"/api/v1/tasks/trash/{restoreChild}/restore", null, 204);
+            var restoredBranch = Data(await Send(aClient, HttpMethod.Get, $"/api/v1/tasks/{restoreRoot}/tree", null, 200));
+            Check(restoredBranch.GetArrayLength() == 3 && NamedId(restoredBranch, "Phần việc đã thực hiện") > 0
+                && (await ReadTask(restoreRoot)).GetProperty("tienDo").GetInt32() == 20,
+                "Restore preserves a former parent's newly recorded manual work before attaching the old child");
 
             int tasksBefore, historyBefore; long versionBefore;
             await using (var db = new ApplicationDbContext(options)) { tasksBefore = await db.DanhSachNhiemVu.CountAsync(); historyBefore = await db.DanhSachLichSuNhiemVu.CountAsync(); versionBefore = await db.DanhSachNguoiDung.Where(x => x.Ma == owner).Select(x => x.PhienBanLapLich).SingleAsync(); }
@@ -219,7 +335,7 @@ public static class IntegrationChecks
             var freeImpact = Data(await Send(aClient, HttpMethod.Post, "/api/v1/calendar/change-preview", new { loai = "GioRanh", ma = freeId, khungGioRanh = Free(false) }, 200));
             Check(freeImpact.GetProperty("phienBiAnhHuong").EnumerateArray().Any(x => x.GetInt32() == firstSession), "Availability preview identifies future session impact");
             await Write(aClient, HttpMethod.Put, $"/api/v1/availability-windows/{freeId}", Free(false), 409);
-            // A second identical window keeps the session covered when the first is disabled.
+            // Khung trùng thứ hai vẫn bao phủ phiên học khi tắt khung thứ nhất.
             var duplicateFree = Id(await Write(aClient, HttpMethod.Post, "/api/v1/availability-windows", Free(), 201));
             await Write(aClient, HttpMethod.Put, $"/api/v1/availability-windows/{freeId}", Free(false), 200);
             await Write(aClient, HttpMethod.Delete, $"/api/v1/availability-windows/{duplicateFree}", null, 409);
@@ -246,20 +362,23 @@ public static class IntegrationChecks
             {
                 var active = await db.DanhSachPhienTuHoc.Where(x => x.MaNguoiDung == owner && x.TrangThai != TrangThaiPhienTuHoc.Cancelled).OrderBy(x => x.BatDauDuKien).ToListAsync();
                 Check(active.Count == 1, "Exactly one racing session persisted");
-                var s = active[0]; clock.Set(s.BatDauDuKien);
+                var s = active[0]; clock.Set(s.BatDauDuKien.AddMinutes(-10));
+                var actualStart = clock.GetUtcNow();
                 var batchPath = $"/api/v1/study-sessions?maLanApDung={s.MaLanApDung}";
                 var batch = Data(await Send(aClient, HttpMethod.Get, batchPath, null, 200));
                 Check(batch.GetArrayLength() == 1 && batch[0].GetProperty("ma").GetInt32() == s.Ma, "Batch view returns the sessions of the applied plan");
                 await Send(bClient, HttpMethod.Get, batchPath, null, 404);
                 var sessionPath = $"/api/v1/study-sessions/{s.Ma}";
                 var started = Data(await Write(aClient, HttpMethod.Post, sessionPath + "/start", null, 200));
-                Check(started.GetProperty("batDauBamGio").GetDateTimeOffset() == s.BatDauDuKien, "Starting stores the server time");
+                Check(started.GetProperty("batDauBamGio").GetDateTimeOffset() == actualStart, "Starting early stores the actual server time");
+                Check(started.GetProperty("batDauDuKien").GetDateTimeOffset() == s.BatDauDuKien &&
+                    started.GetProperty("ketThucDuKien").GetDateTimeOffset() == s.KetThucDuKien, "Starting early preserves the planned interval");
                 clock.Advance(TimeSpan.FromMinutes(5));
                 var repeatedStart = Data(await Write(aClient, HttpMethod.Post, sessionPath + "/start", null, 200));
                 Check(repeatedStart.GetProperty("trangThai").GetString() == "InProgress" &&
-                    repeatedStart.GetProperty("batDauBamGio").GetDateTimeOffset() == s.BatDauDuKien, "Repeated start keeps the original stopwatch");
+                    repeatedStart.GetProperty("batDauBamGio").GetDateTimeOffset() == actualStart, "Repeated start keeps the original stopwatch");
                 var running = Data(await Send(aClient, HttpMethod.Get, sessionPath, null, 200));
-                Check(running.GetProperty("batDauBamGio").GetDateTimeOffset() == s.BatDauDuKien, "Session details restore the running stopwatch");
+                Check(running.GetProperty("batDauBamGio").GetDateTimeOffset() == actualStart, "Session details restore the running stopwatch");
                 var metadata=Data(await Send(aClient,HttpMethod.Get,$"/api/v1/tasks/{taskId}",null,200));
                 await Write(aClient,HttpMethod.Put,$"/api/v1/tasks/{taskId}",TaskBody("Chỉ đổi tiêu đề khi đang học"),200);
                 var versionBeforeNoop=await Revision(aClient);
@@ -283,9 +402,11 @@ public static class IntegrationChecks
             Check(swagger.GetProperty("paths").GetProperty("/api/v1/tasks/{id}/children").GetProperty("post").GetProperty("responses").TryGetProperty("201",out _),"Swagger documents actual batch creation status201");
             Check(swagger.GetProperty("paths").GetProperty("/api/v1/tasks/{id}").GetProperty("put").GetProperty("parameters").EnumerateArray().Any(x=>x.GetProperty("name").GetString()=="If-Match"),"Swagger documents concurrency precondition");
             var directory=new DirectoryInfo(AppContext.BaseDirectory);
-            while(directory is not null && !File.Exists(Path.Combine(directory.FullName,"frontend-preview","checks-http.cjs"))) directory=directory.Parent;
-            if(directory is null)throw new InvalidOperationException("Cannot locate the repository client/API contract checks.");
-            var js=Path.Combine(directory.FullName,"frontend-preview","checks-http.cjs");
+            while(directory is not null && !File.Exists(Path.Combine(directory.FullName,"backend","tests","StudyPlanner.CoreChecks","ClientContractChecks.mjs"))) directory=directory.Parent;
+            if(directory is null)throw new InvalidOperationException("Cannot locate ClientContractChecks.mjs in this repository.");
+            var frontendRoot=Environment.GetEnvironmentVariable("STUDYPLANNER_TEST_FRONTEND") ?? Path.Combine(directory.Parent!.FullName,"Study_Planner_FE");
+            if(!File.Exists(Path.Combine(frontendRoot,"src","hoc-tap","api.ts")))throw new InvalidOperationException("Set STUDYPLANNER_TEST_FRONTEND to the frontend repository with installed dependencies.");
+            var js=Path.Combine(directory.FullName,"backend","tests","StudyPlanner.CoreChecks","ClientContractChecks.mjs");
             var nodeInfo=new System.Diagnostics.ProcessStartInfo("node"){RedirectStandardInput=true,RedirectStandardOutput=true,RedirectStandardError=true,UseShellExecute=false,CreateNoWindow=true};
             nodeInfo.ArgumentList.Add(js);
             using(var process=System.Diagnostics.Process.Start(nodeInfo)!)
@@ -293,10 +414,13 @@ public static class IntegrationChecks
                 await using var authDb=new ApplicationDbContext(options);
                 var user=await authDb.DanhSachNguoiDung.SingleAsync(x=>x.Ma==owner);
                 var auth=app.Services.GetRequiredService<JwtTokenIssuer>().Issue(user);
-                await process.StandardInput.WriteAsync(JsonSerializer.Serialize(new{baseAddress=address,auth},new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+                await process.StandardInput.WriteAsync(JsonSerializer.Serialize(new{baseAddress=address,auth,frontendRoot},new JsonSerializerOptions(JsonSerializerDefaults.Web)));
                 process.StandardInput.Close();
                 var outputTask=process.StandardOutput.ReadToEndAsync();var errorTask=process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync();var output=await outputTask;var error=await errorTask;
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+                try { await process.WaitForExitAsync(timeout.Token); }
+                catch (OperationCanceledException) { process.Kill(true); throw new InvalidOperationException("Frontend/API contract checks timed out."); }
+                var output=await outputTask;var error=await errorTask;
                 Check(process.ExitCode==0,"Real client/API contract: "+error);Console.Write(output);
             }
             Console.WriteLine($"PASS: {count} PostgreSQL/HTTP core assertions; temporary database only.");

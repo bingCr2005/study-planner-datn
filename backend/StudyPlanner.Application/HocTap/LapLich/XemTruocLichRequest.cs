@@ -9,4 +9,5 @@ public sealed class XemTruocLichRequest
     public int? MaHocKy { get; init; }
     public int? MaMonHoc { get; init; }
     public List<int> DanhSachMaNhiemVu { get; init; } = [];
+    public bool CapNhatKeHoach { get; init; }
 }

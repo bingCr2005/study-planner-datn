@@ -12,13 +12,18 @@ public static class HocTapRegistration
         services.AddScoped<IHocTapStore, EfHocTapStore>(); services.AddScoped<HocTapDieuPhoi>();
         services.AddScoped<NhiemVuService>(); services.AddScoped<LichHocService>(); services.AddScoped<KhungGioRanhService>();
         services.AddScoped<ThoiKhoaBieuService>(); services.AddScoped<QuyTacDatPhien>(); services.AddScoped<LapLichService>(); services.AddScoped<PhienTuHocService>();
+        services.AddScoped<TapTrungService>();
+        services.AddScoped<ThongKeTapTrungService>();
+        services.AddScoped<CauHinhHocService>();
+        services.AddScoped<NhacKeHoachService>();
+        services.AddScoped<StudyPlanner.Application.CanhBao.CauHinhThongBaoService>();
         services.AddSingleton<IPreviewLapLichToken>(sp =>
         {
             var config = sp.GetRequiredService<IConfiguration>(); var env = sp.GetRequiredService<IHostEnvironment>();
             var secret = config["Planning:SigningKey"] ?? config["Auth:SigningKey"];
             if (string.IsNullOrEmpty(secret) && !env.IsDevelopment()) throw new InvalidOperationException("Cần khóa runtime cho Planning:SigningKey hoặc Auth:SigningKey.");
             if (!string.IsNullOrEmpty(secret) && Encoding.UTF8.GetByteCount(secret) < 32) throw new InvalidOperationException("Khóa preview cần ít nhất 32 byte.");
-            // Domain separation: never use raw JWT signing material for the preview protocol.
+            // Tách khóa theo mục đích: không dùng trực tiếp khóa ký JWT để ký phiếu gợi ý lịch.
             var key = string.IsNullOrEmpty(secret) ? RandomNumberGenerator.GetBytes(64) : HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret),Encoding.UTF8.GetBytes("StudyPlanner/planning-preview/v1"));
             return new HmacPreviewLapLichToken(key);
         });

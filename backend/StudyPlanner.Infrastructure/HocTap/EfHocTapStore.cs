@@ -21,7 +21,7 @@ public sealed class EfHocTapStore(ApplicationDbContext db) : IHocTapStore
         new GiaoDich(await db.Database.BeginTransactionAsync(ghi ? IsolationLevel.ReadCommitted : IsolationLevel.RepeatableRead, ct));
     public async Task<NguoiDung> NguoiDungAsync(int chu, bool khoa, CancellationToken ct)
     {
-        // JWT validation may already have tracked User: reload the locked row, never trust that earlier snapshot.
+        // Xác thực JWT có thể đã theo dõi người dùng; phải nạp lại dòng đã khóa để tránh dùng dữ liệu cũ.
         var user = khoa
             ? await db.DanhSachNguoiDung.FromSqlInterpolated($"SELECT * FROM nguoi_dung WHERE ma = {chu} FOR UPDATE").SingleOrDefaultAsync(ct)
             : await db.DanhSachNguoiDung.SingleOrDefaultAsync(x => x.Ma == chu, ct);

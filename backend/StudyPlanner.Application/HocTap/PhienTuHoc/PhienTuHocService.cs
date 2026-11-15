@@ -36,7 +36,7 @@ public sealed class PhienTuHocService(IHocTapStore store, HocTapDieuPhoi dieuPho
     {
         await using var session = await dieuPhoi.MoAsync(chu, null, false, ct);
         var row = await TimAsync(chu, id, ct);
-        var doan = await DocDoanThucHocAsync(chu, id, ct);
+        var doan = await DocKhoangThoiGianHocAsync(chu, id, ct);
         await session.CommitAsync(false, ct);
         return new(session.NguoiDung.PhienBanLapLich, PhienTuHocResponse.Tu(row, doan));
     }
@@ -88,22 +88,25 @@ public sealed class PhienTuHocService(IHocTapStore store, HocTapDieuPhoi dieuPho
             "miss" => TrangThaiPhienTuHoc.Missed, "cancel" => TrangThaiPhienTuHoc.Cancelled,
             _ => throw new HocTapException(400, "VALIDATION_ERROR", "Thao tác phiên không hợp lệ.")
         };
-        var doan = await DocDoanThucHocAsync(chu, id, ct);
+        var doan = await DocKhoangThoiGianHocAsync(chu, id, ct);
         var dangChay = doan.SingleOrDefault(x => x.KetThucThucTe is null);
         var changed = row.TrangThai != target;
         if (changed)
         {
             if (action == "start")
             {
-                if (row.TrangThai != TrangThaiPhienTuHoc.Planned || now < row.BatDauDuKien || now >= row.KetThucDuKien)
-                    throw TrangThaiSai("Chỉ bắt đầu phiên Planned trong khoảng giờ đã đặt.");
+                if (row.TrangThai != TrangThaiPhienTuHoc.Planned || now >= row.KetThucDuKien)
+                    throw TrangThaiSai("Chỉ bắt đầu phiên đã lên lịch và chưa hết giờ. Có thể bắt đầu sớm hơn giờ dự kiến.");
+                if (await store.DemAsync(store.TruyVan<PhienTapTrung>().Where(p => p.MaNguoiDung == chu &&
+                    (p.TrangThai == "Running" || p.TrangThai == "Paused")), ct) > 0)
+                    throw TrangThaiSai("Có phiên tập trung đang mở. Hãy tiếp tục hoặc kết thúc phiên đó trước.");
                 if (await store.DemAsync(store.TruyVan<PhienTuHoc>().Where(p => p.MaNguoiDung == chu && p.Ma != id && p.TrangThai == TrangThaiPhienTuHoc.InProgress), ct) > 0)
                     throw TrangThaiSai("Đang có phiên khác chưa kết thúc.");
                 if (await store.DemAsync(store.TruyVan<NhiemVu>().Where(t => t.MaNguoiDung == chu && t.Ma == row.MaNhiemVu && t.TrangThai == TrangThaiNhiemVu.Completed), ct) > 0)
                     throw TrangThaiSai("Nhiệm vụ đã hoàn thành.");
-                if (await store.DemAsync(store.TruyVan<DoanThucHoc>().Where(x => x.MaNguoiDung == chu && x.KetThucThucTe == null), ct) > 0)
+                if (await store.DemAsync(store.TruyVan<KhoangThoiGianHoc>().Where(x => x.MaNguoiDung == chu && x.KetThucThucTe == null), ct) > 0)
                     throw TrangThaiSai("Cần kết thúc đồng hồ của phiên đang chạy trước.");
-                var moi = new DoanThucHoc { MaNguoiDung = chu, MaNhiemVu = row.MaNhiemVu, MaPhienTuHoc = id, BatDauThucTe = now };
+                var moi = new KhoangThoiGianHoc { MaNguoiDung = chu, MaNhiemVu = row.MaNhiemVu, MaPhienTuHoc = id, BatDauThucTe = now };
                 store.Them(moi);
                 doan.Add(moi);
             }
@@ -111,11 +114,19 @@ public sealed class PhienTuHocService(IHocTapStore store, HocTapDieuPhoi dieuPho
             {
                 if (row.TrangThai != TrangThaiPhienTuHoc.InProgress && !(row.TrangThai == TrangThaiPhienTuHoc.Planned && now >= row.KetThucDuKien))
                     throw TrangThaiSai("Chỉ kết thúc phiên đang học hoặc xác nhận phiên Planned đã qua giờ.");
+                var focus = await store.DauTienAsync(store.TruyVan<PhienTapTrung>().Where(p => p.MaNguoiDung == chu &&
+                    p.MaPhienTuHoc == id && (p.TrangThai == "Running" || p.TrangThai == "Paused")), ct);
+                var actualEnd = focus is not null && QuyTacTapTrung.HetGio(focus) is DateTimeOffset expiry && expiry < now ? expiry : now;
+                if (focus is not null)
+                {
+                    focus.SoMiliGiayDaHoc = QuyTacTapTrung.ThoiLuong(focus, actualEnd);
+                    focus.BatDauDoan = null; focus.KetThuc = actualEnd; focus.TrangThai = "Completed";
+                }
                 if (dangChay is not null)
                 {
-                    // PostgreSQL lưu timestamp theo microsecond và yêu cầu kết thúc sau bắt đầu.
+                    // PostgreSQL lưu thời điểm chính xác đến micro giây và yêu cầu kết thúc sau bắt đầu.
                     var ketThucToiThieu = dangChay.BatDauThucTe.AddTicks(10);
-                    dangChay.KetThucThucTe = now < ketThucToiThieu ? ketThucToiThieu : now;
+                    dangChay.KetThucThucTe = actualEnd < ketThucToiThieu ? ketThucToiThieu : actualEnd;
                 }
             }
             else if (action == "miss")
@@ -133,8 +144,8 @@ public sealed class PhienTuHocService(IHocTapStore store, HocTapDieuPhoi dieuPho
         return new(session.NguoiDung.PhienBanLapLich, PhienTuHocResponse.Tu(row, doan));
     }
 
-    private Task<List<DoanThucHoc>> DocDoanThucHocAsync(int chu, int id, CancellationToken ct) =>
-        store.DanhSachAsync(store.TruyVan<DoanThucHoc>().Where(x => x.MaNguoiDung == chu && x.MaPhienTuHoc == id), ct);
+    private Task<List<KhoangThoiGianHoc>> DocKhoangThoiGianHocAsync(int chu, int id, CancellationToken ct) =>
+        store.DanhSachAsync(store.TruyVan<KhoangThoiGianHoc>().Where(x => x.MaNguoiDung == chu && x.MaPhienTuHoc == id), ct);
 
     private async Task<PhienTuHoc> TimAsync(int chu, int id, CancellationToken ct) =>
         await store.DauTienAsync(store.TruyVan<PhienTuHoc>().Where(p => p.Ma == id && p.MaNguoiDung == chu), ct) ?? throw KhongTimThay();

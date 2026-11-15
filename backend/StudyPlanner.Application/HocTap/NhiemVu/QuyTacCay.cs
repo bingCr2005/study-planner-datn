@@ -64,4 +64,30 @@ public static class QuyTacCay
         var parents = nodes.Where(x => x.MaNhiemVuCha.HasValue).Select(x => x.MaNhiemVuCha!.Value).ToHashSet();
         foreach (var parent in nodes.Where(x => parents.Contains(x.Ma))) parent.ThoiLuongDuKienPhut = null;
     }
+
+    // Mỗi nhánh có trọng số bằng nhau ở cấp của nó. Làm tròn xuống để một hậu duệ
+    // chưa hoàn thành không thể khiến tổ tiên hiển thị 100%.
+    public static void TongHopTienDo(IReadOnlyList<NhiemVu> nodes, DateTimeOffset now)
+    {
+        var children = nodes.Where(n => n.MaNhiemVuCha.HasValue).ToLookup(n => n.MaNhiemVuCha!.Value);
+        var visited = new HashSet<int>();
+        var visiting = new HashSet<int>();
+        void Visit(NhiemVu node)
+        {
+            if (visited.Contains(node.Ma)) return;
+            if (!visiting.Add(node.Ma)) throw new HocTapException(409, "TASK_CYCLE", "Cây nhiệm vụ có vòng.");
+            var direct = children[node.Ma].ToArray();
+            foreach (var child in direct) Visit(child);
+            if (direct.Length > 0) GanTienDo(node, direct.Sum(child => child.TienDo) / direct.Length, now);
+            visiting.Remove(node.Ma); visited.Add(node.Ma);
+        }
+        foreach (var node in nodes) Visit(node);
+    }
+
+    public static void GanTienDo(NhiemVu task, int value, DateTimeOffset now)
+    {
+        task.TienDo = value;
+        task.TrangThai = value == 100 ? TrangThaiNhiemVu.Completed : value == 0 ? TrangThaiNhiemVu.NotStarted : TrangThaiNhiemVu.InProgress;
+        task.NgayHoanThanh = value == 100 ? task.NgayHoanThanh ?? now : null;
+    }
 }
