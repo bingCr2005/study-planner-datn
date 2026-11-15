@@ -3,7 +3,7 @@ using StudyPlanner.Domain.Enums;
 
 namespace StudyPlanner.Application.HocTap;
 
-/// <summary>Cùng một bộ kiểm tra cho apply và phiên nhập tay/dời; phải gọi trong giao dịch đã khóa tài khoản.</summary>
+/// <summary>Dùng chung kiểm tra khi áp dụng lịch và nhập tay/dời phiên; phải gọi trong giao dịch đã khóa tài khoản.</summary>
 public sealed class QuyTacDatPhien(IHocTapStore store, ThoiKhoaBieuService lich)
 {
     public async Task KiemTraAsync(int chu, IReadOnlyList<ChonPhienTuHocRequest> phien,
@@ -27,13 +27,21 @@ public sealed class QuyTacDatPhien(IHocTapStore store, ThoiKhoaBieuService lich)
         var min = phien.Min(p => p.BatDauDuKien);
         var max = phien.Max(p => p.KetThucDuKien);
         if (max - min > TimeSpan.FromDays(32)) throw Loi("Các phiên trong một lần ghi không được trải quá 31 ngày địa phương.");
-        var source = await lich.LayNguonAsync(chu, min.AddMinutes(-10), max.AddMinutes(10), ct);
+        var user = await store.NguoiDungAsync(chu, false, ct);
+        var settings = CauHinhHocResponse.Tu(user); settings.KiemTra();
+        var zone = QuyTacThoiGian.MuiGio(user.MuiGio);
+        var firstDay = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(min, zone).DateTime);
+        var lastDay = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(max.AddTicks(-1), zone).DateTime);
+        var dayFrom = QuyTacThoiGian.Utc(firstDay, TimeOnly.MinValue, zone);
+        var dayTo = QuyTacThoiGian.Utc(lastDay.AddDays(1), TimeOnly.MinValue, zone);
+        var source = await lich.LayNguonAsync(chu, min.AddMinutes(-settings.NghiGiuaPhienPhut), max.AddMinutes(settings.NghiGiuaPhienPhut), ct);
         var free = QuyTacThoiGian.HopNhat(source.GioRanh).ToList();
         var busy = source.LichHoc.Concat(source.SuKien).ToList();
-        var restFrom = min.AddMinutes(-10); var restTo = max.AddMinutes(10);
+        var restFrom = min.AddMinutes(-settings.NghiGiuaPhienPhut); var restTo = max.AddMinutes(settings.NghiGiuaPhienPhut);
         var existingQuery = store.TruyVan<PhienTuHoc>().Where(p => p.MaNguoiDung == chu &&
             p.Ma != boQuaMaPhien && p.TrangThai != TrangThaiPhienTuHoc.Cancelled && p.KetThucDuKien > now &&
-            (ids.Contains(p.MaNhiemVu) || p.BatDauDuKien < restTo && p.KetThucDuKien > restFrom));
+            (ids.Contains(p.MaNhiemVu) || p.BatDauDuKien < restTo && p.KetThucDuKien > restFrom ||
+                p.BatDauDuKien < dayTo && p.KetThucDuKien > dayFrom));
         var existing = await store.DanhSachAsync(existingQuery.Take(10001), ct);
         if (existing.Count > 10000) throw new HocTapException(400, "QUERY_LIMIT", "Dữ liệu phiên vượt giới hạn kiểm tra; hãy thu hẹp hoặc xử lý lịch cũ.");
         if (await store.DemAsync(store.TruyVan<PhienTuHoc>().Where(p => p.MaNguoiDung == chu &&
@@ -46,7 +54,7 @@ public sealed class QuyTacDatPhien(IHocTapStore store, ThoiKhoaBieuService lich)
                 slot.BatDauDuKien.UtcTicks % TimeSpan.TicksPerMinute != 0 || slot.KetThucDuKien.UtcTicks % TimeSpan.TicksPerMinute != 0)
                 throw Loi("Phiên phải ở tương lai, có giờ kết thúc sau bắt đầu và đặt theo phút nguyên.");
             var duration = (slot.KetThucDuKien - slot.BatDauDuKien).TotalMinutes;
-            if (duration > QuyTacLapLich.PhienToiDaPhut) throw Loi("Mỗi phiên tối đa 50 phút.");
+            if (duration > settings.PhienHocPhut) throw Loi($"Mỗi phiên mới tối đa {settings.PhienHocPhut} phút theo cấu hình học.");
             var task = dictionary[slot.MaNhiemVu];
             var due = QuyTacCay.HanHieuLuc(task, dictionary).Han;
             if (due.HasValue && slot.KetThucDuKien > due.Value)
@@ -56,13 +64,19 @@ public sealed class QuyTacDatPhien(IHocTapStore store, ThoiKhoaBieuService lich)
                 throw XungDot("OUTSIDE_AVAILABILITY", "Phiên không nằm trọn trong giờ rảnh đang bật.");
             if (busy.Any(b => QuyTacThoiGian.Giao(range, b)))
                 throw XungDot("SCHEDULE_CONFLICT", "Phiên trùng lịch học hoặc sự kiện.");
-            var withBreak = new KhoangThoiGian(range.BatDau.AddMinutes(-10), range.KetThuc.AddMinutes(10));
+            var withBreak = new KhoangThoiGian(range.BatDau.AddMinutes(-settings.NghiGiuaPhienPhut), range.KetThuc.AddMinutes(settings.NghiGiuaPhienPhut));
             if (existing.Any(p => QuyTacThoiGian.Giao(withBreak, new(p.BatDauDuKien, p.KetThucDuKien))))
-                throw XungDot("SCHEDULE_CONFLICT", "Phiên trùng lịch đã đặt hoặc thiếu 10 phút nghỉ.");
+                throw XungDot("SCHEDULE_CONFLICT", $"Phiên trùng lịch đã đặt hoặc thiếu {settings.NghiGiuaPhienPhut} phút nghỉ.");
         }
         for (var i = 1; i < slots.Count; i++)
-            if (slots[i].BatDauDuKien < slots[i - 1].KetThucDuKien.AddMinutes(10))
-                throw XungDot("SCHEDULE_CONFLICT", "Các phiên yêu cầu trùng nhau hoặc thiếu 10 phút nghỉ.");
+            if (slots[i].BatDauDuKien < slots[i - 1].KetThucDuKien.AddMinutes(settings.NghiGiuaPhienPhut))
+                throw XungDot("SCHEDULE_CONFLICT", $"Các phiên yêu cầu trùng nhau hoặc thiếu {settings.NghiGiuaPhienPhut} phút nghỉ.");
+        // Hạn mức dành cho phần lịch tương lai đã đặt và phiên mới; không trừ thời gian nghỉ hoặc thực học lần nữa.
+        var plannedDaily = QuyTacGioiHanNgay.Tong(existing.Where(p => p.TrangThai is TrangThaiPhienTuHoc.Planned or TrangThaiPhienTuHoc.InProgress)
+            .Select(p => new KhoangThoiGian(p.BatDauDuKien < now ? now : p.BatDauDuKien, p.KetThucDuKien)), zone);
+        var newDaily = QuyTacGioiHanNgay.Tong(slots.Select(p => new KhoangThoiGian(p.BatDauDuKien, p.KetThucDuKien)), zone);
+        if (newDaily.Any(day => day.Value + plannedDaily.GetValueOrDefault(day.Key) > settings.GioiHanHocMoiNgayPhut))
+            throw XungDot("DAILY_STUDY_LIMIT", "Tổng phiên mới và các phiên đã đặt vượt giới hạn học trong ngày.");
         foreach (var group in slots.GroupBy(s => s.MaNhiemVu))
         {
             var task = dictionary[group.Key];
@@ -76,8 +90,8 @@ public sealed class QuyTacDatPhien(IHocTapStore store, ThoiKhoaBieuService lich)
             for (var i = 0; i < list.Count; i++)
             {
                 var duration = (list[i].KetThucDuKien - list[i].BatDauDuKien).TotalMinutes;
-                if (duration < 25 && (i != list.Count - 1 || minutes != available))
-                    throw Loi("Phiên dưới 25 phút chỉ được dùng để xếp hết phần cuối còn lại của nhiệm vụ.");
+                if (duration < QuyTacLapLich.PhienToiThieuPhut && (i != list.Count - 1 || minutes != available))
+                    throw Loi("Phiên dưới 15 phút chỉ được dùng để xếp hết phần cuối còn lại của nhiệm vụ.");
             }
         }
     }

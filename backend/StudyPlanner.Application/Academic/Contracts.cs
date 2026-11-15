@@ -23,7 +23,7 @@ public sealed class SemesterRequest : IValidatableObject
     }
 }
 
-// MaHocKy comes only from the POST route; PUT cannot move a course.
+// MaHocKy chỉ lấy từ đường dẫn POST; PUT không được chuyển môn sang học kỳ khác.
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed class CourseRequest
 {

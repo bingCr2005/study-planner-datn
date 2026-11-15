@@ -101,7 +101,7 @@ public sealed class AcademicService(IQuanLyNguoiDungStore store, TimeProvider cl
         var courseIds = courses.Select(x => x.Ma).ToArray();
         var tasks = await store.LoadAsync<NhiemVu>(x => x.MaHocKy == id || (x.MaMonHoc.HasValue && courseIds.Contains(x.MaMonHoc.Value)), ct, includeFiltered: true);
         DetachTasks(userId, tasks, removeSemester: true);
-        // Persist history and FK changes before deleting principals. Any failure rolls back all writes.
+        // Lưu lịch sử và đổi khóa ngoại trước khi xóa bản ghi được tham chiếu; có lỗi thì hoàn tác toàn bộ.
         await store.SaveAsync(ct);
         foreach (var session in await store.LoadAsync<LichHoc>(x => courseIds.Contains(x.MaMonHoc), ct)) store.Remove(session);
         foreach (var course in courses) store.Remove(course);

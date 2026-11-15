@@ -1,8 +1,8 @@
 # Đặc tả nghiệp vụ theo module
 
-Ngày đối chiếu: 2026-10-13. Trạng thái: đặc tả dự thảo để chuẩn bị triển khai, chưa phải chức năng đã chạy hoặc quyết định đã được người dùng duyệt.
+Đặc tả ban đầu ngày 2026-10-13. Một số module đã cập nhật theo code; đọc trạng thái đầu từng file và bản ghi kiểm chứng. Không coi nội dung dự thảo còn lại là chức năng đã chạy hoặc quyết định đã được người dùng duyệt.
 
-[Đặc tả nghiệp vụ bản đầu](../DAC-TA-NGHIEP-VU-BAN-DAU.md) được bổ sung trong lúc soạn bộ module và đã được đọc đối chiếu. Tài liệu đó ghi nhận người dùng đã chọn gợi ý việc nên làm trước có giải thích, chưa tự xếp giờ học. Bộ module giữ phạm vi này; các quy tắc còn lại vẫn là dự thảo, không suy ra toàn bộ tài liệu đã được duyệt.
+[Đặc tả nghiệp vụ bản đầu](../DAC-TA-NGHIEP-VU-BAN-DAU.md) ghi nhận phạm vi gợi ý thứ tự ở thời điểm soạn. Code hiện đã có preview/apply xếp lịch theo giờ rảnh tại [module 07](07-goi-y-cong-viec.md); module 03 và 09 cũng đã cập nhật theo thay đổi gần đây. Không dùng phạm vi cũ để kết luận chức năng hiện có chưa triển khai và không suy ra toàn bộ tài liệu đã được người dùng duyệt.
 
 ## Mục đích và cách đọc
 
@@ -20,6 +20,7 @@ Các tài liệu này giải thích người dùng làm gì, hệ thống kiểm
 | [06 — Thông báo nhắc hạn](06-thong-bao-nhac-han.md) | Nhận và đọc lời nhắc trong ứng dụng | Chuẩn bị từ 5–6, phát ở 8 |
 | [07 — Gợi ý công việc](07-goi-y-cong-viec.md) | Biết nên làm việc nào tiếp theo và lý do | 9 |
 | [08 — Danh mục và quản trị](08-danh-muc-va-quan-tri.md) | Chọn thông tin trường/lớp; quản trị danh mục/tài khoản | Đọc tối thiểu khi cần cho hồ sơ, quản trị ở 10 |
+| [Đồng hồ tập trung (mở rộng)](09-dong-ho-tap-trung.md) | Pomodoro, đếm lên, nghỉ, ghi chú và lịch sử; đã triển khai theo code ngày 12/11/2026 | Nối với nhiệm vụ và phiên tự học |
 | [09 — Danh mục môn học & học kỳ](09-du-lieu-nen-tang.md) | Admin quản lý học kỳ/môn mẫu trong JSON; sinh viên chọn gợi ý khi thêm môn | Chuyển từ hai bảng mẫu sang JSON ngày 14/11/2026 |
 
 Số thứ tự file để đọc và tham chiếu, không yêu cầu viết xong toàn bộ một module mới được bắt đầu module liên quan. Khung API/schema ở giai đoạn 1–2 là nền dùng chung, không tạo một module nghiệp vụ riêng.

@@ -4,17 +4,17 @@ using StudyPlanner.Domain.Entities;
 
 namespace StudyPlanner.Infrastructure.Data.Configurations;
 
-// Mapping của các bảng mới. Ràng buộc DB bảo vệ dữ liệu cơ bản;
-// quyền, trùng lịch lặp, hạn cha-con và giao dịch apply vẫn phải thực hiện trong Application.
+// Ánh xạ các bảng mới. Ràng buộc cơ sở dữ liệu bảo vệ dữ liệu cơ bản;
+// quyền, trùng lịch lặp, hạn cha-con và giao dịch áp dụng lịch vẫn phải kiểm tra ở tầng ứng dụng.
 public sealed class LapKeHoachConfiguration : IEntityTypeConfiguration<KhungGioRanh>,
     IEntityTypeConfiguration<PhienTuHoc>, IEntityTypeConfiguration<LanApDungLich>,
     IEntityTypeConfiguration<LichNhac>, IEntityTypeConfiguration<TepDinhKemNhiemVu>,
-    IEntityTypeConfiguration<DoanThucHoc>, IEntityTypeConfiguration<QuyTacUuTien>
+    IEntityTypeConfiguration<KhoangThoiGianHoc>, IEntityTypeConfiguration<QuyTacUuTien>
 {
     private static void Map<T>(EntityTypeBuilder<T> b, string table) where T : class
     {
         b.ToTable(table); b.HasKey("Ma"); b.Property<int>("Ma").UseIdentityByDefaultColumn();
-        // Chỉ duyệt scalar EF đã nhận diện, không ánh xạ navigation thành cột.
+        // Chỉ duyệt thuộc tính đơn trị EF đã nhận diện, không ánh xạ thuộc tính điều hướng thành cột.
         foreach (var p in b.Metadata.GetProperties())
             p.SetColumnName(System.Text.RegularExpressions.Regex.Replace(p.Name, "(?<!^)([A-Z])", "_$1").ToLowerInvariant());
     }
@@ -24,6 +24,7 @@ public sealed class LapKeHoachConfiguration : IEntityTypeConfiguration<KhungGioR
     public void Configure(EntityTypeBuilder<KhungGioRanh> b)
     {
         const string t = "khung_gio_ranh";
+        b.HasAlternateKey(x => new { x.Ma, x.MaNguoiDung });
         b.HasOne(x => x.NguoiDung).WithMany().HasForeignKey(x => x.MaNguoiDung).OnDelete(DeleteBehavior.Cascade);
         b.HasIndex(x => new { x.MaNguoiDung, x.ThuTrongTuan, x.GioBatDau });
         Check(b,t,"times", "thu_trong_tuan BETWEEN 1 AND 7 AND gio_ket_thuc > gio_bat_dau AND ngay_ket_thuc >= ngay_bat_dau");
@@ -40,7 +41,7 @@ public sealed class LapKeHoachConfiguration : IEntityTypeConfiguration<KhungGioR
             .HasPrincipalKey(x => new { x.Ma, x.MaNguoiDung }).OnDelete(DeleteBehavior.NoAction);
         b.Property(x => x.TrangThai).HasConversion<string>().HasMaxLength(32);
         b.HasIndex(x => new { x.MaNguoiDung, x.BatDauDuKien });
-        // Khóa tài khoản là điều phối chính; unique này là lớp bảo vệ DB cho hai lệnh Start cạnh tranh.
+        // Khóa tài khoản điều phối chính; chỉ mục duy nhất bảo vệ thêm khi hai lệnh bắt đầu phiên cạnh tranh.
         b.HasIndex(x => x.MaNguoiDung).IsUnique().HasDatabaseName("UX_phien_tu_hoc_dang_hoc")
             .HasFilter("trang_thai = 'InProgress'");
         Check(b,t,"times", "ket_thuc_du_kien > bat_dau_du_kien");
@@ -87,9 +88,11 @@ public sealed class LapKeHoachConfiguration : IEntityTypeConfiguration<KhungGioR
         Check(b,t,"values", "kich_thuoc_byte > 0 AND length(btrim(ten_tep)) > 0 AND length(btrim(khoa_luu_tru)) > 0 AND length(btrim(loai_tep)) > 0");
         Map(b,t);
     }
-    public void Configure(EntityTypeBuilder<DoanThucHoc> b)
+    public void Configure(EntityTypeBuilder<KhoangThoiGianHoc> b)
     {
-        const string t = "doan_thuc_hoc";
+        const string t = "khoang_thoi_gian_hoc";
+        b.HasOne(x => x.PhienTapTrung).WithMany().HasForeignKey(x => new { x.MaPhienTapTrung, x.MaNguoiDung })
+            .HasPrincipalKey(x => new { x.Ma, x.MaNguoiDung }).OnDelete(DeleteBehavior.NoAction);
         b.HasOne(x => x.NguoiDung).WithMany().HasForeignKey(x => x.MaNguoiDung).OnDelete(DeleteBehavior.NoAction);
         b.HasOne(x => x.NhiemVu).WithMany().HasForeignKey(x => new { x.MaNhiemVu, x.MaNguoiDung })
             .HasPrincipalKey(x => new { x.Ma, x.MaNguoiDung }).OnDelete(DeleteBehavior.Cascade);

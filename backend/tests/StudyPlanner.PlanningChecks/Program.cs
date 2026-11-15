@@ -94,7 +94,7 @@ using (var db = new ApplicationDbContext(new DbContextOptionsBuilder<Application
     Check(index.IsUnique && index.GetFilter() == "trang_thai = 'InProgress'", "Model includes unique one-active-session guard");
 }
 
-// Generated cases cover interval/deadline/remaining invariants without mirroring exact placement.
+// Các ca sinh tự động kiểm tra bất biến khoảng giờ, hạn và phần còn lại mà không chép lại cách xếp cụ thể.
 var random = new Random(407);
 for (var trial = 0; trial < 60; trial++)
 {

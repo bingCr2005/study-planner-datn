@@ -25,7 +25,7 @@ public sealed class ThongBaoWorker(IServiceScopeFactory scopes, ILogger<ThongBao
             {
                 using var scope = scopes.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                // Keyset batches bound memory. Each account uses a fresh context/transaction.
+                // Phân lô theo khóa để giới hạn bộ nhớ; mỗi tài khoản dùng ngữ cảnh và giao dịch riêng.
                 var lastId = 0;
                 while (!stoppingToken.IsCancellationRequested)
                 {

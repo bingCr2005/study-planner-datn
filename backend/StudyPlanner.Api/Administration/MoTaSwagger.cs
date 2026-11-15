@@ -18,9 +18,13 @@ public sealed class MoTaSwagger : IOperationFilter, ISchemaFilter
         "LichSuNhiemVu" => "Lịch sử nhiệm vụ",
         "LichHoc" => "Quản lý lịch học theo môn",
         "KhungGioRanh" => "Quản lý giờ rảnh",
+        "CauHinhHoc" => "Cấu hình học dùng chung",
+        "NhacKeHoach" => "Nhắc rà soát kế hoạch",
+        "ThongBao" => "Thông báo và thiết lập nhắc hạn",
         "ThoiKhoaBieu" => "Thời khóa biểu",
         "LapLich" => "Gợi ý và áp dụng lịch tự học",
         "PhienTuHoc" => "Quản lý phiên tự học",
+        "TapTrung" => "Đồng hồ tập trung và lịch sử",
         _ => "API mẫu và hệ thống"
     };
 
@@ -64,6 +68,7 @@ public sealed class MoTaSwagger : IOperationFilter, ISchemaFilter
         ["vaiTro"] = "Student = sinh viên; Admin = quản trị.",
         ["muiGio"] = "Múi giờ tài khoản.",
         ["nhacTruocGio"] = "Số giờ nhắc trước hạn mặc định.",
+        ["nhacKeHoach"] = "Bật/tắt nhắc rà soát tuần và giờ rảnh sắp hết hạn; mặc định tắt.",
         ["ngayTao"] = "Thời điểm tạo do hệ thống ghi, theo UTC.",
         ["ngayCapNhat"] = "Thời điểm cập nhật gần nhất do hệ thống ghi, theo UTC.",
         ["tuKhoa"] = "Từ khóa tìm kiếm, có thể bỏ trống.",
@@ -82,12 +87,13 @@ public sealed class MoTaSwagger : IOperationFilter, ISchemaFilter
             context.Type.Namespace != "StudyPlanner.Application.Auth" &&
             context.Type.Namespace != "StudyPlanner.Application.HocTap" &&
             context.Type.Namespace != "StudyPlanner.Application.Academic" &&
+            context.Type.Namespace != "StudyPlanner.Application.CanhBao" &&
             context.Type != typeof(Controllers.LivenessResponse)) return;
         if (schema.Properties is null) return;
         foreach (var (name, value) in schema.Properties)
             if (value is OpenApiSchema property && Fields.TryGetValue(name, out var description))
                 property.Description = description;
-        // Cùng tên field nhưng chỉ DangKyRequest bắt buộc đủ hồ sơ; CRUD/response legacy vẫn nullable.
+        // Cùng tên trường nhưng chỉ DangKyRequest bắt buộc đủ hồ sơ; thao tác dữ liệu/phản hồi cũ vẫn cho phép null.
         if (context.Type == typeof(StudyPlanner.Application.Auth.DangKyRequest))
         {
             foreach (var name in new[] { "maSoSinhVien", "tenTruong", "tenLop", "nganhHoc" })
@@ -133,15 +139,54 @@ public sealed class MoTaSwagger : IOperationFilter, ISchemaFilter
             operation.Description = "Chỉ thao tác dữ liệu của tài khoản đăng nhập. Response có phienBan/duLieu và ETag; lỗi dùng ProblemDetails. " +
                 (method == "PUT" ? "PUT gửi đầy đủ DTO; thiếu trường tùy chọn sẽ bỏ giá trị. " : "") +
                 (controller == "LapLich" ? "Preview không ghi DB. Apply kiểm tra lại hạn, giờ rảnh, lịch bận, thời lượng và phiên bản; Idempotency-Key chống ghi lặp." : "Thay đổi ảnh hưởng phiên học yêu cầu xem trước/xác nhận; lỗi rollback toàn bộ.");
+            if (controller == "NhiemVu")
+                operation.Description += " Cha lấy trung bình tiến độ các con trực tiếp; checklist chỉ tính tiến độ ở lá. " +
+                    "Preview trả maNhiemVuMoLai/maChecklistChuyenThanhBuoc/maTienDoChuyenThanhBuoc. " +
+                    "Thêm/chuyển con làm mở lại hoặc chuyển nguồn tiến độ cần xacNhanDoiCauTruc=true sau khi người dùng xác nhận.";
+            if (controller == "KhungGioRanh")
+            {
+                operation.Summary = action switch { "ThemNhieu" => "Thêm giờ rảnh cho nhiều thứ trong một giao dịch", "NgoaiLe" => "Xem các ngày điều chỉnh của mẫu giờ rảnh", "XemNgoaiLe" => "Xem ảnh hưởng điều chỉnh một ngày", "SuaNgoaiLe" => "Bỏ hoặc đổi giờ riêng một ngày", "XoaNgoaiLe" => "Dùng lại lịch lặp cho một ngày", _ => operation.Summary };
+                operation.Description += " Mẫu lặp theo tuần; ngoại lệ chỉ thay đổi ngày được chọn. Giảm giờ rảnh có preview/xác nhận hủy phiên dự kiến, không tự hủy phiên đang học.";
+            }
+            if (controller == "CauHinhHoc")
+            {
+                operation.Summary = method == "GET" ? "Đọc cấu hình học dùng chung" : "Lưu thời lượng phiên, nghỉ và giới hạn mỗi ngày";
+                operation.Description = "Dữ liệu theo tài khoản. Phiên 15–50 phút, nghỉ 1–30 phút, giới hạn ngày 15–720 phút. PUT cần If-Match; không sửa các phiên đã đặt, preview cũ hết hiệu lực khi cấu hình đổi.";
+            }
+            if (controller == "NhacKeHoach")
+            {
+                operation.Summary = action switch { "CauHinh" => "Đọc tùy chọn nhắc kế hoạch", "LuuCauHinh" => "Bật hoặc tắt nhắc kế hoạch", "Doc" => "Đánh dấu đã đọc một nhắc kế hoạch", "DocTatCa" => "Đánh dấu đã đọc đến mốc đã tải", _ => "Nhắc rà soát tuần và mẫu giờ rảnh sắp hết hạn" };
+                operation.Description = "Nhắc trong ứng dụng khi tải hộp thông báo, mặc định tắt; không gửi email hoặc tự tạo phiên học. Chống trùng theo tài khoản/tuần hoặc ngày hết hiệu lực. Chỉ sửa tùy chọn mới cần If-Match, đánh dấu đọc dùng mốc thông báo.";
+            }
+            if (controller == "ThongBao")
+            {
+                operation.Summary = action switch { "CauHinh" => "Đọc thiết lập nhắc hạn và nhắc kế hoạch", "LuuCauHinh" => "Lưu thiết lập thông báo dùng chung", "Doc" => "Đánh dấu đã đọc thông báo", "DocTatCa" => "Đọc các thông báo đến mốc đã tải", _ => "Xem thông báo nhắc hạn nhiệm vụ" };
+                operation.Description = action is "CauHinh" or "LuuCauHinh"
+                    ? "Dùng dữ liệu tài khoản hiện có. nhacTruocGio từ 0–8760, 0 là đúng hạn; nhiệm vụ có giờ nhắc riêng được ưu tiên. nhacKeHoach bật nhắc tuần/giờ rảnh; PUT đủ hai trường và If-Match, lưu chung giao dịch."
+                    : "Chỉ thông báo nhiệm vụ của tài khoản đăng nhập. Đọc một dùng ngayPhat, đọc tất cả dùng docDenLuc để không đọc nhầm thông báo mới; không cần If-Match khi đánh dấu đọc.";
+            }
+            if (controller == "LapLich")
+                operation.Description += " Dùng cấu hình học của tài khoản và giới hạn ngày theo múi giờ. capNhatKeHoach tạo preview thay các phiên Planned chưa đến giờ trong phạm vi; apply thay trong một giao dịch và giữ lịch thực học.";
+            if (controller == "TapTrung")
+            {
+                operation.Summary = action switch { "Doc" => "Đồng hồ hiện tại, lịch sử và tổng quan", "ThongKe" => "Thống kê tập trung theo ngày và nhiệm vụ", "NhiemVu" => "Tổng thời gian tập trung của nhiệm vụ", "BatDau" => "Bắt đầu Pomodoro hoặc đếm lên", "Nhap" => "Bổ sung thời gian đã tập trung", _ => "Tạm dừng, tiếp tục, kết thúc, bỏ phiên hoặc lưu ghi chú" };
+                operation.Description = "Dữ liệu riêng của tài khoản. operation nhận pause/resume/finish/discard/note. " +
+                    "Thời gian dựa trên máy chủ, không tính khoảng tạm dừng và không tự tăng tiến độ nhiệm vụ. " +
+                    "GET state chốt Pomodoro đã hết giờ kể cả khi trình duyệt từng đóng. Gửi If-Match gần nhất khi ghi.";
+            }
             var preview = action is "XemTruoc" or "XemThayDoi" or "XemXoa" or "XemAnhHuong";
-            if (method != "GET" && !preview && !(controller == "LapLich" && action == "ApDung"))
+            var docThongBao = (controller is "ThongBao" or "NhacKeHoach") && (action is "Doc" or "DocTatCa");
+            if (method != "GET" && !preview && !(controller == "LapLich" && action == "ApDung") && !docThongBao)
             {
                 operation.Parameters ??= [];
                 if (!operation.Parameters.Any(p => p.Name == "If-Match")) operation.Parameters.Add(new OpenApiParameter { Name="If-Match",In=ParameterLocation.Header,Required=true,Description="ETag đọc gần nhất, ví dụ \"ht-0\". Thiếu trả 428, cũ trả 409.",Schema=new OpenApiSchema { Type=JsonSchemaType.String } });
             }
             operation.Responses ??= [];
             foreach (var status in new[] { "400","401","404","409","428" })
+            {
+                if (docThongBao && status == "428") continue;
                 operation.Responses.TryAdd(status,new OpenApiResponse { Description=status == "428" ? "Thiếu If-Match." : "Lỗi có code/traceId trong ProblemDetails." });
+            }
         }
         if (controller == "XacThuc")
         {
@@ -156,7 +201,7 @@ public sealed class MoTaSwagger : IOperationFilter, ISchemaFilter
             operation.Summary = action switch { "XemHoSo" => "Xem hồ sơ của tôi", "SuaHoSo" => "Sửa hồ sơ của tôi", _ => "Đổi mật khẩu" };
             if (action == "SuaHoSo")
             {
-                // PATCH nhận JsonElement để phân biệt thiếu field với null. Đặt mẫu riêng cho thao tác này,
+                // PATCH nhận JsonElement để phân biệt thiếu trường với null. Đặt mẫu riêng cho thao tác này,
                 // tránh gắn mẫu hồ sơ vào mọi API khác cũng dùng JsonElement.
                 if (operation.RequestBody?.Content is not null)
                     foreach (var media in operation.RequestBody.Content.Values)

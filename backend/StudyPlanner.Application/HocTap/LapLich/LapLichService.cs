@@ -16,6 +16,7 @@ public sealed class LapLichService(IHocTapStore store, HocTapDieuPhoi dieuPhoi,
         await using var session = await dieuPhoi.MoAsync(chu, null, false, ct);
         var now = clock.GetUtcNow();
         var zone = QuyTacThoiGian.MuiGio(session.NguoiDung.MuiGio);
+        var settings = CauHinhHocResponse.Tu(session.NguoiDung); settings.KiemTra();
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, zone).DateTime);
         var startDay = request.NgayBatDau ?? today;
         if (startDay < today || startDay.DayNumber > DateOnly.MaxValue.DayNumber - request.SoNgay)
@@ -54,7 +55,17 @@ public sealed class LapLichService(IHocTapStore store, HocTapDieuPhoi dieuPhoi,
         var archived = (await store.DanhSachAsync(store.TruyVan<HocKy>().Where(s => s.MaNguoiDung == chu && semesters.Contains(s.Ma) && s.DaLuuTru)
             .Select(s => s.Ma), ct)).ToHashSet();
         var reserved = await store.DanhSachAsync(store.TruyVan<PhienTuHoc>().Where(p => p.MaNguoiDung == chu && taskIds.Contains(p.MaNhiemVu) &&
-            p.KetThucDuKien > now && (p.TrangThai == TrangThaiPhienTuHoc.Planned || p.TrangThai == TrangThaiPhienTuHoc.InProgress)), ct);
+            p.KetThucDuKien > now && (p.TrangThai == TrangThaiPhienTuHoc.Planned || p.TrangThai == TrangThaiPhienTuHoc.InProgress)).Take(10001), ct);
+        if (reserved.Count > 10000) throw new HocTapException(400, "PLANNING_LIMIT", "Quá nhiều phiên đã đặt; hãy thu hẹp phạm vi nhiệm vụ.");
+        var eligibleIds = tasks.Where(task => task.ThoiLuongDuKienPhut.HasValue &&
+            (!task.MaHocKy.HasValue || !archived.Contains(task.MaHocKy.Value)) &&
+            (QuyTacCay.HanHieuLuc(task, map).Han is not DateTimeOffset due || due > now)).Select(task => task.Ma).ToHashSet();
+        // Chỉ thay phiên dự kiến chưa đến giờ, nằm trọn phạm vi ngày và thuộc các lá hợp lệ đã chọn.
+        // Giữ phiên ngoài phạm vi cùng mọi phiên đang học/đã học để bảo toàn lịch sử thực tế.
+        var replaceIds = request.CapNhatKeHoach ? reserved.Where(p => eligibleIds.Contains(p.MaNhiemVu) &&
+            p.TrangThai == TrangThaiPhienTuHoc.Planned && p.BatDauDuKien > now && p.BatDauDuKien >= from && p.KetThucDuKien <= to)
+            .Select(p => p.Ma).Order().ToArray() : [];
+        var replaceSet = replaceIds.ToHashSet();
         var warnings = new List<CanhBaoLapLich>();
         var unreviewed = await store.DanhSachAsync(store.TruyVan<PhienTuHoc>().Where(p => p.MaNguoiDung == chu &&
             taskIds.Contains(p.MaNhiemVu) && p.TrangThai == TrangThaiPhienTuHoc.Planned && p.KetThucDuKien <= now)
@@ -73,7 +84,7 @@ public sealed class LapLichService(IHocTapStore store, HocTapDieuPhoi dieuPhoi,
             else if (due.HasValue && due <= now) { reason = "TASK_OVERDUE"; message = "Hạn đã qua; hãy điều chỉnh hạn trước khi xếp lịch."; }
             var remaining = task.ThoiLuongConLaiPhut ?? 0;
             if (reason is not null) { warnings.Add(new(task.Ma, task.TieuDe, reason, message!, remaining)); continue; }
-            var booked = reserved.Where(p => p.MaNhiemVu == task.Ma)
+            var booked = reserved.Where(p => p.MaNhiemVu == task.Ma && !replaceSet.Contains(p.Ma))
                 .Sum(p => Math.Max(0, (p.KetThucDuKien - (p.BatDauDuKien < now ? now : p.BatDauDuKien)).TotalMinutes));
             // Chỉ xếp phút nguyên; không làm tròn riêng từng phiên khiến phần đã dành chỗ bị trừ hai lần.
             var need = Math.Max(0, (int)Math.Floor(remaining - booked));
@@ -82,25 +93,30 @@ public sealed class LapLichService(IHocTapStore store, HocTapDieuPhoi dieuPhoi,
             if (need == 0) warnings.Add(new(task.Ma, task.TieuDe, "ALREADY_RESERVED", "Đã đủ thời lượng trong các phiên còn hiệu lực.", 0));
             else jobs.Add(new(task.Ma, task.TieuDe, due, task.MucDoUuTien, need));
         }
-        var source = await lich.LayNguonAsync(chu, from.AddMinutes(-10), to.AddMinutes(10), ct);
+        var source = await lich.LayNguonAsync(chu, from.AddMinutes(-settings.NghiGiuaPhienPhut), to.AddMinutes(settings.NghiGiuaPhienPhut), ct);
         var busy = source.LichHoc.Concat(source.SuKien).Concat(source.PhienTuHoc
-            .Where(p => p.TrangThai != TrangThaiPhienTuHoc.Cancelled)
-            .Select(p => new KhoangThoiGian(p.BatDauDuKien.AddMinutes(-10), p.KetThucDuKien.AddMinutes(10))));
+            .Where(p => p.TrangThai != TrangThaiPhienTuHoc.Cancelled && !replaceSet.Contains(p.Ma))
+            .Select(p => new KhoangThoiGian(p.BatDauDuKien.AddMinutes(-settings.NghiGiuaPhienPhut), p.KetThucDuKien.AddMinutes(settings.NghiGiuaPhienPhut))));
         var free = QuyTacThoiGian.Tru(source.GioRanh, busy)
             .Select(g => new KhoangThoiGian(g.BatDau < from ? from : g.BatDau, g.KetThuc > to ? to : g.KetThuc))
             .Where(g => g.KetThuc > g.BatDau).ToList();
-        var result = QuyTacLapLich.Xep(jobs, free, now);
+        var bookedDays = QuyTacGioiHanNgay.Tong(source.PhienTuHoc.Where(p => !replaceSet.Contains(p.Ma) && p.KetThucDuKien > now &&
+                p.TrangThai is TrangThaiPhienTuHoc.Planned or TrangThaiPhienTuHoc.InProgress)
+            .Select(p => new KhoangThoiGian(p.BatDauDuKien < now ? now : p.BatDauDuKien, p.KetThucDuKien)), zone);
+        var result = QuyTacLapLich.Xep(jobs, free, now, settings, zone, bookedDays);
         foreach (var job in jobs.Where(j => result.ChuaXep[j.MaNhiemVu] > 0))
             warnings.Add(new(job.MaNhiemVu, job.TieuDe, free.Count == 0 ? "NO_AVAILABILITY" : "INSUFFICIENT_TIME",
-                free.Count == 0 ? "Không có giờ rảnh khả dụng trong khoảng chọn." : "Chưa đủ chỗ trước hạn hoặc không đủ độ dài phiên/nghỉ.", result.ChuaXep[job.MaNhiemVu]));
+                free.Count == 0 ? "Không có giờ rảnh khả dụng trong khoảng chọn." : "Chưa đủ chỗ trước hạn, độ dài phiên/nghỉ hoặc giới hạn học mỗi ngày.", result.ChuaXep[job.MaNhiemVu]));
         if (await store.DemAsync(store.TruyVan<PhienTuHoc>().Where(p => p.MaNguoiDung == chu && p.TrangThai == TrangThaiPhienTuHoc.InProgress && p.KetThucDuKien <= now), ct) > 0)
             warnings.Add(new(0, "Phiên đang học", "SESSION_NEEDS_REVIEW", "Có phiên đang học đã quá giờ; cần kết thúc trước khi áp dụng lịch mới.", 0));
         var expires = now.AddMinutes(10);
         var payload = new NoiDungPreviewLapLich(chu, session.NguoiDung.PhienBanLapLich, QuyTacLapLich.PhienBan, now, expires,
-            result.Phien.Select(p => new ChonPhienTuHocRequest(p.MaNhiemVu, p.BatDauDuKien, p.KetThucDuKien)).ToList());
+            result.Phien.Select(p => new ChonPhienTuHocRequest(p.MaNhiemVu, p.BatDauDuKien, p.KetThucDuKien)).ToList())
+        { CauHinhHoc = settings, MaPhienThayThe = replaceIds };
         var response = new XemTruocLichResponse(result.Phien, warnings, sumRequired, sumReserved,
             result.Phien.Sum(p => (int)(p.KetThucDuKien - p.BatDauDuKien).TotalMinutes), result.ChuaXep.Values.Sum(),
-            payload.PhienBanNguon, payload.PhienBanQuyTac, now, expires, tokens.Tao(payload), session.NguoiDung.MuiGio);
+            payload.PhienBanNguon, payload.PhienBanQuyTac, now, expires, tokens.Tao(payload), session.NguoiDung.MuiGio)
+        { CauHinhHoc = settings, MaPhienThayThe = replaceIds };
         await session.CommitAsync(false, ct);
         return new(session.NguoiDung.PhienBanLapLich, response);
     }
@@ -111,12 +127,17 @@ public sealed class LapLichService(IHocTapStore store, HocTapDieuPhoi dieuPhoi,
             throw new HocTapException(400, "VALIDATION_ERROR", "Cần Idempotency-Key tối đa 128 ký tự và 1–2.000 phiên.");
         var payload = tokens.Doc(request.TokenPreview);
         if (payload.MaNguoiDung != chu) throw KhongTimThay();
+        if (payload.CauHinhHoc is null || payload.MaPhienThayThe is null || payload.MaPhienThayThe.Count > 10000 ||
+            payload.MaPhienThayThe.Any(id => id <= 0) || payload.MaPhienThayThe.Distinct().Count() != payload.MaPhienThayThe.Count)
+            throw new HocTapException(400, "INVALID_PREVIEW_TOKEN", "Phiếu gợi ý thiếu cấu hình hoặc danh sách phiên hợp lệ.");
+        payload.CauHinhHoc.KiemTra();
         var selected = request.Phien.OrderBy(p => p.BatDauDuKien).ThenBy(p => p.KetThucDuKien).ThenBy(p => p.MaNhiemVu).ToArray();
         if (selected.Distinct().Count() != selected.Length || selected.Any(p => !payload.Phien.Contains(p)))
             throw new HocTapException(400, "INVALID_PREVIEW_SELECTION", "Chỉ được chọn một tập con nguyên vẹn của lịch đề xuất.");
         var hash = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
-        { payload.PhienBanNguon, payload.PhienBanQuyTac, phien = selected.Select(p => new { p.MaNhiemVu, batDau = p.BatDauDuKien.UtcTicks, ketThuc = p.KetThucDuKien.UtcTicks }) })));
-        // Apply mở khóa chưa kiểm tra revision để tìm key thành công trước; retry sau timeout không bị coi là dữ liệu cũ.
+        { payload.PhienBanNguon, payload.PhienBanQuyTac, payload.CauHinhHoc, thayThe = payload.MaPhienThayThe.Order(),
+            phien = selected.Select(p => new { p.MaNhiemVu, batDau = p.BatDauDuKien.UtcTicks, ketThuc = p.KetThucDuKien.UtcTicks }) })));
+        // Tìm khóa yêu cầu đã thành công trước khi so phiên bản; gửi lại sau mất phản hồi sẽ nhận đúng kết quả cũ.
         await using var tx = await store.BatDauAsync(true, ct);
         var user = await store.NguoiDungAsync(chu, true, ct);
         var previous = await store.DauTienAsync(store.TruyVan<LanApDungLich>().Where(b => b.MaNguoiDung == chu && b.KhoaYeuCau == key), ct);
@@ -135,6 +156,16 @@ public sealed class LapLichService(IHocTapStore store, HocTapDieuPhoi dieuPhoi,
             throw new HocTapException(409, "RULE_VERSION_CONFLICT", "Quy tắc đã đổi; hãy tạo gợi ý mới.");
         if (now > payload.HetHanLuc || payload.ThoiDiemTinh > now)
             throw new HocTapException(409, "PREVIEW_EXPIRED", "Gợi ý đã hết hạn; hãy tính lại.");
+        if (payload.CauHinhHoc != CauHinhHocResponse.Tu(user))
+            throw new HocTapException(409, "DATA_VERSION_CONFLICT", "Cấu hình học đã thay đổi; hãy tạo gợi ý mới.");
+        var replacementIds = payload.MaPhienThayThe.ToArray();
+        var replaced = await store.DanhSachAsync(store.TruyVan<PhienTuHoc>().Where(p => p.MaNguoiDung == chu && replacementIds.Contains(p.Ma)), ct);
+        if (replaced.Count != replacementIds.Length || replaced.Any(p => p.TrangThai != TrangThaiPhienTuHoc.Planned || p.BatDauDuKien <= now))
+            throw new HocTapException(409, "REPLANNING_CONFLICT", "Có phiên cần thay thế đã thay đổi hoặc đến giờ. Hãy tạo gợi ý mới.");
+        foreach (var old in replaced) { old.TrangThai = TrangThaiPhienTuHoc.Cancelled; old.NgayCapNhat = now; }
+        // Ghi trạng thái hủy trong giao dịch hiện tại để bộ kiểm tra chung nhìn thấy các chỗ đã được giải phóng.
+        // Nếu kiểm tra hoặc lưu thất bại, hoàn tác cả việc hủy phiên cũ lẫn thêm phiên mới.
+        if (replaced.Count > 0) await store.LuuAsync(ct);
         await datPhien.KiemTraAsync(chu, selected, now, null, ct);
         var batch = new LanApDungLich { MaNguoiDung = chu, KhoaYeuCau = key, DauKiemNoiDung = hash,
             PhienBanNguon = payload.PhienBanNguon, PhienBanQuyTac = payload.PhienBanQuyTac, NgayTao = now };

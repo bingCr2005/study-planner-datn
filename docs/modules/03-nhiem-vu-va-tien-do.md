@@ -1,6 +1,6 @@
 # Module 03 — Nhiệm vụ và tiến độ
 
-Trạng thái đối chiếu mã ngày 2026-11-10. BE có CRUD nhiệm vụ, chia nhỏ, checklist với tiến độ riêng, hạn kế thừa, lịch sử và kiểm tra ảnh hưởng lịch. FE React trong repository `Study_Planner_FE` đã nối API và chọn học kỳ/môn theo tên. Xem [bản ghi checklist](../history/2026-11-10-tach-checklist-va-tien-do-nhiem-vu-con.md) và [bản ghi tích hợp FE](../history/2026-11-06-chuyen-day-du-frontend-preview-va-sua-bo-loc.md).
+Trạng thái đối chiếu mã ngày 2026-11-13. BE/FE đã chuyển sang tiến độ cha tổng hợp từ con; checklist chỉ điều khiển tiến độ nhiệm vụ lá. Xem [bản ghi chuyển quy tắc và kiểm chứng](../history/2026-11-13-tong-hop-tien-do-nhiem-vu.md). Quy tắc độc lập trong [bản ghi checklist cũ](../history/2026-11-10-tach-checklist-va-tien-do-nhiem-vu-con.md) là lịch sử, không còn là quy tắc hiện hành.
 
 Các phần bên dưới giữ nội dung đặc tả ban đầu để đối chiếu. Tên DTO/route và hành vi hiện hành được đối chiếu với `backend/StudyPlanner.Application/HocTap` và `backend/StudyPlanner.Api/Controllers/NhiemVuController.cs`.
 
@@ -30,13 +30,26 @@ Exam chưa phải sự kiện thi có giờ/phòng. DueDate là hạn hoàn thà
 ## 3. Quy tắc cây và hạn hiệu lực
 
 - Cha/con phải cùng UserId và CourseId, kể cả cùng NULL. Không tự làm cha, gắn vào hậu duệ hoặc tạo vòng ở bất kỳ độ sâu nào.
-- Mỗi nhiệm vụ có tiến độ độc lập. Khi có checklist, tiến độ bằng tỷ lệ mục đã đánh dấu, làm tròn xuống. Nhiệm vụ chưa có checklist nhận tiến độ nhập tay.
-- Ghi thời điểm hoàn thành khi nhiệm vụ đạt 100% và xóa mốc khi tiến độ giảm. Tiến độ con thay đổi độc lập với cha.
-- Thêm con vào lá bỏ ước lượng nhập tay của cha và giữ nguyên tiến độ. Thời lượng tổng hợp lấy từ lá, tránh cộng cả cha lẫn con.
+- Mỗi nhiệm vụ có một nguồn tiến độ: có con thì lấy trung bình số nguyên của mọi con trực tiếp, làm tròn xuống; không có con nhưng có checklist thì lấy tỷ lệ mục đã xong; lá không có checklist nhận tiến độ nhập tay. Tính từ dưới lên mọi cấp, không gom toàn bộ cháu vào mẫu số của gốc.
+- Con đã hoàn thành vẫn thuộc cây và vẫn được tính. Cha chỉ đạt 100%/Completed khi mọi con trực tiếp đạt 100%; làm tròn không được tạo 100% giả. Ghi ngày hoàn thành khi đạt 100%, giữ mốc nếu vẫn hoàn thành, xóa mốc khi mở lại.
+- Không nhập tay progress/complete/reopen cho cha và không gắn checklist công việc trực tiếp lên cha. API từ chối tương ứng bằng `TASK_PROGRESS_IS_DERIVED` và `TASK_CHECKLIST_REQUIRES_LEAF`. Mô tả cha vẫn chỉnh sửa bình thường; UI giải thích nguồn tiến độ và mở chi tiết con khi cần.
+- Thêm/chuyển con vào lá có checklist giữ checklist trong con **Công việc chung**; lá có tiến độ nhập tay >0 giữ tiến độ/ước lượng trong con **Phần việc đã thực hiện**. Cha chuyển sang nguồn tổng hợp. Cả nhánh bảo toàn và nhánh mới đều góp một phần bằng nhau. Ước lượng cha để NULL, tổng thời lượng lấy từ lá.
+- Preview thông báo các mã nhiệm vụ sẽ mở lại hoặc chuyển phần việc cũ thành con. Ghi children/parent cần `xacNhanDoiCauTruc=true` khi có các ảnh hưởng đó; không được chỉ dựa vào nút xác nhận FE. Metadata không đổi cấu trúc và cập nhật trực tiếp nhiệm vụ lá không cần cờ này.
+- Thêm/xóa/chuyển/thùng rác/khôi phục tính lại các tổ tiên bị ảnh hưởng trong cùng giao dịch; chuyển con tính cả nhánh cũ và nhánh mới. Khi không còn con, cha cũ trở lại lá tiến độ 0, không giữ 100% dẫn xuất đã mất nguồn. Khôi phục là thao tác rõ ràng đưa việc trở lại và có thể mở lại các tổ tiên; nếu cha đã trở thành lá và có phần việc riêng mới, bảo toàn phần đó trước khi gắn lại con.
 - Hạn hiệu lực = DueDate của chính node nếu có; nếu không, lấy tổ tiên gần nhất có hạn. Không có hạn ở cả chuỗi → NULL.
 - Hạn con nếu tự nhập không được muộn hơn hạn hiệu lực cha. Đổi hạn/chuyển cây phải kiểm tra toàn bộ cây con bị ảnh hưởng; không tự kéo hạn của con cho vừa mà không có hợp đồng.
 
-Ví dụ, checklist của cha có 1/3 mục đã đánh dấu thì tiến độ cha là 33%, dù hai nhiệm vụ con đang ở 50% mỗi việc. Xem [bản ghi checklist](../history/2026-11-10-tach-checklist-va-tien-do-nhiem-vu-con.md) để đối chiếu bản thay thế quy tắc trung bình trước đây.
+Ví dụ A gồm B và C; B gồm B1=100%, B2=0%, C=0% thì B=50%, A=25%. B hoàn thành thì A=50%; C hoàn thành thì A=100%. Thêm việc chưa xong vào B sẽ tính lại B/A và xóa trạng thái hoàn thành cũ sau xác nhận. Đây là tỷ lệ các nhánh công việc có trọng số bằng nhau, không phải tỷ lệ khối lượng/thời gian chính xác.
+
+Migration dữ liệu `20261113010000_TongHopTienDoNhiemVu` chuyển checklist cha cũ thành con, tính lại cây đang dùng và nhóm thùng rác, ghi lịch sử System trước/sau và tăng revision tài khoản liên quan. Migration kiểm tra cấu trúc/giới hạn trước khi ghi, không tự loại bỏ dữ liệu. Không có Down tự động vì các con bảo toàn có thể đã được người dùng chỉnh sửa; phục hồi phải dựa trên bản sao lưu đã kiểm tra. Chưa tự áp dụng migration vào database ứng dụng.
+
+Khi chuẩn bị nâng cấp database đã cấu hình, giữ bản sao lưu trước nâng cấp rồi chạy từ repository BE:
+
+```powershell
+dotnet ef database update --project backend/StudyPlanner.Infrastructure --startup-project backend/StudyPlanner.Api --configuration Release
+```
+
+Sau đó khởi động lại backend và tải lại frontend. Kiểm thử riêng dùng CoreChecks với `STUDYPLANNER_TEST_POSTGRES` theo quy tắc database localhost tạm; đặt `STUDYPLANNER_TEST_FRONTEND` nếu repository FE không nằm cạnh BE. Không trỏ bộ kiểm thử vào database ứng dụng.
 
 ## 4. Luồng xử lý
 
@@ -48,9 +61,9 @@ Nhiệm vụ không môn/không hạn là hợp lệ. TaskResponse trả cả du
 
 ### Thêm/chuyển con
 
-Tải node/cha/cây cần thiết có kiểm tra quyền → kiểm tra vòng, môn và hạn → áp dụng thay đổi → chuẩn hóa ước lượng ở nhánh bị ảnh hưởng → ghi lịch sử và đồng bộ lời nhắc → lưu chung giao dịch.
+Tải node/cha/cây cần thiết có kiểm tra quyền → xem trước bảo toàn checklist/tiến độ và mở lại → kiểm tra vòng, môn và hạn → áp dụng thay đổi → tổng hợp tiến độ từ dưới lên và chuẩn hóa ước lượng → kiểm tra phiên học bị ảnh hưởng → xác nhận theo hợp đồng → ghi lịch sử User/System và đồng bộ lời nhắc → lưu chung giao dịch. Preview không ghi dữ liệu và không tăng revision.
 
-POST có parentTaskId hoặc POST children cùng dùng một nghiệp vụ tạo con. Course của con kế thừa cha; client gửi môn khác khi tạo con trả 400. Đổi môn của root phải cập nhật cả cây. Chuyển sang cha khác môn đang có phương án đồng bộ cây chuyển về môn cha mới, cần chốt Q09 trước code; con không tự đổi môn khác cha.
+Tạo con qua `POST /api/v1/tasks/{id}/children`, phạm vi kế thừa cha; client gửi môn/học kỳ khác bị từ chối. `PATCH /{id}/scope` chỉ nhận nhiệm vụ gốc và áp dụng cho cả cây. `PATCH /{id}/parent` không cho chuyển sang cha khác phạm vi; phải điều chỉnh phạm vi phù hợp trước, không tự đổi môn cho riêng một con.
 
 ### Xóa cây
 
@@ -89,4 +102,4 @@ PUT thay thế đủ trường trong DTO sửa, không sửa parent/status qua �
 
 ## 7. Điểm cần chốt và điều kiện hoàn thành
 
-Chốt Q04–Q06 và Q09 trước phần phụ thuộc. Triển khai lá kèm lịch sử/lịch nhắc nền trước; cây làm sau nhưng dùng cùng quy tắc hạn và quyền. Hoàn thành khi các ca trên có kết quả kiểm chứng, UI thể hiện nguồn hạn kế thừa và ảnh hưởng thao tác, không đếm cha thành khối lượng bổ sung.
+Các quy tắc tiến độ, nguồn tính và xác nhận cấu trúc đã được chốt trong thay đổi ngày 13/11/2026. Đối chiếu kết quả kiểm chứng ở bản ghi lịch sử; việc đã có code/migration không đồng nghĩa database ứng dụng đã được nâng cấp. Không đếm thời lượng cha thành khối lượng bổ sung ngoài các lá.
