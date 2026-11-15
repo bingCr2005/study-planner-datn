@@ -19,19 +19,20 @@ var expectedTables = new[]
     "hoc_ky", "mon_hoc", "lich_hoc", "nhiem_vu", "thong_bao", "lich_su_nhiem_vu", "khung_gio_ranh", "phien_tu_hoc", "lich_nhac", "tep_dinh_kem_nhiem_vu", "lan_ap_dung_lich", "doan_thuc_hoc", "quy_tac_uu_tien"
 };
 Check(entities.Select(x => x.GetTableName()).Order().SequenceEqual(expectedTables.Order()),
-    "All eighteen tables use Vietnamese names, including seven new planning tables");
+    "All eighteen tables use Vietnamese names; JSON catalog adds no database tables");
 var tableMigration = new StudyPlanner.Infrastructure.Migrations.RenameBusinessTablesToVietnamese();
 Check(tableMigration.UpOperations.Count == 11 && tableMigration.UpOperations.All(x => x is RenameTableOperation),
     "Table migration upgrade contains only eleven RenameTable operations; no data or schema recreation");
 Check(tableMigration.DownOperations.Count == 11 && tableMigration.DownOperations.All(x => x is RenameTableOperation),
     "Table migration downgrade only restores table names");
-Check(entities.Sum(x => x.GetForeignKeys().Count()) == 27, "27 foreign keys including owned planning data");
+Check(entities.Sum(x => x.GetForeignKeys().Count()) == 27, "27 foreign keys; no database relation for the JSON catalog");
 Check(entities.All(x => x.GetProperties().All(p => !p.IsShadowProperty())),
     "No accidental shadow columns from misspelled foreign keys");
 Check(entities.All(entity => entity.GetProperties().All(property =>
     property.GetColumnName(StoreObjectIdentifier.Table(entity.GetTableName()!, entity.GetSchema())) ==
-    System.Text.RegularExpressions.Regex.Replace(property.Name, "(?<!^)([A-Z])", "_$1").ToLowerInvariant())),
-    "Vietnamese C# properties map to their snake_case PostgreSQL columns");
+    (entity.ClrType == typeof(NhiemVu) && property.Name == nameof(NhiemVu.ChecklistJson) ? "checklist" :
+    System.Text.RegularExpressions.Regex.Replace(property.Name, "(?<!^)([A-Z])", "_$1").ToLowerInvariant()))),
+    "Snake_case columns and the explicit ChecklistJson-to-checklist mapping are preserved");
 
 var expectedDeletes = new (Type Dependent, string Property, Type Principal, DeleteBehavior Behavior)[]
 {
