@@ -1,3 +1,5 @@
+using StudyPlanner.Infrastructure.Administration;
+using StudyPlanner.Infrastructure.UuTien;
 using StudyPlanner.Api.CanhBao;
 using Microsoft.EntityFrameworkCore;
 using StudyPlanner.Infrastructure.Data;
@@ -42,6 +44,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 //đăng ký controller (dky các dịch vụ hỗ trợ controller)
 builder.Services.AddQuanTri();
+builder.Services.AddScoped<TongQuanAdminService>();
+builder.Services.AddScoped<QuyTacUuTienService>();
+builder.Services.AddScoped<StudyPlanner.Infrastructure.NenTang.DuLieuNenTangService>();
+builder.Services.AddSingleton(_ => new StudyPlanner.Infrastructure.NenTang.DanhMucJsonStore(
+    builder.Configuration["Catalog:FilePath"] ?? Path.Combine(builder.Environment.ContentRootPath, "Administration", "Data", "danh-muc-mau.json"),
+    Path.Combine(builder.Environment.ContentRootPath, "Administration", "Data", "danh-muc-mau.seed.json")));
 builder.Services.AddHocTap();
 builder.Services.AddThongBao();
 builder.Services.AddAcademic();

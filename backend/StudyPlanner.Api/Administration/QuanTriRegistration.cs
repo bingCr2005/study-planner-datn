@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using StudyPlanner.Api.Auth;
 using StudyPlanner.Application.Administration;
 using StudyPlanner.Infrastructure.Administration;
 
@@ -9,6 +11,7 @@ public static class QuanTriRegistration
 {
     public static IServiceCollection AddQuanTri(this IServiceCollection services)
     {
+        services.TryAddSingleton<KenhPhienDangNhap>();
         services.AddControllers().AddApplicationPart(typeof(QuanTriRegistration).Assembly)
             .AddJsonOptions(options => options.JsonSerializerOptions.Converters
                 .Add(new JsonStringEnumConverter(allowIntegerValues: false)));

@@ -1,0 +1,23 @@
+{
+  "phienBanSchema": 1,
+  "maHocKyTiepTheo": 3,
+  "maMonTiepTheo": 13,
+  "hocKy": [
+    { "ma": 1, "ten": "Học kỳ 1", "thuTu": 1, "phienBan": 1 },
+    { "ma": 2, "ten": "Học kỳ 2", "thuTu": 2, "phienBan": 1 }
+  ],
+  "monHoc": [
+    { "ma": 1, "maHocKyMau": 1, "kyHieu": "TOAN01", "ten": "Toán cao cấp", "soTinChi": 3, "phienBan": 1 },
+    { "ma": 2, "maHocKyMau": 1, "kyHieu": "TIN01", "ten": "Tin học cơ sở", "soTinChi": 3, "phienBan": 1 },
+    { "ma": 3, "maHocKyMau": 1, "kyHieu": "LT01", "ten": "Nhập môn lập trình", "soTinChi": 3, "phienBan": 1 },
+    { "ma": 4, "maHocKyMau": 1, "kyHieu": "ANH01", "ten": "Tiếng Anh 1", "soTinChi": 3, "phienBan": 1 },
+    { "ma": 5, "maHocKyMau": 1, "kyHieu": "PL01", "ten": "Pháp luật đại cương", "soTinChi": 2, "phienBan": 1 },
+    { "ma": 6, "maHocKyMau": 1, "kyHieu": "KN01", "ten": "Kỹ năng học tập", "soTinChi": 2, "phienBan": 1 },
+    { "ma": 7, "maHocKyMau": 2, "kyHieu": "CTDL01", "ten": "Cấu trúc dữ liệu và giải thuật", "soTinChi": 3, "phienBan": 1 },
+    { "ma": 8, "maHocKyMau": 2, "kyHieu": "CSDL01", "ten": "Cơ sở dữ liệu", "soTinChi": 3, "phienBan": 1 },
+    { "ma": 9, "maHocKyMau": 2, "kyHieu": "OOP01", "ten": "Lập trình hướng đối tượng", "soTinChi": 3, "phienBan": 1 },
+    { "ma": 10, "maHocKyMau": 2, "kyHieu": "WEB01", "ten": "Thiết kế web", "soTinChi": 3, "phienBan": 1 },
+    { "ma": 11, "maHocKyMau": 2, "kyHieu": "ANH02", "ten": "Tiếng Anh 2", "soTinChi": 3, "phienBan": 1 },
+    { "ma": 12, "maHocKyMau": 2, "kyHieu": "XSTK01", "ten": "Xác suất thống kê", "soTinChi": 3, "phienBan": 1 }
+  ]
+}

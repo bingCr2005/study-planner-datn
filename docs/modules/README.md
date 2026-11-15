@@ -20,7 +20,8 @@ Các tài liệu này giải thích người dùng làm gì, hệ thống kiểm
 | [06 — Thông báo nhắc hạn](06-thong-bao-nhac-han.md) | Nhận và đọc lời nhắc trong ứng dụng | Chuẩn bị từ 5–6, phát ở 8 |
 | [07 — Gợi ý công việc](07-goi-y-cong-viec.md) | Biết nên làm việc nào tiếp theo và lý do | 9 |
 | [08 — Danh mục và quản trị](08-danh-muc-va-quan-tri.md) | Chọn thông tin trường/lớp; quản trị danh mục/tài khoản | Đọc tối thiểu khi cần cho hồ sơ, quản trị ở 10 |
-| [09 — Đồng hồ tập trung](09-dong-ho-tap-trung.md) | Pomodoro, đếm lên, nghỉ, ghi chú và lịch sử; đã triển khai theo code ngày 12/11/2026 | Nối với nhiệm vụ và phiên tự học |
+| [Đồng hồ tập trung (mở rộng)](09-dong-ho-tap-trung.md) | Pomodoro, đếm lên, nghỉ, ghi chú và lịch sử; đã triển khai theo code ngày 12/11/2026 | Nối với nhiệm vụ và phiên tự học |
+| [09 — Danh mục môn học & học kỳ](09-du-lieu-nen-tang.md) | Admin quản lý học kỳ/môn mẫu trong JSON; sinh viên chọn gợi ý khi thêm môn | Chuyển từ hai bảng mẫu sang JSON ngày 14/11/2026 |
 
 Số thứ tự file để đọc và tham chiếu, không yêu cầu viết xong toàn bộ một module mới được bắt đầu module liên quan. Khung API/schema ở giai đoạn 1–2 là nền dùng chung, không tạo một module nghiệp vụ riêng.
 

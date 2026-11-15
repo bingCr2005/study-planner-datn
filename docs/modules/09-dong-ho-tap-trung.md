@@ -1,4 +1,4 @@
-# Module 09 — Đồng hồ tập trung
+# Đồng hồ tập trung
 
 Trạng thái đối chiếu ngày 14/11/2026: đã triển khai BE/FE, cấu hình phiên/nghỉ dùng chung với lập kế hoạch. Xem [bản ghi đồng hồ ban đầu](../history/2026-11-12-man-dong-ho-tap-trung-rieng.md) và [cải tiến lập kế hoạch/cấu hình](../history/2026-11-14-cai-tien-lap-ke-hoach.md). Module này mô tả code hiện hành.
 

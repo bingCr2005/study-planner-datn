@@ -74,3 +74,7 @@ Cảnh báo gồm thiếu ước lượng, quá hạn, học kỳ lưu trữ, kh
 - Migration `20261114092625_CaiTienLapKeHoach` thêm dữ liệu cấu hình/ngoại lệ/nhắc. Đã áp dụng vào database Development ngày 14/11/2026 sau khi sao lưu và diễn tập khôi phục/nâng cấp; xem [bản ghi database](../history/2026-11-14-ap-dung-migration-database.md). Khởi động lại BE và tải lại FE để nạp code mới. Kết quả kiểm chứng nằm trong [bản ghi triển khai 14/11](../history/2026-11-14-cai-tien-lap-ke-hoach.md); không nhầm với lượt đối chiếu tài liệu trước đó cùng ngày.
 
 Đánh giá chất lượng gợi ý cần cùng bộ đầu vào: số phút xếp được trước hạn, xung đột và phần chưa xếp/lý do. Thêm tên thuật toán phức tạp chưa đủ để khẳng định lịch tốt hơn.
+
+## Quy tắc ưu tiên trên trang Hôm nay
+
+Main đã bổ sung quản trị cấu hình ưu tiên và xếp hạng công việc trên trang Hôm nay; xem [bản ghi quy tắc ưu tiên](../history/2026-11-12-quan-ly-quy-tac-uu-tien.md). Cấu hình đó được FE đọc để xếp thứ tự công việc. Bộ phân bổ phiên tự học `QuyTacLapLich` hiện giữ quy tắc hạn, mức ưu tiên và thời lượng đã mô tả ở trên; chưa sử dụng cấu hình thứ tự tiêu chí của quản trị để thay thuật toán xếp giờ. Hai luồng được ghi riêng để tránh hiểu nhầm khi thay cấu hình Hôm nay.

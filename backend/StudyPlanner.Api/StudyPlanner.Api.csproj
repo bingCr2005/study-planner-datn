@@ -21,4 +21,11 @@
     <ProjectReference Include="..\StudyPlanner.Infrastructure\StudyPlanner.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="Administration\Data\danh-muc-mau.seed.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Remove="Administration\Data\danh-muc-mau.json*;Administration\Data\backups\**" />
+    <None Remove="Administration\Data\danh-muc-mau.json*;Administration\Data\backups\**" />
+    <Content Remove="App_Data\**" />
+    <None Remove="App_Data\**" />
+  </ItemGroup>
 </Project>
