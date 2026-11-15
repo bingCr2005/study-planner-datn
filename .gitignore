@@ -12,6 +12,9 @@
 .env.*
 !.env.example
 appsettings.Local.json
+backend/StudyPlanner.Api/App_Data/
+backend/StudyPlanner.Api/Administration/Data/danh-muc-mau.json*
+backend/StudyPlanner.Api/Administration/Data/backups/
 
 # Frontend build output
 node_modules/

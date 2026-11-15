@@ -81,3 +81,25 @@ Không sửa bản ghi cũ để làm mất lịch sử. Khi logic thay đổi, 
 - [2026-11-12 - Thoat phien khi khoa tai khoan](2026-11-12-thoat-phien-khi-khoa.md)
 
 - [2026-11-12 — Gộp main vào nhánh quy tắc ưu tiên](2026-11-12-gop-main-vao-quy-tac-uu-tien.md)
+
+- [2026-11-13 — Sửa Tiến độ khi học kỳ có nhiệm vụ con đã hoàn thành](2026-11-13-sua-tien-do-hoc-ky-co-nhiem-vu-con.md)
+
+- [2026-11-13 — Admin quản lý dữ liệu nền tảng](2026-11-13-quan-ly-du-lieu-nen-tang.md)
+
+- [2026-11-13 — Cập nhật database để trang Dữ liệu nền tảng hoạt động](2026-11-13-cap-nhat-database-danh-muc-mau.md)
+
+- [2026-11-13 — Gợi ý môn mẫu trong ô thêm môn học](2026-11-13-goi-y-mon-mau-khi-them-mon.md)
+
+- [2026-11-13 — Giải phóng cổng backend cho terminal người dùng](2026-11-13-giai-phong-cong-backend-5059.md)
+
+- [2026-11-14 — Lưu danh mục mẫu trong JSON, không thêm bảng](2026-11-14-luu-danh-muc-mau-trong-json.md)
+
+- [2026-11-14 — Chuyển JSON danh mục vào thư mục admin](2026-11-14-chuyen-json-vao-thu-muc-admin.md)
+
+- [2026-11-14 — Bỏ mô tả và ghi chú ở trang Dữ liệu nền tảng](2026-11-14-bo-mo-ta-va-ghi-chu-danh-muc.md)
+
+- [2026-11-14 — Bỏ nút Tải lại trên các trang](2026-11-14-bo-nut-tai-lai-tren-cac-trang.md)
+
+- [2026-11-14 — Đổi tên trang thành Danh mục môn học & học kỳ](2026-11-14-doi-ten-danh-muc-mon-hoc-hoc-ky.md)
+
+- [2026-11-14 — Dùng chung logo giữa sinh viên và admin](2026-11-14-dung-chung-logo-sinh-vien-admin.md)

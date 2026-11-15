@@ -46,6 +46,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddQuanTri();
 builder.Services.AddScoped<TongQuanAdminService>();
 builder.Services.AddScoped<QuyTacUuTienService>();
+builder.Services.AddScoped<StudyPlanner.Infrastructure.NenTang.DuLieuNenTangService>();
+builder.Services.AddSingleton(_ => new StudyPlanner.Infrastructure.NenTang.DanhMucJsonStore(
+    builder.Configuration["Catalog:FilePath"] ?? Path.Combine(builder.Environment.ContentRootPath, "Administration", "Data", "danh-muc-mau.json"),
+    Path.Combine(builder.Environment.ContentRootPath, "Administration", "Data", "danh-muc-mau.seed.json")));
 builder.Services.AddHocTap();
 builder.Services.AddThongBao();
 builder.Services.AddAcademic();
