@@ -16,7 +16,7 @@ public sealed class ThongBaoService(ApplicationDbContext db, IHocTapStore store,
 {
     private async Task<Domain.Entities.NguoiDung> DongBoTrongGiaoDich(int owner, CancellationToken ct)
     {
-        // Same per-user row lock as task writes: worker, reads and mutations serialize.
+        // Dùng cùng khóa dòng tài khoản với thao tác nhiệm vụ để tiến trình nền, lượt đọc và cập nhật chạy lần lượt.
         var user = await store.NguoiDungAsync(owner, true, ct);
         var tasks = await db.DanhSachNhiemVu.Where(x => x.MaNguoiDung == owner).ToListAsync(ct);
         var rows = await db.DanhSachThongBao.Where(x => x.MaNguoiDung == owner).ToListAsync(ct);

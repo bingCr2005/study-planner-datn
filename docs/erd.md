@@ -1,5 +1,32 @@
 # Cơ sở dữ liệu Study Planner
 
+**Đối chiếu 14/11/2026:** model hiện hành có **22 bảng / 34 FK**; database Development đã được sao lưu, diễn tập và áp dụng các migration còn thiếu ngày 14/11/2026; xem [bản ghi cập nhật database](history/2026-11-14-ap-dung-migration-database.md). Phần ERD 11 bảng và phạm vi ban đầu phía sau là lịch sử. Code đã có lập lịch tự học, `phien_tap_trung` và FK nhóm focus trên đoạn thực học; lượt mới bổ sung cấu hình chung, ngoại lệ giờ rảnh và nhắc kế hoạch. Xem [module lập kế hoạch](modules/07-goi-y-cong-viec.md), [module đồng hồ](modules/09-dong-ho-tap-trung.md) và [bản ghi triển khai](history/2026-11-14-cai-tien-lap-ke-hoach.md).
+
+Bảng ghi từng khoảng học liên tục hiện có tên `khoang_thoi_gian_hoc`, entity `KhoangThoiGianHoc`. Migration `20261114114703_DoiTenKhoangThoiGianHoc` đổi từ `doan_thuc_hoc` cùng PK/FK/CHECK/index và sequence, giữ dữ liệu. Số bảng/FK vẫn là 22/34; đã áp dụng vào database Development, kèm migration bổ sung `20261114122238_DoiTenRangBuocKhongNullKhoangHoc` đổi tên NOT NULL tự sinh trên PostgreSQL 18. Xem [bản ghi đổi tên](history/2026-11-14-doi-ten-khoang-thoi-gian-hoc.md).
+
+## Bổ sung schema hiện hành ngày 14/11/2026
+
+Migration `20261114092625_CaiTienLapKeHoach` thêm ba cột vào `nguoi_dung` và ba bảng, từ model trước 19 bảng/31 FK thành 22 bảng/34 FK. Đã áp dụng vào database Development ngày 14/11/2026, có backup trước nâng cấp.
+
+| Bảng/cột | Ý nghĩa và ràng buộc hiện hành |
+| --- | --- |
+| `nguoi_dung.phien_hoc_phut` | Không NULL, mặc định 25, CHECK 15–50 |
+| `nguoi_dung.nghi_giua_phien_phut` | Không NULL, mặc định 5, CHECK 1–30 |
+| `nguoi_dung.gioi_han_hoc_moi_ngay_phut` | Không NULL, mặc định 180, CHECK 15–720; Application còn kiểm tra hạn mức không ngắn hơn một phiên |
+| `ngoai_le_gio_ranh` | PK `ma`; `ma_khung_gio_ranh`, `ma_nguoi_dung`, `ngay`, `bo_qua`, hai giờ nullable, ngày tạo/cập nhật. Bỏ ngày yêu cầu hai giờ NULL; thay giờ yêu cầu đủ cặp và kết thúc sau bắt đầu |
+| `cau_hinh_nhac_ke_hoach` | PK đồng thời FK `ma_nguoi_dung` → người dùng, `dang_bat` mặc định false, ngày tạo/cập nhật |
+| `nhac_ke_hoach` | PK `ma`, FK người dùng, khóa chống trùng, loại/tiêu đề/nội dung/đường dẫn, ngày phát/đọc. Loại chỉ `WeeklyReview` hoặc `AvailabilityExpiring`, đường dẫn chỉ tới lập kế hoạch/giờ rảnh; ngày đọc NULL hoặc không trước ngày phát |
+
+- `khung_gio_ranh` thêm alternate key `(ma, ma_nguoi_dung)` để ngoại lệ FK kép tới đúng mẫu và đúng chủ. Xóa mẫu cascade ngoại lệ; unique `(ma_khung_gio_ranh, ngay)` ngăn hai ngoại lệ cho một lần xuất hiện, index `(ma_nguoi_dung, ngay)` hỗ trợ lọc lịch. API kiểm tra thứ/ngày hiệu lực và quyền sở hữu trước khi ghi.
+- Hai bảng nhắc FK người dùng với cascade; unique `(ma_nguoi_dung, khoa_chong_trung)` ngăn nhắc tuần/ngày hết hiệu lực bị nhân bản, index `(ma_nguoi_dung, ngay_phat)` phục vụ hộp. Không dùng nhiệm vụ giả để gắn nhắc kế hoạch vào loại thông báo hạn cũ.
+- Batch nhiều thứ tạo các dòng `khung_gio_ranh` bình thường cùng giao dịch, không thêm bảng nhóm hoặc bản sao tuần. `ngoai_le_gio_ranh` ghi riêng ngày bỏ/thay giờ; các tuần khác vẫn theo mẫu.
+- Cấu hình chung được server trả cho đồng hồ/gợi ý/validator. Đổi cấu hình không sửa mục tiêu nhóm focus đang chạy hoặc tự viết lại phiên dự kiến đã lưu. Hạn mức ngày kiểm tra phần Planned/InProgress tương lai và phiên mới theo múi giờ người dùng, không cộng giờ nghỉ hoặc dùng để khóa đồng hồ tự do.
+- Cập nhật kế hoạch giữ schema `phien_tu_hoc`/`lan_ap_dung_lich` hiện có: preview ký danh sách ID thay thế/cấu hình/revision; apply đổi đúng các phiên Planned tương lai thành Cancelled rồi thêm phiên mới và batch trong một giao dịch. Không xóa các bản ghi cũ, không đổi lịch sử thực học.
+- Nhắc mặc định tắt và chỉ được tạo khi người dùng bật rồi mở ứng dụng/tải hộp. Có khóa chống trùng theo tuần/ngày hết hiệu lực; không có background worker/email/push khi ứng dụng đóng và không tự áp dụng lịch học.
+- Down của migration này bỏ ba bảng/cột cấu hình mới, do đó mất dữ liệu riêng của phần mở rộng nếu dùng downgrade. Cần sao lưu trước nâng cấp và kiểm tra phương án phục hồi; chưa có thao tác downgrade trên dữ liệu người dùng trong phiên làm việc này.
+
+Phần bên dưới giữ thiết kế đề xuất ban đầu để tham khảo; các số bảng/quan hệ và tên tiếng Anh trong sơ đồ cũ không phải thống kê model hiện hành.
+
 ## 1. Phạm vi và trạng thái
 
 Đây là thiết kế đề xuất cho sinh viên quản lý học kỳ, môn học, lịch học lặp theo tuần, nhiệm vụ, tiến độ, thông báo trong ứng dụng và lịch sử thao tác. Hệ thống có thể gợi ý thứ tự công việc từ hạn, ưu tiên và thời lượng còn lại; chưa lưu kế hoạch tự phân bổ công việc vào từng buổi học.
@@ -177,8 +204,9 @@ erDiagram
 - Type gồm Assignment, Exam, Revision, Personal. Exam ở đây là một nhiệm vụ có hạn, chưa có thời điểm bắt đầu/kết thúc và phòng thi như một sự kiện thi hoàn chỉnh.
 - Priority mặc định Medium, Status mặc định NotStarted, Progress mặc định 0. EstimatedMinutes là ước lượng tổng thời lượng của nhiệm vụ lá, không phải thời gian đã bấm giờ thực tế.
 - Nhiệm vụ lá: NotStarted tương ứng Progress = 0; InProgress tương ứng 1–99; Completed tương ứng 100 và có CompletedAt. Cập nhật tiến độ đồng thời cập nhật trạng thái. Đánh dấu hoàn thành đặt Progress = 100. Mở lại cho phép chọn tiến độ 0–99 (mặc định 0), đồng thời xóa CompletedAt.
-- Nhiệm vụ cha: nếu tất cả con trực tiếp Completed thì Progress = 100 và Status = Completed; nếu tất cả con có tiến độ 0 thì Progress = 0 và Status = NotStarted; còn lại là InProgress, lấy trung bình cộng tiến độ các con trực tiếp, làm tròn xuống và giới hạn trong 1–99 để không mâu thuẫn với trạng thái. CompletedAt được ghi khi chuyển sang Completed và xóa khi rời trạng thái đó. Không sửa tay tiến độ/trạng thái cha khi còn con. Các con được tính cùng trọng số; đây là lựa chọn đơn giản cho bản đầu, chưa phải tỷ lệ theo khối lượng thực tế.
-- Khi thêm, sửa, chuyển hoặc xóa con: tính lại cha cũ, cha mới và các tổ tiên trong cùng giao dịch. Nếu xóa hết con thì giữ tiến độ cuối của cha và chuyển sang quy tắc nhiệm vụ lá. EstimatedMinutes của cha để NULL; thời lượng tổng hợp được tính từ các lá để tránh cộng trùng.
+- Nhiệm vụ cha: Progress bằng trung bình tiến độ các con trực tiếp, làm tròn xuống. Status theo phần trăm lưu: 0 là NotStarted, 1–99 là InProgress, 100 là Completed. Chỉ khi mọi con đều 100% thì cha mới đạt 100%. CompletedAt được ghi khi chuyển sang Completed và xóa khi rời trạng thái đó. Không sửa tay tiến độ/trạng thái cha khi còn con. Các con có cùng trọng số; đây chưa phải tỷ lệ theo khối lượng thực tế.
+- Khi thêm, sửa, chuyển, xóa hoặc khôi phục con: tính lại cha cũ, cha mới và các tổ tiên trong cùng giao dịch. Nếu xóa hết con thì cha trở thành lá tiến độ 0 vì tiến độ dẫn xuất đã mất nguồn. EstimatedMinutes của cha để NULL; thời lượng tổng hợp được tính từ các lá để tránh cộng trùng.
+- Quy tắc hiện hành ngày 13/11/2026: cha lấy trung bình số nguyên các con trực tiếp, làm tròn xuống; trạng thái theo phần trăm lưu (0/1–99/100). Checklist chỉ điều khiển tiến độ ở lá. Khi chia nhỏ lá có checklist hoặc tiến độ đã ghi, giữ phần việc cũ trong một con trước khi tổng hợp; thao tác cần xác nhận thay đổi cấu trúc. Xem [module 03](modules/03-nhiem-vu-va-tien-do.md) và [lịch sử chuyển đổi](history/2026-11-13-tong-hop-tien-do-nhiem-vu.md).
 - Nhiệm vụ cha và con phải cùng UserId và cùng CourseId (bao gồm cùng NULL). Không cho tự làm cha, tạo chu trình hoặc gắn vào con/cháu của chính nó. Khi đổi môn của cha phải cập nhật cả cây con trong cùng giao dịch.
 - Nếu cha có hạn hiệu lực, các con có hạn không được muộn hơn hạn hiệu lực của cha; con không hạn sử dụng hạn của tổ tiên gần nhất có hạn làm hạn hiệu lực. Nếu không tổ tiên nào có hạn thì con cũng không có hạn hiệu lực. Thay đổi hạn hoặc vị trí trong cây phải kiểm tra lại toàn bộ cây con bị ảnh hưởng.
 - Quá hạn được tính bằng hạn hiệu lực < thời điểm hiện tại và Status != Completed; không thêm Overdue vào enum Status. Nhiệm vụ con kế thừa hạn phải được xét cả khi xem lịch, nhắc hạn và gợi ý.

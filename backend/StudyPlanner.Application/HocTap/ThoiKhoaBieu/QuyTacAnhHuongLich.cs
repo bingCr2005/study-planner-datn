@@ -16,7 +16,7 @@ internal static class QuyTacAnhHuongLich
     {
         if (affected.Any(x => x.TrangThai == TrangThaiPhienTuHoc.InProgress || x.BatDauDuKien <= now)) return true;
         var ids = affected.Select(x => x.Ma).ToArray();
-        return ids.Length > 0 && await store.DemAsync(store.TruyVan<DoanThucHoc>().Where(x => x.MaNguoiDung == chu &&
+        return ids.Length > 0 && await store.DemAsync(store.TruyVan<KhoangThoiGianHoc>().Where(x => x.MaNguoiDung == chu &&
             x.KetThucThucTe == null && x.MaPhienTuHoc != null && ids.Contains(x.MaPhienTuHoc.Value)), ct) > 0;
     }
 

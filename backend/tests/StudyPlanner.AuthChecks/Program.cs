@@ -248,7 +248,7 @@ async Task VerifyColumnRenameMigrationAsync()
     await RejectSql($"INSERT INTO phien_tu_hoc(ma_nguoi_dung,ma_nhiem_vu,bat_dau_du_kien,ket_thuc_du_kien,trang_thai,ngay_tao,ngay_cap_nhat) VALUES({fixtureId},{childId},now(),now(),'Planned',now(),now())", "23514");
     await RejectSql($"INSERT INTO tep_dinh_kem_nhiem_vu(ma_nhiem_vu,ma_nguoi_tai_len,ten_tep,khoa_luu_tru,loai_tep,kich_thuoc_byte,ngay_tao) VALUES({childId},{fixtureId + 2},'a.pdf','test/a','application/pdf',10,now())", "23503");
     await RejectSql($"INSERT INTO lan_ap_dung_lich(ma_nguoi_dung,khoa_yeu_cau,dau_kiem_noi_dung,phien_ban_nguon,phien_ban_quy_tac,ngay_tao) VALUES({fixtureId},'same',repeat('a',64),0,1,now()),({fixtureId},'same',repeat('b',64),0,1,now())", "23505");
-    await RejectSql($"INSERT INTO doan_thuc_hoc(ma_nguoi_dung,ma_nhiem_vu,bat_dau_thuc_te) VALUES({fixtureId},{childId},now()),({fixtureId},{childId},now())", "23505");
+    await RejectSql($"INSERT INTO khoang_thoi_gian_hoc(ma_nguoi_dung,ma_nhiem_vu,bat_dau_thuc_te) VALUES({fixtureId},{childId},now()),({fixtureId},{childId},now())", "23505");
     await RejectSql($"INSERT INTO khung_gio_ranh(ma_nguoi_dung,thu_trong_tuan,gio_bat_dau,gio_ket_thuc,ngay_bat_dau,ngay_ket_thuc,dang_su_dung,ngay_tao,ngay_cap_nhat) VALUES({fixtureId},8,'20:00','19:00','2026-10-01','2026-10-31',true,now(),now())", "23514");
     // Model hiện tại chỉ đọc EF sau khi cả cột hồ sơ và tên bảng đã nâng cấp.
     var migrated = await schema.DanhSachNguoiDung.AsNoTracking().SingleAsync(user => user.Ma == fixtureId);
@@ -263,7 +263,7 @@ async Task VerifyColumnRenameMigrationAsync()
         task.MonHoc!.HocKy.NguoiDung.Ma == fixtureId && task.NguoiDung.LopSinhVien!.Khoa.Truong.Ma == fixtureId),
         "Renamed ownership, task tree, course and catalog foreign keys remain readable");
     // Chỉ fixture trong DB tên ngẫu nhiên do lượt test này tạo; không đụng cấu hình appsettings/Neon.
-    var planningTables = new[] { "lich_nhac", "phien_tu_hoc", "khung_gio_ranh", "lan_ap_dung_lich", "doan_thuc_hoc", "tep_dinh_kem_nhiem_vu", "quy_tac_uu_tien" };
+    var planningTables = new[] { "lich_nhac", "phien_tu_hoc", "khung_gio_ranh", "lan_ap_dung_lich", "khoang_thoi_gian_hoc", "tep_dinh_kem_nhiem_vu", "quy_tac_uu_tien" };
     await using var cleanup = new NpgsqlCommand("TRUNCATE TABLE " + string.Join(",", tables.Select(table => Quoted(vietnameseTables[table])).Concat(planningTables.Select(Quoted))) + " RESTART IDENTITY", connection);
     await cleanup.ExecuteNonQueryAsync();
     Check(!await schema.DanhSachNguoiDung.AnyAsync() && !await schema.DanhSachNhiemVu.AnyAsync() && !await schema.DanhSachLichSuNhiemVu.AnyAsync(),

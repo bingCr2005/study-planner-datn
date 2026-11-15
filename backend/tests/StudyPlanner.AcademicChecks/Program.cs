@@ -45,7 +45,7 @@ try
     Check(swagger.GetProperty("paths").GetProperty("/api/v1/semesters").TryGetProperty("post", out _), "Swagger semesters route");
     Check(swagger.GetProperty("paths").GetProperty("/api/v1/courses/{id}").GetProperty("delete").GetProperty("responses").TryGetProperty("204", out _), "Swagger empty deletion response");
     Check(!swagger.GetProperty("components").GetProperty("schemas").GetProperty("CourseRequest").GetProperty("properties").TryGetProperty("maHocKy", out _), "Swagger course update cannot reassign semester");
-    // PostgreSQL stores microseconds; use whole milliseconds for exact round trips.
+    // PostgreSQL lưu chính xác đến micro giây; dùng mili giây nguyên để so khớp chính xác sau ghi/đọc.
     var now = DateTimeOffset.FromUnixTimeMilliseconds(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
     var a = new NguoiDung { Email = "a@example.test", EmailChuanHoa = "A@EXAMPLE.TEST", HoTen = "A", MatKhauBam = Guid.NewGuid().ToString(), NgayTao = now, NgayCapNhat = now };
     var b = new NguoiDung { Email = "b@example.test", EmailChuanHoa = "B@EXAMPLE.TEST", HoTen = "B", MatKhauBam = Guid.NewGuid().ToString(), NgayTao = now, NgayCapNhat = now };

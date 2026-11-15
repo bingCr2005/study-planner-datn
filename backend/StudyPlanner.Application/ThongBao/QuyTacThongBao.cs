@@ -8,8 +8,8 @@ public static class QuyTacThongBao
 {
     public const string SapHan = "Nhiệm vụ sắp đến hạn", QuaHan = "Nhiệm vụ đã quá hạn";
 
-    // One inbox row per task, as required by the existing unique index. Crossing
-    // the deadline replaces its reminder with an unread overdue notification.
+    // Mỗi nhiệm vụ có một dòng thông báo theo chỉ mục duy nhất hiện có.
+    // Khi quá hạn, thay nội dung nhắc bằng thông báo quá hạn chưa đọc.
     public static IReadOnlyList<Domain.Entities.ThongBao> DongBo(IReadOnlyList<NhiemVu> tasks,
         IReadOnlyList<Domain.Entities.ThongBao> existing, NguoiDung user, DateTimeOffset now)
     {
@@ -22,7 +22,7 @@ public static class QuyTacThongBao
             inbox.TryGetValue(task.Ma, out var row);
             var due = QuyTacCay.HanHieuLuc(task, map).Han;
             var completed = task.TrangThai == TrangThaiNhiemVu.Completed || task.TienDo == 100;
-            // Delivered messages remain readable after completion; no further reminder.
+            // Thông báo đã phát vẫn xem được sau khi hoàn thành; không phát thêm lời nhắc.
             if (completed)
             {
                 if (row is not null && row.TrangThaiPhat != TrangThaiPhatThongBao.Delivered) Cancel(row, now);

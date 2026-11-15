@@ -1,6 +1,6 @@
 # Module 06 — Thông báo nhắc hạn
 
-Trạng thái: đặc tả dự thảo, chưa triển khai. Nguồn: [quy ước chung](00-quy-uoc-va-quyet-dinh.md), [ERD](../erd.md), [API — Notifications](../THIET-KE-API-SWAGGER.md). Chuẩn bị lịch nhắc khi làm nhiệm vụ, phát nền ở giai đoạn 8.
+**Hiện hành 14/11/2026:** xem và thiết lập nhắc hạn cùng nằm trong chuông **Thông báo → Cài đặt**. `GET/PUT /api/v1/notifications/settings` dùng `{nhacTruocGio, nhacKeHoach}`; PUT cần If-Match. Dùng lại số giờ tài khoản (24 giờ mặc định, 0 đúng hạn) và tùy chọn kế hoạch; giờ riêng của nhiệm vụ được ưu tiên. Nhắc hạn/quá hạn theo worker cũ, nhắc tuần/giờ rảnh tạo khi tải hộp và đã bật. Hai loại dùng chung giao diện, giữ dữ liệu/quy tắc riêng. Xem [bản ghi triển khai](../history/2026-11-14-gop-thiet-lap-vao-thong-bao.md). Phần đặc tả ban đầu bên dưới được giữ để tham khảo.
 
 ## 1. Mục tiêu và phạm vi
 

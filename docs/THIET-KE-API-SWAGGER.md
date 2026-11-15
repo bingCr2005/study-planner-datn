@@ -1,5 +1,42 @@
 # Thiết kế API và Swagger — Study Planner
 
+**Thông báo và thiết lập 14/11/2026:** `GET/PUT /api/v1/notifications/settings` trả/nhận `{nhacTruocGio, nhacKeHoach}` trong envelope phiên bản. PUT đủ hai trường và If-Match; số giờ nguyên 0–8760, 0 đúng hạn. Dùng dữ liệu tài khoản/cấu hình kế hoạch hiện có; không thêm bảng/cột. Chuông FE chứa danh sách và Cài đặt. Nhắc hạn nhiệm vụ và nhắc tuần/giờ rảnh giữ quy tắc riêng. Xem [bản ghi gộp thiết lập](history/2026-11-14-gop-thiet-lap-vao-thong-bao.md).
+
+**Đối chiếu 14/11/2026:** mục **Hợp đồng hiện hành** ngay dưới đây mô tả phần lập kế hoạch đã triển khai. Phần đề xuất ngày 13/10 phía sau được giữ làm lịch sử, không phải danh sách API đang chạy. Backend có API nghiệp vụ và nhóm `/api/v1/focus`; xem [module lập kế hoạch](modules/07-goi-y-cong-viec.md), [module đồng hồ](modules/09-dong-ho-tap-trung.md), [bản ghi triển khai](history/2026-11-14-cai-tien-lap-ke-hoach.md) và Swagger sinh từ controller hiện tại.
+
+## Hợp đồng hiện hành — cải tiến lập kế hoạch ngày 14/11/2026
+
+Các route sau cần tài khoản sinh viên đã đăng nhập, chủ sở hữu lấy từ token. Response nghiệp vụ dùng `{phienBan,duLieu}` và ETag `"ht-N"`; các lệnh ghi cấu hình/giờ rảnh yêu cầu If-Match, 428 khi thiếu và 409 khi cũ. Ngày dùng `yyyy-MM-dd`, giờ địa phương `HH:mm:ss`, thời điểm có offset. Lỗi ProblemDetails có `code`; sai chủ tài nguyên trả 404. Dữ liệu schema đã có migration nhưng **chưa tự áp dụng migration vào database người dùng**.
+
+| Method / route | Request và hành vi |
+| --- | --- |
+| `POST /api/v1/availability-windows/batch` | `thuTrongTuan` là 1–7 thứ khác nhau, `gioBatDau`, `gioKetThuc`, `ngayBatDau`, `ngayKetThuc`, `dangSuDung`; 201 trả danh sách mẫu trong một giao dịch, tăng revision một lần |
+| `GET /api/v1/availability-windows/{id}/exceptions` | Danh sách ngoại lệ thuộc mẫu của mình |
+| `POST /api/v1/availability-windows/{id}/exceptions/change-preview` | `ngay`, `boQua`, hai giờ khi thay giờ; `xoa=true` khi xem ảnh hưởng khôi phục mẫu gốc; không ghi dữ liệu |
+| `PUT /api/v1/availability-windows/{id}/exceptions/{date}` | Ngày trên route là ngày ngoại lệ; `boQua=true` không gửi giờ, hoặc false kèm đủ hai giờ; `huyPhienLienQuan=true` sau xác nhận ảnh hưởng |
+| `DELETE /api/v1/availability-windows/{id}/exceptions/{date}` | Xóa ngoại lệ để trở về mẫu gốc, 204; query `huyPhienLienQuan` sau xác nhận khi cần |
+| `GET /api/v1/study-settings` | Cấu hình dùng chung cho đồng hồ và lập kế hoạch, mặc định 25 phút học / 5 phút nghỉ / 180 phút mỗi ngày |
+| `PUT /api/v1/study-settings` | Gửi đủ `phienHocPhut` 15–50, `nghiGiuaPhienPhut` 1–30, `gioiHanHocMoiNgayPhut` 15–720 và không ngắn hơn một phiên; giữ lịch đã đặt/đồng hồ đang chạy |
+| `POST /api/v1/planning/preview` | Ngày bắt đầu, số ngày 1–31, phạm vi học kỳ/môn/mã nhiệm vụ; `capNhatKeHoach=false` tạo thêm, true đề xuất cập nhật phần chưa học |
+| `POST /api/v1/planning/apply` | `tokenPreview` và tập con nguyên vẹn các phiên đã đề xuất; bắt buộc `Idempotency-Key`, kiểm tra lại rồi ghi chung giao dịch |
+| `GET /api/v1/planning-reminders/settings` | Cấu hình nhắc kế hoạch, mặc định `dangBat=false` |
+| `PUT /api/v1/planning-reminders/settings` | `{dangBat}` và If-Match để bật/tắt tùy chọn |
+| `GET /api/v1/planning-reminders` | `chuaDoc`, `trang`, `kichThuocTrang`; tạo nhắc đến hạn khi tải hộp rồi trả danh sách/tổng chưa đọc/múi giờ/`docDenLuc` |
+| `PATCH` hoặc `PUT /api/v1/planning-reminders/{id}/read` | `{ngayPhat}` là snapshot bản nhắc đã đọc; 204, chặn đánh dấu nhầm bản đã thay đổi |
+| `POST /api/v1/planning-reminders/read-all` | `{docDenLuc}` từ lần đọc hộp; chỉ đánh dấu các nhắc đến mốc đó, 204 |
+
+- Batch trùng mẫu y hệt trả `AVAILABILITY_DUPLICATE`, không lưu một phần các thứ còn lại. Thiếu giờ bắt đầu/kết thúc bị từ chối; `00:00` hợp lệ chỉ khi gửi rõ và kết thúc muộn hơn.
+- Ngoại lệ phải đúng thứ và ngày hiệu lực của mẫu, không ở ngày đã qua. Thêm/sửa/xóa tính lại nguồn giờ rảnh toàn tài khoản để không hủy sai phiên còn được mẫu khác phủ. Preview trả mã phiên bị ảnh hưởng; ghi cần xác nhận hủy phiên tương lai mất tính hợp lệ. Nếu ảnh hưởng phiên đang học/đã đến giờ thì chặn, không tự dừng đồng hồ. Calendar, preview/apply và validator dùng cùng nguồn đã áp dụng ngoại lệ.
+- Preview trả `cauHinhHoc`, `maPhienThayThe`, các tổng phút/cảnh báo và token có chữ ký, hết hạn sau 10 phút. Độ dài phiên/nghỉ và hạn mức ngày lấy từ cùng cấu hình server; các phiên mới cộng với phần Planned/InProgress tương lai đã đặt theo ngày địa phương. Phần cuối công việc có thể dưới 15 phút khi xếp đủ phần còn lại.
+- Cập nhật kế hoạch chỉ đề xuất thay phiên **Planned chưa đến giờ, nằm trọn trong khoảng và thuộc các lá hợp lệ đã chọn**. Token ký cấu hình, revision, phiên bản quy tắc và ID thay thế. Apply xác nhận lại tất cả điều kiện, hủy đúng phiên cũ và tạo phiên mới đã chọn trong cùng giao dịch; lỗi rollback cả hai. Không sửa phiên ngoài phạm vi/đang học/lịch sử đã học. Nếu bỏ chọn một số phiên mới, vẫn thay thế danh sách cũ đã công bố; UI phải thông báo trước khi xác nhận.
+- Retry cùng key/nội dung trả batch đã lưu dù revision đã tăng; cùng key khác nội dung trả `IDEMPOTENCY_KEY_REUSED`. Preview cũ sau thay cấu hình/dữ liệu bị từ chối; không tự nâng phiên bản rồi ghi lại.
+- Nhắc kế hoạch gồm `WeeklyReview` và `AvailabilityExpiring`, mặc định tắt. Khi bật, nhắc được tạo khi mở ứng dụng/tải hộp nhắc; chống trùng theo tài khoản/tuần hoặc ngày hết hiệu lực. **Không có tác vụ nền phát khi đóng ứng dụng, email hoặc push ngoài ứng dụng**. Nhắc không tự tạo phiên học hoặc sao chép mẫu giờ rảnh mỗi tuần.
+- Migration cần dùng là `20261114092625_CaiTienLapKeHoach`; xem trạng thái kiểm chứng và hướng dẫn nâng cấp trong bản ghi triển khai, không coi việc có file migration là database người dùng đã cập nhật.
+
+---
+
+Phần dưới là hợp đồng đề xuất lịch sử ngày 13/10/2026, giữ để đối chiếu các quyết định cũ.
+
 Ngày: 2026-10-13. Trạng thái: hợp đồng đề xuất để triển khai, không phải danh sách endpoint đã chạy.
 
 Đọc cùng [kế hoạch chi tiết](KE-HOACH-TRIEN-KHAI-CHI-TIET.md), [ERD](erd.md) và [kiến trúc](KIEN-TRUC-BACKEND.md). Code hiện có GET /, GET /weatherforecast và GET /health/live. Swagger có trong Development nhưng chưa có API nghiệp vụ học tập.
@@ -40,6 +77,8 @@ Tài liệu này gồm danh mục endpoint, quy ước DTO/lỗi, ví dụ chi t
 Response danh sách phân trang dùng items, page, pageSize, totalCount. Response chi tiết trả object trực tiếp, không thêm wrapper khác nhau tùy controller. Các thao tác complete/reopen/progress trả DTO đã cập nhật; DELETE và read trả 204. Endpoint dạng tổng quan/calendar có hợp đồng riêng rõ ràng, không bắt buộc phân trang nếu đã giới hạn khoảng/trả top N.
 
 GET danh sách nhiệm vụ mặc định cây gốc; query leafOnly=true dùng cho thống kê/gợi ý hoặc danh sách việc có thể thực hiện độc lập. Khi lọc làm thiếu con, response không được tự suy ra hasChildren=false từ số con đã tải; hasChildren là thông tin thật ở dữ liệu. Xem cây đầy đủ qua endpoint tree riêng.
+
+Hợp đồng hiện hành ngày 13/11/2026 dùng `/api/v1/tasks`, DTO tiếng Việt: cha tổng hợp tiến độ con trực tiếp; checklist chỉ dùng ở lá. Preview trả `maNhiemVuMoLai`, `maChecklistChuyenThanhBuoc`, `maTienDoChuyenThanhBuoc` bên cạnh ảnh hưởng phiên học. `POST /{id}/children` và `PATCH /{id}/parent` cần `xacNhanDoiCauTruc=true` khi preview có các ảnh hưởng này; thiếu cờ trả `TASK_STRUCTURE_CONFIRMATION_REQUIRED`. Các con bảo toàn được trả cùng danh sách tạo mới. Các route nhập tay tiến độ/hoàn thành/mở lại cha trả `TASK_PROGRESS_IS_DERIVED`, gắn checklist không rỗng lên cha trả `TASK_CHECKLIST_REQUIRES_LEAF`. Xem [module nhiệm vụ hiện hành](modules/03-nhiem-vu-va-tien-do.md).
 
 ## 3. Xác thực và quyền
 

@@ -1,7 +1,7 @@
 using StudyPlanner.Domain.Entities;
 namespace StudyPlanner.Application.HocTap;
 
-// Query expressions remain provider-translated; Application does not depend on EF or SQL.
+// Biểu thức truy vấn do bộ cung cấp dịch; tầng ứng dụng không phụ thuộc EF hoặc SQL.
 public interface IHocTapStore
 {
     IQueryable<T> TruyVan<T>() where T : class;
