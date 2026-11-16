@@ -1,5 +1,7 @@
 # Module 08 — Danh mục và quản trị
 
+**Hiện hành 15/11/2026:** đã bỏ bốn bảng tổ chức trường/khoa/khóa/lớp và khóa `nguoi_dung.ma_lop`. Hồ sơ dùng tên tự khai; quản trị tài khoản đã có. Danh mục mẫu môn/học kỳ dùng JSON. Nội dung về phân cấp tổ chức bên dưới là đặc tả lịch sử đã rút khỏi phạm vi hiện tại. Xem [bảng đang sử dụng](../database-tables.md).
+
 Trang quản lý học kỳ/môn học mẫu của admin được triển khai riêng trong [Dữ liệu nền tảng](09-du-lieu-nen-tang.md). Các danh mục tổ chức trường/khoa/khóa/lớp mô tả dưới đây vẫn là phạm vi dự thảo; không dùng chúng để thay thế mẫu hoặc dữ liệu học tập riêng của sinh viên.
 
 Trạng thái: đặc tả dự thảo, chưa triển khai. Nguồn: [quy ước chung](00-quy-uoc-va-quyet-dinh.md), [ERD](../erd.md), [API — Catalogs/Admin](../THIET-KE-API-SWAGGER.md). CRUD quản trị ở giai đoạn 10; đọc danh mục tối thiểu khi hồ sơ cần.

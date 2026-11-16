@@ -123,3 +123,7 @@ Không sửa bản ghi cũ để làm mất lịch sử. Khi logic thay đổi, 
 - [2026-11-15 — Đồng bộ main BE/FE và giải quyết xung đột PR](2026-11-15-dong-bo-main-be-fe.md)
 
 - [2026-11-15 — Giải quyết conflict phần kiểm tra đăng nhập với main](2026-11-15-giai-quyet-conflict-kiem-tra-dang-nhap.md)
+
+- [2026-11-15 — Dọn bảng cũ và triển khai tệp đính kèm](2026-11-15-don-bang-cu-va-tep-dinh-kem.md)
+
+- [2026-11-16 — Giải quyết xung đột khi gộp tệp đính kèm vào main](2026-11-16-giai-quyet-xung-dot-tep-dinh-kem.md)

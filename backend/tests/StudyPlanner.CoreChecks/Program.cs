@@ -12,8 +12,9 @@ try
         Console.WriteLine("SKIP PostgreSQL/HTTP checks: set STUDYPLANNER_TEST_POSTGRES to an isolated localhost postgres database. Pure checks only; integration is not verified.");
     else
     {
-        if (Environment.GetEnvironmentVariable("STUDYPLANNER_FOCUS_ONLY") == "1") await FocusHttpChecks.RunAsync(supplied);
-        else { await MigrationProgressChecks.RunAsync(supplied); await IntegrationChecks.RunAsync(supplied); await AvailabilityUpgradeChecks.RunAsync(supplied); await PlanningUpgradeChecks.RunAsync(supplied); await PlanningReminderChecks.RunAsync(supplied); await FocusHttpChecks.RunAsync(supplied); }
+        if (Environment.GetEnvironmentVariable("STUDYPLANNER_ATTACHMENTS_ONLY") == "1") await AttachmentHttpChecks.RunAsync(supplied);
+        else if (Environment.GetEnvironmentVariable("STUDYPLANNER_FOCUS_ONLY") == "1") await FocusHttpChecks.RunAsync(supplied);
+        else { await MigrationProgressChecks.RunAsync(supplied); await IntegrationChecks.RunAsync(supplied); await AvailabilityUpgradeChecks.RunAsync(supplied); await PlanningUpgradeChecks.RunAsync(supplied); await PlanningReminderChecks.RunAsync(supplied); await FocusHttpChecks.RunAsync(supplied); await AttachmentHttpChecks.RunAsync(supplied); }
     }
 }
 catch (Exception e)

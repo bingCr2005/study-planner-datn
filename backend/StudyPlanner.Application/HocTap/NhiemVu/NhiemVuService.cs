@@ -106,7 +106,7 @@ public sealed class NhiemVuService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, 
         var changed = await PhienBiAnhHuongAsync(chu, [n], [], [n.Ma], now, ct, new HashSet<int>{n.Ma});
         await XuLyPhienAsync(changed, r.HuyPhienLienQuan, false, now, ct);
         GhiLichSu(n, null, Snapshot(n), HanhDongLichSuNhiemVu.Created, "User", now);
-        await DongBoNhacAsync(chu, [n], now, ct); await tx.CommitAsync(true, ct);
+        await tx.CommitAsync(true, ct);
         return new(tx.NguoiDung.PhienBanLapLich, Dto(n, [n], now));
     }
     public Task<HocTapResponse<object>> ThayDoiAsync(int chu, int ma, long? version, string action, object input, bool preview, CancellationToken ct) => ChayAsync(chu, ma, version, action, input, preview, ct);
@@ -226,7 +226,7 @@ public sealed class NhiemVuService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, 
         var deletedIds = deleted.Select(x => x.Ma).ToArray();
         var changedIds = nodes.Where(x => x.Ma > 0 && before.TryGetValue(x.Ma,out var old) && Snapshot(x) != old).Select(x => x.Ma).ToArray();
         var impact = new AnhHuongNhiemVuResponse(deleted.Count,
-            await store.DemAsync(store.TruyVan<LichNhac>().Where(x => x.MaNguoiDung == chu && deletedIds.Contains(x.MaNhiemVu)),ct),
+            0, // Giữ trường phản hồi cũ để tương thích; hàng đợi nhắc hạn đã được gỡ.
             await store.DemAsync(store.TruyVan<ThongBao>().Where(x => x.MaNguoiDung == chu && deletedIds.Contains(x.MaNhiemVu)),ct),
             await store.DemAsync(store.TruyVan<TepDinhKemNhiemVu>().Where(x => x.MaNguoiTaiLen == chu && deletedIds.Contains(x.MaNhiemVu)),ct),
             affected.Select(x => x.Ma).ToArray(),
@@ -278,7 +278,6 @@ public sealed class NhiemVuService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, 
             GhiLichSu(n,old,after,historyAction,n.Ma == ma ? "User" : "System",now);
         }
         var changed = changedIds.Length > 0 || added.Count > 0 || deleted.Count > 0 || affected.Count > 0;
-        if (changed) await DongBoNhacAsync(chu,nodes,now,ct);
         await tx.CommitAsync(changed,ct);
         object data = action is "delete" or "trash" ? impact : action == "children" ? added.Select(x => Dto(x,nodes,now)).ToArray() : Dto(node,nodes,now);
         return new(tx.NguoiDung.PhienBanLapLich,data);
@@ -359,7 +358,6 @@ public sealed class NhiemVuService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, 
                 task.NgayCapNhat = now;
                 GhiLichSu(task, beforeExisting[task.Ma], Snapshot(task), HanhDongLichSuNhiemVu.Updated, "System", now);
             }
-            await DongBoNhacAsync(chu, tree, now, ct);
         }
         await tx.CommitAsync(true, ct);
         return tx.NguoiDung.PhienBanLapLich;
@@ -370,14 +368,6 @@ public sealed class NhiemVuService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, 
         var sessions = await store.DanhSachAsync(store.TruyVan<PhienTuHoc>().Where(x =>
             x.MaNguoiDung == chu && ids.Contains(x.MaNhiemVu) && x.TrangThai == TrangThaiPhienTuHoc.Planned), ct);
         foreach (var session in sessions) { session.TrangThai = TrangThaiPhienTuHoc.Cancelled; session.NgayCapNhat = now; }
-        var reminders = await store.DanhSachAsync(store.TruyVan<LichNhac>().Where(x =>
-            x.MaNguoiDung == chu && ids.Contains(x.MaNhiemVu) && (x.TrangThai == TrangThaiLichNhac.Pending || x.TrangThai == TrangThaiLichNhac.Failed)), ct);
-        foreach (var reminder in reminders)
-        {
-            reminder.TrangThai = TrangThaiLichNhac.Cancelled;
-            reminder.NgayPhat = reminder.LanThuTiepTheoLuc = null;
-            reminder.NgayCapNhat = now;
-        }
         var notifications = await store.DanhSachAsync(store.TruyVan<ThongBao>().Where(x =>
             x.MaNguoiDung == chu && ids.Contains(x.MaNhiemVu) && (x.TrangThaiPhat == TrangThaiPhatThongBao.Pending || x.TrangThaiPhat == TrangThaiPhatThongBao.Failed)), ct);
         foreach (var notification in notifications)
@@ -425,21 +415,6 @@ public sealed class NhiemVuService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, 
         if (sessions.Count > 0 && !confirm && !preview) throw new HocTapException(409,"SCHEDULE_CHANGE_CONFIRMATION_REQUIRED","Cần xác nhận hủy phiên dự kiến bị ảnh hưởng.",new { maPhienBiHuy = sessions.Select(x => x.Ma).ToArray() });
         if (!preview) foreach (var s in sessions) { s.TrangThai = TrangThaiPhienTuHoc.Cancelled; s.NgayCapNhat = now; }
         return Task.CompletedTask;
-    }
-    private async Task DongBoNhacAsync(int chu, IReadOnlyList<NhiemVu> nodes, DateTimeOffset now, CancellationToken ct)
-    {
-        var ids = nodes.Select(x => x.Ma).ToArray(); var map = nodes.ToDictionary(x => x.Ma);
-        var pending = await store.DanhSachAsync(store.TruyVan<LichNhac>().Where(x => x.MaNguoiDung == chu && ids.Contains(x.MaNhiemVu) && (x.TrangThai == TrangThaiLichNhac.Pending || x.TrangThai == TrangThaiLichNhac.Failed)),ct);
-        var user = await store.NguoiDungAsync(chu,false,ct);
-        foreach (var reminder in pending)
-        {
-            var node = map[reminder.MaNhiemVu]; var due = QuyTacCay.HanHieuLuc(node,map).Han;
-            reminder.NgayCapNhat = now;
-            if (node.TienDo == 100 || due is null || due <= now) { reminder.TrangThai = TrangThaiLichNhac.Cancelled; reminder.NgayPhat = null; reminder.LanThuTiepTheoLuc = null; continue; }
-            var minutes = checked((node.NhacTruocGio ?? user.NhacTruocGio) * 60);
-            reminder.NhacTruocPhut = minutes; reminder.ThoiDiemNhac = due.Value.AddMinutes(-minutes) < now ? now : due.Value.AddMinutes(-minutes);
-            reminder.TrangThai = TrangThaiLichNhac.Pending; reminder.SoLanThu = 0; reminder.LanThuTiepTheoLuc = null; reminder.NgayPhat = null;
-        }
     }
     private async Task<(int? HocKy,int? MonHoc)> PhamViAsync(int chu,int? hocKy,int? mon,CancellationToken ct)
     {

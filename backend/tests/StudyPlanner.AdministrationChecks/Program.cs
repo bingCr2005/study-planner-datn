@@ -128,23 +128,13 @@ try
     await Post("/api/v1/admin/users", new { email = "long-class@example.test", hoTen = "Tên lớp quá dài", matKhau = password, tenLop = new string('a', 201) }, HttpStatusCode.BadRequest);
     await Post("/api/v1/admin/users", new { email = "blank@example.test", hoTen = " ", matKhau = password }, HttpStatusCode.BadRequest);
     await Post("/api/v1/admin/users", new { email = "short@example.test", hoTen = "Thiếu mật khẩu", matKhau = "" }, HttpStatusCode.BadRequest);
-    int legacyClassId;
     await using (var db = new ApplicationDbContext(dbOptions))
     {
         var saved = await db.DanhSachNguoiDung.SingleAsync(x => x.Ma == userId);
         Check(saved.EmailChuanHoa == "STUDENT@EXAMPLE.TEST" && saved.MaSoSinhVien == "SV001", "Normalized identity fields persisted");
         Check(new PasswordHasher<NguoiDung>().VerifyHashedPassword(saved, saved.MatKhauBam, password) != PasswordVerificationResult.Failed,
             "Stored password verifies through Identity");
-        Check(!await db.DanhSachTruong.AnyAsync() && !await db.DanhSachLopSinhVien.AnyAsync(),
-            "Self-declared school/class names do not create catalog entities");
-        // Danh mục chỉ được seed trực tiếp làm dữ liệu legacy; không gọi lại API đã rút.
-        var now = DateTimeOffset.UtcNow;
-        var school = new Truong { KyHieu = "LEGACY", Ten = "Trường danh mục cũ", NgayTao = now, NgayCapNhat = now };
-        var cohort = new KhoaHoc { Ten = "LEGACY-K2026", NamBatDau = 2026, NamKetThuc = 2030, NgayTao = now, NgayCapNhat = now };
-        var faculty = new Khoa { Truong = school, KyHieu = "IT", Ten = "Khoa cũ", NgayTao = now, NgayCapNhat = now };
-        var legacyClass = new LopSinhVien { Khoa = faculty, KhoaHoc = cohort, Ten = "Lớp danh mục cũ", NgayTao = now, NgayCapNhat = now };
-        db.DanhSachLopSinhVien.Add(legacyClass); await db.SaveChangesAsync();
-        legacyClassId = legacyClass.Ma; saved.MaLop = legacyClassId; await db.SaveChangesAsync();
+
     }
     await Put($"/api/v1/admin/users/{userId}", new { email = "student@example.test", hoTen = "Đã sửa", tenTruong = "Trường mới",
         tenLop = (string?)null, maSoSinhVien = (string?)null, nganhHoc = "CNTT", dangHoatDong = false });
@@ -152,9 +142,6 @@ try
     Check(!inactive.GetProperty("dangHoatDong").GetBoolean(), "Explicit false persists");
     Check(inactive.GetProperty("tenTruong").GetString() == "Trường mới" && inactive.GetProperty("tenLop").ValueKind == JsonValueKind.Null,
         "PUT persists the self-declared school/class fields");
-    await using (var db = new ApplicationDbContext(dbOptions))
-        Check((await db.DanhSachNguoiDung.SingleAsync(x => x.Ma == userId)).MaLop == legacyClassId,
-            "Updating the core profile preserves the legacy class FK instead of silently clearing it");
     var page = await Get("/api/v1/admin/users?trang=1&kichThuocTrang=1&dangHoatDong=false&tuKhoa=student");
     Check(page.GetProperty("tongSo").GetInt32() == 1 && page.GetProperty("danhSach").GetArrayLength() == 1 &&
         page.GetProperty("trang").GetInt32() == 1 && page.GetProperty("kichThuocTrang").GetInt32() == 1,

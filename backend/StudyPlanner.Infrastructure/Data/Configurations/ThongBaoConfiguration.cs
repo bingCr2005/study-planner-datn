@@ -11,9 +11,6 @@ public class ThongBaoConfiguration : IEntityTypeConfiguration<ThongBao>
     {
         builder.Property(x => x.TieuDe).HasColumnName("tieu_de").HasMaxLength(200).HasDefaultValue("Nhắc hạn nhiệm vụ");
         builder.ToTable("thong_bao", t => t.HasCheckConstraint("CK_thong_bao_tieu_de", "length(btrim(tieu_de)) > 0"));
-        builder.Property(x => x.MaLichNhac).HasColumnName("ma_lich_nhac");
-        builder.HasOne(x => x.LichNhac).WithMany().HasForeignKey(x => new { x.MaLichNhac, x.MaNguoiDung, x.MaNhiemVu }).HasPrincipalKey(x => new { x.Ma, x.MaNguoiDung, x.MaNhiemVu }).OnDelete(DeleteBehavior.NoAction);
-        builder.HasIndex(x => x.MaLichNhac).IsUnique().HasFilter("ma_lich_nhac IS NOT NULL");
         // Tên bảng/cột tiếng Việt; giữ tên constraint/index cũ để migration chỉ rename bảng.
         builder.Property(x => x.Ma).HasColumnName("ma");
         builder.Property(x => x.MaNguoiDung).HasColumnName("ma_nguoi_dung");

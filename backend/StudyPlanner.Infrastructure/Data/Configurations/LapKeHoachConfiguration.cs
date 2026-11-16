@@ -8,7 +8,7 @@ namespace StudyPlanner.Infrastructure.Data.Configurations;
 // quyền, trùng lịch lặp, hạn cha-con và giao dịch áp dụng lịch vẫn phải kiểm tra ở tầng ứng dụng.
 public sealed class LapKeHoachConfiguration : IEntityTypeConfiguration<KhungGioRanh>,
     IEntityTypeConfiguration<PhienTuHoc>, IEntityTypeConfiguration<LanApDungLich>,
-    IEntityTypeConfiguration<LichNhac>, IEntityTypeConfiguration<TepDinhKemNhiemVu>,
+    IEntityTypeConfiguration<TepDinhKemNhiemVu>,
     IEntityTypeConfiguration<KhoangThoiGianHoc>, IEntityTypeConfiguration<QuyTacUuTien>
 {
     private static void Map<T>(EntityTypeBuilder<T> b, string table) where T : class
@@ -57,22 +57,6 @@ public sealed class LapKeHoachConfiguration : IEntityTypeConfiguration<KhungGioR
         b.Property(x => x.DauKiemNoiDung).HasMaxLength(64).IsRequired();
         b.HasIndex(x => new { x.MaNguoiDung, x.KhoaYeuCau }).IsUnique();
         Check(b,t,"key", "length(btrim(khoa_yeu_cau)) > 0 AND dau_kiem_noi_dung ~ '^[0-9a-fA-F]{64}$' AND phien_ban_nguon >= 0 AND phien_ban_quy_tac > 0");
-        Map(b,t);
-    }
-    public void Configure(EntityTypeBuilder<LichNhac> b)
-    {
-        const string t = "lich_nhac";
-        b.HasAlternateKey(x => new { x.Ma, x.MaNguoiDung, x.MaNhiemVu });
-        b.HasOne(x => x.NguoiDung).WithMany().HasForeignKey(x => x.MaNguoiDung).OnDelete(DeleteBehavior.NoAction);
-        b.HasOne(x => x.NhiemVu).WithMany().HasForeignKey(x => new { x.MaNhiemVu, x.MaNguoiDung })
-            .HasPrincipalKey(x => new { x.Ma, x.MaNguoiDung }).OnDelete(DeleteBehavior.Cascade);
-        b.Property(x => x.TrangThai).HasConversion<string>().HasMaxLength(32);
-        b.Property(x => x.MocNhac).HasMaxLength(32).IsRequired(); b.Property(x => x.NoiDung).IsRequired();
-        b.HasIndex(x => x.MaThongBaoCu).IsUnique().HasFilter("ma_thong_bao_cu IS NOT NULL");
-        b.HasIndex(x => x.ThoiDiemNhac).HasFilter("trang_thai = 'Pending'");
-        b.HasIndex(x => x.LanThuTiepTheoLuc).HasFilter("trang_thai = 'Failed'");
-        Check(b,t,"values", "(nhac_truoc_phut IS NULL OR nhac_truoc_phut >= 0) AND so_lan_thu >= 0 AND length(btrim(moc_nhac)) > 0 AND length(btrim(noi_dung)) > 0");
-        Check(b,t,"status", "trang_thai IN ('Pending','Delivered','Cancelled','Failed') AND ((trang_thai = 'Delivered' AND ngay_phat IS NOT NULL) OR (trang_thai <> 'Delivered' AND ngay_phat IS NULL))");
         Map(b,t);
     }
     public void Configure(EntityTypeBuilder<TepDinhKemNhiemVu> b)

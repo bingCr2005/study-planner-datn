@@ -1,5 +1,7 @@
 # Module 06 — Thông báo nhắc hạn
 
+**Cập nhật 15/11/2026:** đã gỡ hàng đợi `lich_nhac` và `thong_bao.ma_lich_nhac`; chuông giữ nguyên cơ chế suy ra nhắc hạn từ nhiệm vụ qua `QuyTacThongBao` và lưu `thong_bao`. Không còn task service cập nhật hàng đợi thứ hai. Nhắc kế hoạch vẫn dùng hai bảng riêng với quy tắc khác; xem [bản ghi dọn schema](../history/2026-11-15-don-bang-cu-va-tep-dinh-kem.md).
+
 **Hiện hành 14/11/2026:** xem và thiết lập nhắc hạn cùng nằm trong chuông **Thông báo → Cài đặt**. `GET/PUT /api/v1/notifications/settings` dùng `{nhacTruocGio, nhacKeHoach}`; PUT cần If-Match. Dùng lại số giờ tài khoản (24 giờ mặc định, 0 đúng hạn) và tùy chọn kế hoạch; giờ riêng của nhiệm vụ được ưu tiên. Nhắc hạn/quá hạn theo worker cũ, nhắc tuần/giờ rảnh tạo khi tải hộp và đã bật. Hai loại dùng chung giao diện, giữ dữ liệu/quy tắc riêng. Xem [bản ghi triển khai](../history/2026-11-14-gop-thiet-lap-vao-thong-bao.md). Phần đặc tả ban đầu bên dưới được giữ để tham khảo.
 
 ## 1. Mục tiêu và phạm vi

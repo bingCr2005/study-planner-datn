@@ -51,6 +51,10 @@ builder.Services.AddSingleton(_ => new StudyPlanner.Infrastructure.NenTang.DanhM
     builder.Configuration["Catalog:FilePath"] ?? Path.Combine(builder.Environment.ContentRootPath, "Administration", "Data", "danh-muc-mau.json"),
     Path.Combine(builder.Environment.ContentRootPath, "Administration", "Data", "danh-muc-mau.seed.json")));
 builder.Services.AddHocTap();
+builder.Services.AddSingleton(_ => new StudyPlanner.Infrastructure.TepDinhKem.KhoTepNhiemVu(
+    builder.Configuration["Attachments:StoragePath"] ?? Path.Combine(builder.Environment.ContentRootPath, "App_Data", "tep-nhiem-vu")));
+builder.Services.AddScoped<StudyPlanner.Infrastructure.TepDinhKem.TepDinhKemService>();
+builder.Services.AddHostedService<StudyPlanner.Api.HocTap.DonKhoTepWorker>();
 builder.Services.AddThongBao();
 builder.Services.AddAcademic();
 builder.Services.AddStudyPlannerXacThuc(builder.Configuration, builder.Environment);

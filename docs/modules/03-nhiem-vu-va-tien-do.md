@@ -1,5 +1,7 @@
 # Module 03 — Nhiệm vụ và tiến độ
 
+**Cập nhật 15/11/2026:** đã có đính kèm tệp trong chi tiết nhiệm vụ ở cả trang Nhiệm vụ và Tập trung. Danh sách/tải lên/tải xuống/xóa đều kiểm tra chủ sở hữu; 10 MB/tệp, 20 tệp/nhiệm vụ. Thùng rác giữ tệp để khôi phục. Xem [API và cách lưu](../database-tables.md#cách-dùng-tệp-đính-kèm).
+
 Trạng thái đối chiếu mã ngày 2026-11-13. BE/FE đã chuyển sang tiến độ cha tổng hợp từ con; checklist chỉ điều khiển tiến độ nhiệm vụ lá. Xem [bản ghi chuyển quy tắc và kiểm chứng](../history/2026-11-13-tong-hop-tien-do-nhiem-vu.md). Quy tắc độc lập trong [bản ghi checklist cũ](../history/2026-11-10-tach-checklist-va-tien-do-nhiem-vu-con.md) là lịch sử, không còn là quy tắc hiện hành.
 
 Các phần bên dưới giữ nội dung đặc tả ban đầu để đối chiếu. Tên DTO/route và hành vi hiện hành được đối chiếu với `backend/StudyPlanner.Application/HocTap` và `backend/StudyPlanner.Api/Controllers/NhiemVuController.cs`.
@@ -41,7 +43,7 @@ Exam chưa phải sự kiện thi có giờ/phòng. DueDate là hạn hoàn thà
 
 Ví dụ A gồm B và C; B gồm B1=100%, B2=0%, C=0% thì B=50%, A=25%. B hoàn thành thì A=50%; C hoàn thành thì A=100%. Thêm việc chưa xong vào B sẽ tính lại B/A và xóa trạng thái hoàn thành cũ sau xác nhận. Đây là tỷ lệ các nhánh công việc có trọng số bằng nhau, không phải tỷ lệ khối lượng/thời gian chính xác.
 
-Migration dữ liệu `20261113010000_TongHopTienDoNhiemVu` chuyển checklist cha cũ thành con, tính lại cây đang dùng và nhóm thùng rác, ghi lịch sử System trước/sau và tăng revision tài khoản liên quan. Migration kiểm tra cấu trúc/giới hạn trước khi ghi, không tự loại bỏ dữ liệu. Không có Down tự động vì các con bảo toàn có thể đã được người dùng chỉnh sửa; phục hồi phải dựa trên bản sao lưu đã kiểm tra. Chưa tự áp dụng migration vào database ứng dụng.
+Migration dữ liệu `20261113010000_TongHopTienDoNhiemVu` chuyển checklist cha cũ thành con, tính lại cây đang dùng và nhóm thùng rác, ghi lịch sử System trước/sau và tăng revision tài khoản liên quan. Migration kiểm tra cấu trúc/giới hạn trước khi ghi, không tự loại bỏ dữ liệu. Không có Down tự động vì các con bảo toàn có thể đã được người dùng chỉnh sửa; phục hồi phải dựa trên bản sao lưu đã kiểm tra. Đã áp dụng vào database Development ngày 14/11/2026 sau sao lưu và diễn tập; xem [bản ghi cập nhật DB](../history/2026-11-14-ap-dung-migration-database.md).
 
 Khi chuẩn bị nâng cấp database đã cấu hình, giữ bản sao lưu trước nâng cấp rồi chạy từ repository BE:
 
@@ -55,13 +57,13 @@ Sau đó khởi động lại backend và tải lại frontend. Kiểm thử ri�
 
 ### Tạo hoặc cập nhật lá
 
-Request → lấy người dùng hiện tại → kiểm tra dữ liệu/quyền Course → xác định trạng thái và hạn hiệu lực → chuẩn bị TaskHistory và lịch nhắc → lưu chung giao dịch → trả TaskResponse.
+Request → lấy người dùng hiện tại → kiểm tra dữ liệu/quyền Course → xác định trạng thái và hạn hiệu lực → chuẩn bị TaskHistory → lưu chung giao dịch → trả TaskResponse.
 
 Nhiệm vụ không môn/không hạn là hợp lệ. TaskResponse trả cả dueDate và effectiveDueDate, nguồn kế thừa, hasChildren/isOverdue; không tự thêm các cột tính toán này vào ERD.
 
 ### Thêm/chuyển con
 
-Tải node/cha/cây cần thiết có kiểm tra quyền → xem trước bảo toàn checklist/tiến độ và mở lại → kiểm tra vòng, môn và hạn → áp dụng thay đổi → tổng hợp tiến độ từ dưới lên và chuẩn hóa ước lượng → kiểm tra phiên học bị ảnh hưởng → xác nhận theo hợp đồng → ghi lịch sử User/System và đồng bộ lời nhắc → lưu chung giao dịch. Preview không ghi dữ liệu và không tăng revision.
+Tải node/cha/cây cần thiết có kiểm tra quyền → xem trước bảo toàn checklist/tiến độ và mở lại → kiểm tra vòng, môn và hạn → áp dụng thay đổi → tổng hợp tiến độ từ dưới lên và chuẩn hóa ước lượng → kiểm tra phiên học bị ảnh hưởng → xác nhận theo hợp đồng → ghi lịch sử User/System → lưu chung giao dịch; chuông đồng bộ từ dữ liệu mới khi tải hộp hoặc qua worker. Preview không ghi dữ liệu và không tăng revision.
 
 Tạo con qua `POST /api/v1/tasks/{id}/children`, phạm vi kế thừa cha; client gửi môn/học kỳ khác bị từ chối. `PATCH /{id}/scope` chỉ nhận nhiệm vụ gốc và áp dụng cho cả cây. `PATCH /{id}/parent` không cho chuyển sang cha khác phạm vi; phải điều chỉnh phạm vi phù hợp trước, không tự đổi môn cho riêng một con.
 

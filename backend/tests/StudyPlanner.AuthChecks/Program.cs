@@ -220,21 +220,21 @@ async Task VerifyColumnRenameMigrationAsync()
         seed.Parameters.AddWithValue("time", fixtureTime); seed.Parameters.AddWithValue("state", state);
         await seed.ExecuteNonQueryAsync();
     }
-    await migrator.MigrateAsync();
+    await migrator.MigrateAsync("20261114122238_DoiTenRangBuocKhongNullKhoangHoc");
     Check(await schema.DanhSachNhiemVu.Where(x => x.Ma == childId).Select(x => x.MaHocKy).SingleAsync() == fixtureId,
         "Planning migration backfills task semester from its owned course");
-    var reminder = await schema.DanhSachLichNhac.SingleAsync(x => x.MaThongBaoCu == fixtureId);
-    Check(reminder.NhacTruocPhut == null && reminder.NgayPhat == fixtureTime.AddHours(-25).AddMinutes(1) &&
-        reminder.TrangThai.ToString() == "Delivered", "Legacy reminder preserves delivered time without guessing offset");
-    Check(await schema.DanhSachThongBao.AnyAsync(x => x.Ma == fixtureId && x.MaLichNhac == reminder.Ma),
-        "Delivered notification links to its migrated reminder");
-    foreach (var state in new[] { "Pending", "Failed", "Cancelled" })
-    {
-        var row = await schema.DanhSachLichNhac.SingleAsync(x => x.TrangThai.ToString() == state);
-        Check(row.ThoiDiemNhac == fixtureTime && row.SoLanThu == 2 && row.LanThuTiepTheoLuc == fixtureTime,
-            "Reminder migration preserves schedule/retry for " + state);
-        Check(!await schema.DanhSachThongBao.AnyAsync(x => x.MaLichNhac == row.Ma), "Undelivered legacy rows do not become inbox messages");
-    }
+    // Bản chuyển đổi cũ vẫn phải giữ thông báo và tách hàng đợi đúng trạng thái.
+    await using (var verifyLegacy = new NpgsqlCommand("SELECT count(*) FROM lich_nhac WHERE ma_thong_bao_cu IS NOT NULL", connection))
+        Check((long)(await verifyLegacy.ExecuteScalarAsync())! == 4, "Legacy reminder migration retains all four original rows");
+    try { await migrator.MigrateAsync(); throw new Exception("Expected pending reminder rejection"); }
+    catch (PostgresException e) when (e.MessageText.Contains("LEGACY_REMINDERS_REQUIRE_REVIEW"))
+    { Check(true, "Cleanup refuses to discard pending or failed reminders"); }
+    // Chỉ hủy fixture của bài test sau khi đã xác minh hàng đợi chưa xử lý chặn migration.
+    await using (var cancelLegacy = new NpgsqlCommand("UPDATE lich_nhac SET trang_thai='Cancelled',ngay_phat=NULL WHERE trang_thai IN ('Pending','Failed')", connection))
+        await cancelLegacy.ExecuteNonQueryAsync();
+    await migrator.MigrateAsync();
+    Check(await schema.DanhSachThongBao.AnyAsync(x => x.Ma == fixtureId && x.NgayDoc == fixtureTime.AddHours(-24)),
+        "Cleanup preserves delivered notification and its read timestamp");
     async Task RejectSql(string sql, string state)
     {
         await using var tx = await connection.BeginTransactionAsync();
@@ -254,19 +254,19 @@ async Task VerifyColumnRenameMigrationAsync()
     await RejectSql($"INSERT INTO khung_gio_ranh(ma_nguoi_dung,thu_trong_tuan,gio_bat_dau,gio_ket_thuc,ngay_bat_dau,ngay_ket_thuc,dang_su_dung,ngay_tao,ngay_cap_nhat) VALUES({fixtureId},8,'20:00','19:00','2026-10-01','2026-10-31',true,now(),now())", "23514");
     // Model hiện tại chỉ đọc EF sau khi cả cột hồ sơ và tên bảng đã nâng cấp.
     var migrated = await schema.DanhSachNguoiDung.AsNoTracking().SingleAsync(user => user.Ma == fixtureId);
-    Check(migrated.TenTruong == "Trường kiểm thử chuyển đổi" && migrated.TenLop == "MIG-CNTT01" && migrated.MaLop == fixtureId,
-        "Profile names are backfilled from the legacy school/class without dropping the legacy FK");
+    Check(migrated.TenTruong == "Trường kiểm thử chuyển đổi" && migrated.TenLop == "MIG-CNTT01",
+        "Profile names are backfilled from the legacy school/class before removing the legacy FK");
     var unlinked = await schema.DanhSachNguoiDung.AsNoTracking().SingleAsync(user => user.Ma == fixtureId + 2);
-    Check(unlinked.TenTruong == null && unlinked.TenLop == null && unlinked.MaLop == null,
+    Check(unlinked.TenTruong == null && unlinked.TenLop == null,
         "Users without a legacy class keep optional profile names empty");
     Check(migrated.MatKhauBam == fixtureHash && passwordHasher.VerifyHashedPassword(migrated, migrated.MatKhauBam, fixturePassword) != PasswordVerificationResult.Failed,
         "Legacy password hash remains byte-identical and still verifies after upgrade");
     Check(await schema.DanhSachNhiemVu.AsNoTracking().AnyAsync(task => task.Ma == childId && task.NhiemVuCha!.Ma == fixtureId &&
-        task.MonHoc!.HocKy.NguoiDung.Ma == fixtureId && task.NguoiDung.LopSinhVien!.Khoa.Truong.Ma == fixtureId),
+        task.MonHoc!.HocKy.NguoiDung.Ma == fixtureId && task.NguoiDung.TenTruong == "Trường kiểm thử chuyển đổi"),
         "Renamed ownership, task tree, course and catalog foreign keys remain readable");
     // Chỉ fixture trong DB tên ngẫu nhiên do lượt test này tạo; không đụng cấu hình appsettings/Neon.
-    var planningTables = new[] { "lich_nhac", "phien_tu_hoc", "khung_gio_ranh", "lan_ap_dung_lich", "khoang_thoi_gian_hoc", "tep_dinh_kem_nhiem_vu", "quy_tac_uu_tien" };
-    await using var cleanup = new NpgsqlCommand("TRUNCATE TABLE " + string.Join(",", tables.Select(table => Quoted(vietnameseTables[table])).Concat(planningTables.Select(Quoted))) + " RESTART IDENTITY", connection);
+    var currentTables = schema.Model.GetEntityTypes().Select(x => x.GetTableName()!).Distinct();
+    await using var cleanup = new NpgsqlCommand("TRUNCATE TABLE " + string.Join(",", currentTables.Select(Quoted)) + " RESTART IDENTITY", connection);
     await cleanup.ExecuteNonQueryAsync();
     Check(!await schema.DanhSachNguoiDung.AnyAsync() && !await schema.DanhSachNhiemVu.AnyAsync() && !await schema.DanhSachLichSuNhiemVu.AnyAsync(),
         "Migration fixture removed before the HTTP authentication scenarios");

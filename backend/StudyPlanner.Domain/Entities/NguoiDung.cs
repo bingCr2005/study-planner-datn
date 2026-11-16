@@ -13,8 +13,6 @@ public class NguoiDung
     // Hồ sơ tự khai của bản cốt lõi; không tạo phân cấp hoặc quyền giao việc.
     public string? TenTruong { get; set; }
     public string? TenLop { get; set; }
-    // Giữ khóa lớp cũ để bảo toàn và chuyển dữ liệu; không nhận qua API hồ sơ cốt lõi.
-    public int? MaLop { get; set; }
     public string? NganhHoc { get; set; }
     public VaiTroNguoiDung VaiTro { get; set; } = VaiTroNguoiDung.Student;
     public bool DangHoatDong { get; set; } = true;
@@ -25,8 +23,6 @@ public class NguoiDung
     public int GioiHanHocMoiNgayPhut { get; set; } = 180;
     // Tăng trong giao dịch khi dữ liệu ảnh hưởng lịch thay đổi; chưa thay thế khóa/kiểm tra xung đột.
     public long PhienBanLapLich { get; set; }
-    // Liên kết tổ chức cũ ngoài phạm vi cốt lõi; không xóa thuộc tính điều hướng trước khi chuyển dữ liệu.
-    public LopSinhVien? LopSinhVien { get; set; }
     public ICollection<HocKy> DanhSachHocKy { get; set; } = new List<HocKy>();
     public ICollection<NhiemVu> DanhSachNhiemVu { get; set; } = new List<NhiemVu>();
     public ICollection<ThongBao> DanhSachThongBao { get; set; } = new List<ThongBao>();

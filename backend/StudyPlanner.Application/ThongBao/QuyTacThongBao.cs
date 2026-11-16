@@ -47,7 +47,7 @@ public static class QuyTacThongBao
             row.ThoiDiemNhac = marker;
             row.TrangThaiPhat = TrangThaiPhatThongBao.Delivered;
             row.NgayPhat = now; row.NgayDoc = null; row.NgayCapNhat = now;
-            row.MaLichNhac = null; row.SoLanThu = 0; row.LanThuTiepTheoLuc = null;
+            row.SoLanThu = 0; row.LanThuTiepTheoLuc = null;
         }
         return added;
     }
