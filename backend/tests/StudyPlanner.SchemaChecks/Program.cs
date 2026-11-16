@@ -15,11 +15,11 @@ var model = context.GetService<IDesignTimeModel>().Model;
 var entities = model.GetEntityTypes().ToArray();
 var expectedTables = new[]
 {
-    "truong", "khoa", "khoa_hoc", "lop_sinh_vien", "nguoi_dung",
-    "hoc_ky", "mon_hoc", "lich_hoc", "nhiem_vu", "thong_bao", "lich_su_nhiem_vu", "khung_gio_ranh", "phien_tu_hoc", "lich_nhac", "tep_dinh_kem_nhiem_vu", "lan_ap_dung_lich", "khoang_thoi_gian_hoc", "quy_tac_uu_tien", "phien_tap_trung", "ngoai_le_gio_ranh", "cau_hinh_nhac_ke_hoach", "nhac_ke_hoach"
+    "nguoi_dung",
+    "hoc_ky", "mon_hoc", "lich_hoc", "nhiem_vu", "thong_bao", "lich_su_nhiem_vu", "khung_gio_ranh", "phien_tu_hoc", "tep_dinh_kem_nhiem_vu", "lan_ap_dung_lich", "khoang_thoi_gian_hoc", "quy_tac_uu_tien", "phien_tap_trung", "ngoai_le_gio_ranh", "cau_hinh_nhac_ke_hoach", "nhac_ke_hoach"
 };
 Check(entities.Select(x => x.GetTableName()).Order().SequenceEqual(expectedTables.Order()),
-    "All twenty-two tables use Vietnamese names, including planning upgrades");
+    "All seventeen tables use Vietnamese names, including planning upgrades");
 var tableMigration = new StudyPlanner.Infrastructure.Migrations.RenameBusinessTablesToVietnamese();
 Check(tableMigration.UpOperations.Count == 11 && tableMigration.UpOperations.All(x => x is RenameTableOperation),
     "Table migration upgrade contains only eleven RenameTable operations; no data or schema recreation");
@@ -29,7 +29,7 @@ var studyTimeRename = new StudyPlanner.Infrastructure.Migrations.DoiTenKhoangTho
 Check(studyTimeRename.UpOperations.Concat(studyTimeRename.DownOperations).All(x =>
     x is RenameTableOperation or RenameIndexOperation || x is SqlOperation sql && sql.Sql.StartsWith("ALTER ") && sql.Sql.Contains(" RENAME ")),
     "Study time rename only renames tables, constraints, indexes and identity sequence in both directions");
-Check(entities.Sum(x => x.GetForeignKeys().Count()) == 34, "34 foreign keys including planning upgrades");
+Check(entities.Sum(x => x.GetForeignKeys().Count()) == 27, "27 foreign keys including planning upgrades");
 Check(entities.All(x => x.GetProperties().All(p => !p.IsShadowProperty())),
     "No accidental shadow columns from misspelled foreign keys");
 Check(entities.All(entity => entity.GetProperties().All(property =>
@@ -40,10 +40,6 @@ Check(entities.All(entity => entity.GetProperties().All(property =>
 
 var expectedDeletes = new (Type Dependent, string Property, Type Principal, DeleteBehavior Behavior)[]
 {
-    (typeof(Khoa), "MaTruong", typeof(Truong), DeleteBehavior.Restrict),
-    (typeof(LopSinhVien), "MaKhoa", typeof(Khoa), DeleteBehavior.Restrict),
-    (typeof(LopSinhVien), "MaKhoaHoc", typeof(KhoaHoc), DeleteBehavior.Restrict),
-    (typeof(NguoiDung), "MaLop", typeof(LopSinhVien), DeleteBehavior.SetNull),
     (typeof(HocKy), "MaNguoiDung", typeof(NguoiDung), DeleteBehavior.Cascade),
     (typeof(MonHoc), "MaHocKy", typeof(HocKy), DeleteBehavior.Cascade),
     (typeof(LichHoc), "MaMonHoc", typeof(MonHoc), DeleteBehavior.Cascade),
@@ -105,7 +101,7 @@ Check(expectedTables.All(table => sql.Contains("CREATE TABLE " + table + " (")),
     "PostgreSQL SQL generated for all tables");
 Check(sql.Contains("CK_task_items_state") && sql.Contains("CK_notifications_read") &&
       sql.Contains("CK_class_sessions_times"), "Critical CHECK constraints included in SQL");
-Check(sql.Contains("ON DELETE SET NULL") && sql.Contains("ON DELETE RESTRICT") &&
+Check(sql.Contains("ON DELETE SET NULL") &&
       sql.Contains("ON DELETE CASCADE"), "Delete behaviors included in PostgreSQL SQL");
 Console.WriteLine("All schema checks passed. No database connection was opened.");
 

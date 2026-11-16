@@ -8,8 +8,6 @@ public class ThongBao
     public int MaNguoiDung { get; set; }
     public int MaNhiemVu { get; set; }
     // Giai đoạn chuyển đổi: chỉ bản Delivered cũ được liên kết; cột lập lịch cũ giữ đến cutover worker.
-    public int? MaLichNhac { get; set; }
-    public LichNhac? LichNhac { get; set; }
     public LoaiThongBao Loai { get; set; } = LoaiThongBao.DeadlineReminder;
     public string NoiDung { get; set; } = string.Empty;
     // Tiêu đề ngắn của hộp thông báo; nội dung chi tiết vẫn ở NoiDung.

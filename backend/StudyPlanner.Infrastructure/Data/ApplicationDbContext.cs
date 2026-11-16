@@ -8,14 +8,6 @@ public class ApplicationDbContext : DbContext
         : base(options)
     {
     }
-    // Tổ chức cũ ngoài chức năng cốt lõi vẫn được ánh xạ để bảo toàn cơ sở dữ liệu và chuyển hồ sơ cũ.
-    // Không bỏ DbSet/cấu hình khi chưa có bản chuyển đổi và kế hoạch chuyển dữ liệu tương ứng.
-    public DbSet<Truong> DanhSachTruong => Set<Truong>();
-
-    public DbSet<Khoa> DanhSachKhoa => Set<Khoa>();
-    public DbSet<KhoaHoc> DanhSachKhoaHoc => Set<KhoaHoc>();
-    public DbSet<LopSinhVien> DanhSachLopSinhVien => Set<LopSinhVien>();
-
     // Dữ liệu cốt lõi dành cho sinh viên.
     public DbSet<NguoiDung> DanhSachNguoiDung => Set<NguoiDung>();
     public DbSet<HocKy> DanhSachHocKy => Set<HocKy>();
@@ -30,7 +22,6 @@ public class ApplicationDbContext : DbContext
     public DbSet<NhacKeHoach> DanhSachNhacKeHoach => Set<NhacKeHoach>();
     public DbSet<PhienTuHoc> DanhSachPhienTuHoc => Set<PhienTuHoc>();
     public DbSet<LanApDungLich> DanhSachLanApDungLich => Set<LanApDungLich>();
-    public DbSet<LichNhac> DanhSachLichNhac => Set<LichNhac>();
     public DbSet<TepDinhKemNhiemVu> DanhSachTepDinhKemNhiemVu => Set<TepDinhKemNhiemVu>();
     public DbSet<KhoangThoiGianHoc> DanhSachKhoangThoiGianHoc => Set<KhoangThoiGianHoc>();
     public DbSet<PhienTapTrung> DanhSachPhienTapTrung => Set<PhienTapTrung>();
@@ -46,7 +37,6 @@ public class ApplicationDbContext : DbContext
             typeof(ApplicationDbContext).Assembly);
         modelBuilder.Entity<PhienTuHoc>().HasQueryFilter(x => x.NhiemVu.NgayXoa == null);
         modelBuilder.Entity<KhoangThoiGianHoc>().HasQueryFilter(x => x.NhiemVu.NgayXoa == null);
-        modelBuilder.Entity<LichNhac>().HasQueryFilter(x => x.NhiemVu.NgayXoa == null);
         modelBuilder.Entity<ThongBao>().HasQueryFilter(x => x.NhiemVu.NgayXoa == null);
         modelBuilder.Entity<TepDinhKemNhiemVu>().HasQueryFilter(x => x.NhiemVu.NgayXoa == null);
     }

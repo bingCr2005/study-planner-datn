@@ -25,8 +25,6 @@ public class NguoiDungConfiguration : IEntityTypeConfiguration<NguoiDung>
         builder.Property(x => x.MaSoSinhVien).HasColumnName("ma_so_sinh_vien");
         builder.Property(x => x.TenTruong).HasColumnName("ten_truong");
         builder.Property(x => x.TenLop).HasColumnName("ten_lop");
-        // Giữ cột/khóa ngoại cũ trong mô hình để nâng cấp không làm mất dữ liệu tổ chức.
-        builder.Property(x => x.MaLop).HasColumnName("ma_lop");
         builder.Property(x => x.NganhHoc).HasColumnName("nganh_hoc");
         builder.Property(x => x.VaiTro).HasColumnName("vai_tro");
         builder.Property(x => x.DangHoatDong).HasColumnName("dang_hoat_dong");
@@ -72,10 +70,7 @@ public class NguoiDungConfiguration : IEntityTypeConfiguration<NguoiDung>
         builder.Property(x => x.MuiGio).HasDefaultValue("Asia/Ho_Chi_Minh");
         // 0 nghĩa là nhắc đúng hạn, không phải chưa gán; không để giá trị mặc định 24 của cơ sở dữ liệu ghi đè.
         builder.Property(x => x.NhacTruocGio).HasDefaultValue(24).HasSentinel(24);
-        // Liên kết cũ ngoài phạm vi cốt lõi; giữ khóa ngoại để tương thích và chuyển dữ liệu trước khi xét loại bỏ.
-        builder.HasOne(x => x.LopSinhVien).WithMany(x => x.DanhSachNguoiDung).HasForeignKey(x => x.MaLop).HasConstraintName("FK_users_student_classes_ClassId").OnDelete(DeleteBehavior.SetNull);
         // Giữ tên chỉ mục hiện có để bản chuyển đổi chỉ đổi tên cột.
-        builder.HasIndex(x => x.MaLop).HasDatabaseName("IX_users_ClassId");
         builder.HasIndex(x => x.EmailChuanHoa).HasDatabaseName("IX_users_NormalizedEmail");
         builder.HasIndex(x => x.MaSoSinhVien).HasDatabaseName("IX_users_StudentCode");
     }

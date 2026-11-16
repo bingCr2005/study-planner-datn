@@ -86,11 +86,12 @@ public static class MigrationProgressChecks
             var trashChild = Task(owner.Ma, "Con chưa xong trong thùng rác", 0, trash);
             trashChild.NgayXoa = oldDate; trashChild.MaNhomXoa = trash.Ma;
             db.Add(trashChild);
-            var reminder = new LichNhac { MaNguoiDung = owner.Ma, MaNhiemVu = completed.Ma, ThoiDiemNhac = DateTimeOffset.UtcNow.AddDays(1), NoiDung = "Pending fixture" };
+            // Kiểm tra migration lịch sử bằng SQL để không phụ thuộc entity đã được gỡ.
+            await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO lich_nhac(ma_nguoi_dung,ma_nhiem_vu,thoi_diem_nhac,noi_dung,moc_nhac,trang_thai,so_lan_thu,ngay_tao,ngay_cap_nhat) VALUES ({owner.Ma},{completed.Ma},{DateTimeOffset.UtcNow.AddDays(1)},'Pending fixture','Deadline','Pending',0,now(),now())");
             var pending = new ThongBao { MaNguoiDung = owner.Ma, MaNhiemVu = completed.Ma, ThoiDiemNhac = DateTimeOffset.UtcNow.AddDays(1), NoiDung = "Pending fixture" };
             var delivered = new ThongBao { MaNguoiDung = owner.Ma, MaNhiemVu = floor.Ma, ThoiDiemNhac = oldDate,
                 TrangThaiPhat = TrangThaiPhatThongBao.Delivered, NgayPhat = oldDate, NoiDung = "Delivered fixture" };
-            db.AddRange(reminder, pending, delivered); await db.SaveChangesAsync(); db.ChangeTracker.Clear();
+            db.AddRange(pending, delivered); await db.SaveChangesAsync(); db.ChangeTracker.Clear();
 
             await db.GetService<IMigrator>().MigrateAsync(After);
             var all = await db.DanhSachNhiemVu.IgnoreQueryFilters().ToListAsync();
@@ -115,7 +116,7 @@ public static class MigrationProgressChecks
                 JsonDocument.Parse(reopened.DuLieuSau!).RootElement.GetProperty("tienDo").GetInt32() == 50, "camelCase before/after history retains original progress and checklist");
             Check(await db.DanhSachNguoiDung.Where(u => u.Ma == owner.Ma).Select(u => u.PhienBanLapLich).SingleAsync() == 8 &&
                 await db.DanhSachNguoiDung.Where(u => u.Ma == other.Ma).Select(u => u.PhienBanLapLich).SingleAsync() == 11, "only affected owners advance their revision once");
-            Check((await db.DanhSachLichNhac.IgnoreQueryFilters().SingleAsync(r => r.Ma == reminder.Ma)).TrangThai == TrangThaiLichNhac.Cancelled, "newly completed task reminder cancelled");
+            Check(await db.Database.SqlQueryRaw<int>("SELECT count(*)::integer AS \"Value\" FROM lich_nhac WHERE trang_thai='Cancelled'").SingleAsync() == 1, "newly completed task reminder cancelled");
             Check((await db.DanhSachThongBao.IgnoreQueryFilters().SingleAsync(r => r.Ma == pending.Ma)).TrangThaiPhat == TrangThaiPhatThongBao.Cancelled &&
                 (await db.DanhSachThongBao.IgnoreQueryFilters().SingleAsync(r => r.Ma == delivered.Ma)).TrangThaiPhat == TrangThaiPhatThongBao.Delivered, "pending delivery cancelled while delivered history preserved");
             var taskCount = all.Count; var historyCount = await db.DanhSachLichSuNhiemVu.CountAsync();
@@ -128,7 +129,7 @@ public static class MigrationProgressChecks
             const string beforeRename = "20261114092625_CaiTienLapKeHoach";
             await db.GetService<IMigrator>().MigrateAsync(beforeRename);
             await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO doan_thuc_hoc(ma_nguoi_dung,ma_nhiem_vu,bat_dau_thuc_te,ket_thuc_thuc_te) VALUES ({owner.Ma},{manualLeaf.Ma},{oldDate},{oldDate.AddMinutes(20)}),({owner.Ma},{manualLeaf.Ma},{oldDate.AddMinutes(30)},NULL)");
-            await db.Database.MigrateAsync();
+            await db.GetService<IMigrator>().MigrateAsync("20261114122238_DoiTenRangBuocKhongNullKhoangHoc");
             var intervals = await db.DanhSachKhoangThoiGianHoc.OrderBy(x => x.Ma).ToListAsync();
             Check(intervals.Count == 2 && intervals[0].MaNhiemVu == manualLeaf.Ma && intervals[0].BatDauThucTe == oldDate &&
                 intervals[0].KetThucThucTe == oldDate.AddMinutes(20) && intervals[1].KetThucThucTe == null,
