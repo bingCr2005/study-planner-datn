@@ -11,6 +11,8 @@ public sealed class EfHocTapStore(ApplicationDbContext db) : IHocTapStore
     public IQueryable<T> TruyVan<T>() where T : class => db.Set<T>();
     public IQueryable<NhiemVu> NhiemVuTrongThungRac() =>
         db.DanhSachNhiemVu.IgnoreQueryFilters().Where(x => x.NgayXoa != null);
+    public IQueryable<KhoangThoiGianHoc> KhoangHocKeCaThungRac() =>
+        db.DanhSachKhoangThoiGianHoc.IgnoreQueryFilters();
     public Task<List<T>> DanhSachAsync<T>(IQueryable<T> query, CancellationToken ct) => query.ToListAsync(ct);
     public Task<T?> DauTienAsync<T>(IQueryable<T> query, CancellationToken ct) => query.FirstOrDefaultAsync(ct);
     public Task<int> DemAsync<T>(IQueryable<T> query, CancellationToken ct) => query.CountAsync(ct);
@@ -19,6 +21,9 @@ public sealed class EfHocTapStore(ApplicationDbContext db) : IHocTapStore
     public async Task LuuAsync(CancellationToken ct) => await db.SaveChangesAsync(ct);
     public async Task<IHocTapTransaction> BatDauAsync(bool ghi, CancellationToken ct) =>
         new GiaoDich(await db.Database.BeginTransactionAsync(ghi ? IsolationLevel.ReadCommitted : IsolationLevel.RepeatableRead, ct));
+    // Cùng khóa của Admin, giữ cấu hình ổn định tới khi áp dụng lịch hoàn tất.
+    public Task KhoaQuyTacUuTienAsync(CancellationToken ct) =>
+        db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock_shared(193701, 11)", ct);
     public async Task<NguoiDung> NguoiDungAsync(int chu, bool khoa, CancellationToken ct)
     {
         // Xác thực JWT có thể đã theo dõi người dùng; phải nạp lại dòng đã khóa để tránh dùng dữ liệu cũ.

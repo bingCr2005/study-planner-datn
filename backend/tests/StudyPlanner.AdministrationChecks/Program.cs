@@ -142,6 +142,14 @@ try
     Check(!inactive.GetProperty("dangHoatDong").GetBoolean(), "Explicit false persists");
     Check(inactive.GetProperty("tenTruong").GetString() == "Trường mới" && inactive.GetProperty("tenLop").ValueKind == JsonValueKind.Null,
         "PUT persists the self-declared school/class fields");
+    // Form cũ từng thấy tài khoản đang mở không được ghi đè lần khóa mới.
+    var staleProfile = await Put($"/api/v1/admin/users/{userId}", new { email = "student@example.test", hoTen = "Không được lưu",
+        dangHoatDong = true, ngayCapNhatMongDoi = user.GetProperty("ngayCapNhat").GetDateTimeOffset() }, HttpStatusCode.Conflict);
+    Check(staleProfile.GetProperty("code").GetString() == "ACCOUNT_CHANGED", "Stale profile returns a specific conflict code");
+    var unchanged = await Get($"/api/v1/admin/users/{userId}");
+    Check(!unchanged.GetProperty("dangHoatDong").GetBoolean() && unchanged.GetProperty("hoTen").GetString() == "Đã sửa", "Stale profile cannot reactivate or rename the account");
+    await Put($"/api/v1/admin/users/{userId}", new { email = "student@example.test", hoTen = "Đã sửa", tenTruong = "Trường mới", nganhHoc = "CNTT",
+        dangHoatDong = false, ngayCapNhatMongDoi = unchanged.GetProperty("ngayCapNhat").GetDateTimeOffset() });
     var page = await Get("/api/v1/admin/users?trang=1&kichThuocTrang=1&dangHoatDong=false&tuKhoa=student");
     Check(page.GetProperty("tongSo").GetInt32() == 1 && page.GetProperty("danhSach").GetArrayLength() == 1 &&
         page.GetProperty("trang").GetInt32() == 1 && page.GetProperty("kichThuocTrang").GetInt32() == 1,

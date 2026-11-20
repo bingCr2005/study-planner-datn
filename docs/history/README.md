@@ -14,6 +14,10 @@ Không sửa bản ghi cũ để làm mất lịch sử. Khi logic thay đổi, 
 
 ## Danh sách bản ghi
 
+- [2026-11-19 — Tích hợp admin vào bản đang chạy](2026-11-19-tich-hop-admin-vao-ban-dang-chay.md)
+- [2026-11-18 — Admin theo dõi học tập sinh viên](2026-11-18-admin-theo-doi-hoc-tap-sinh-vien.md)
+- [2026-11-18 — Admin quản lý tài khoản sinh viên](2026-11-18-admin-quan-ly-tai-khoan-sinh-vien.md)
+
 - [2026-10-13: Trạng thái ban đầu và quy trình lưu lịch sử](2026-10-13-trang-thai-ban-dau.md)
 - [2026-10-13: Thiết kế ERD và quy tắc nghiệp vụ](2026-10-13-thiet-ke-erd.md)
 - [2026-10-13: Đánh giá hiện trạng và kế hoạch phát triển](2026-10-13-danh-gia-va-ke-hoach.md)
@@ -127,3 +131,71 @@ Không sửa bản ghi cũ để làm mất lịch sử. Khi logic thay đổi, 
 - [2026-11-15 — Dọn bảng cũ và triển khai tệp đính kèm](2026-11-15-don-bang-cu-va-tep-dinh-kem.md)
 
 - [2026-11-16 — Giải quyết xung đột khi gộp tệp đính kèm vào main](2026-11-16-giai-quyet-xung-dot-tep-dinh-kem.md)
+
+- [2026-11-16 — Đổi tên bước giữ tiến độ cũ](2026-11-16-doi-ten-buoc-giu-tien-do.md)
+
+- [2026-11-16 — Bỏ con trỏ dấu hỏi ở nhãn hạn](2026-11-16-bo-con-tro-dau-hoi-nhan-han.md)
+
+- [2026-11-16 — Xem trước ảnh đính kèm nhiệm vụ](2026-11-16-xem-truoc-anh-dinh-kem.md)
+
+- [2026-11-16 — Rút gọn nhắc tiến độ từ các bước nhỏ](2026-11-16-rut-gon-nhac-tien-do.md)
+
+- [2026-11-16 — Làm rõ hoạt động nhiệm vụ và tệp đính kèm](2026-11-16-lam-ro-hoat-dong-nhiem-vu.md)
+
+- [2026-11-16 — Làm rõ hạn nộp trong lịch tuần](2026-11-16-lam-ro-han-trong-lich-tuan.md)
+
+- [2026-11-17 — Mở Đồng hồ từ nhiệm vụ và lọc việc theo hạn](2026-11-17-tap-trung-tu-nhiem-vu.md)
+
+- [2026-11-17 — Gọn hộp chọn nhiệm vụ của Đồng hồ](2026-11-17-gon-hop-chon-nhiem-vu-dong-ho.md)
+
+- [2026-11-17 — Bảng chọn nổi và cây nhiệm vụ trên Đồng hồ](2026-11-17-bang-chon-noi-dong-ho.md)
+
+- [2026-11-17 — Căn giữa nút Bắt đầu và gọn mặt đồng hồ](2026-11-17-can-giua-nut-bat-dau-dong-ho.md)
+
+- [2026-11-17 — Tách bộ chuyển chế độ và rút gọn câu chữ trên Đồng hồ](2026-11-17-sua-bo-chuyen-che-do-dong-ho.md)
+
+- [2026-11-17 — Hiện nhiệm vụ đã hoàn thành trên Bảng trạng thái](2026-11-17-hien-nhiem-vu-da-hoan-thanh-tren-bang.md)
+
+- [2026-11-17 — Làm nhạt nhiệm vụ đã hoàn thành](2026-11-17-lam-nhat-nhiem-vu-da-hoan-thanh.md)
+
+- [2026-11-17 — Tăng mức làm nhạt nhiệm vụ đã xong](2026-11-17-tang-muc-lam-nhat-nhiem-vu.md)
+
+- [2026-11-17 — Đồng nhất thanh bên của Nhiệm vụ và Lập kế hoạch](2026-11-17-dong-nhat-thanh-ben-hoc-tap.md)
+
+- [2026-11-17 — Thu gọn menu để mở rộng Thời khóa biểu](2026-11-17-thu-gon-menu-thoi-khoa-bieu.md)
+
+- [2026-11-17 — Đánh dấu nhiệm vụ và thu gọn hạn trên lịch](2026-11-17-danh-dau-nhiem-vu-tren-lich.md)
+
+- [2026-11-17 — Mở rộng vùng lịch khi cuộn xuống](2026-11-17-mo-rong-vung-lich-khi-cuon.md)
+
+- [2026-11-17 — Chỉnh nhãn đếm hạn thu gọn](2026-11-17-chinh-nhan-dem-han-thu-gon.md)
+
+- [2026-11-17 — Ghim nhiệm vụ lên đầu danh sách](2026-11-17-ghim-nhiem-vu.md)
+
+- [2026-11-17 — Xếp gợi ý Hôm nay theo nhóm độ gấp](2026-11-17-xep-goi-y-theo-nhom-do-gap.md)
+
+- [2026-11-17 — Đối chiếu test case ưu tiên nhiệm vụ](2026-11-17-doi-chieu-test-uu-tien-nhiem-vu.md)
+
+- [2026-11-17 — Giới hạn nhiệm vụ ở 5 cấp](2026-11-17-gioi-han-nhiem-vu-nam-cap.md)
+
+- [2026-11-17 — Đưa đính kèm vào menu nhiệm vụ](2026-11-17-dua-dinh-kem-vao-menu-nhiem-vu.md)
+
+- [2026-11-17 — Sửa áp dụng lịch tự học cho sinh viên](2026-11-17-ap-dung-lich-tu-hoc.md)
+
+- [2026-11-17 — Ổn định thanh cuộn màn Nhiệm vụ](2026-11-17-on-dinh-thanh-cuon-nhiem-vu.md)
+
+- [2026-11-17 — Làm mảnh đường chia chi tiết nhiệm vụ](2026-11-17-lam-manh-duong-chia-chi-tiet.md)
+
+- [2026-11-17 — Chọn chế độ và sửa thời gian thực học](2026-11-17-chon-che-do-va-sua-thoi-gian-hoc.md)
+
+- [2026-11-18 — Nâng cấp Development và nghiệm thu sửa thời gian học](2026-11-18-nghiem-thu-sua-thoi-gian-hoc.md)
+
+- [2026-11-18 — Thu gọn log API trong terminal backend](2026-11-18-thu-gon-log-api.md)
+
+- [2026-11-18 — Phân biệt hủy request và lỗi database](2026-11-18-phan-biet-huy-request-va-loi-database.md)
+
+- [2026-11-18 — Ổn định và làm gọn luồng lập kế hoạch](2026-11-18-hoan-thien-lap-ke-hoach.md)
+
+- [2026-11-18 — Bố trí Lập kế hoạch và làm rõ xác nhận lịch](2026-11-18-bo-tri-lap-ke-hoach-va-xac-nhan-lich.md)
+
+- [2026-11-18 — Đối chiếu luồng lập kế hoạch cho sinh viên](2026-11-18-doi-chieu-luong-lap-ke-hoach-sinh-vien.md)

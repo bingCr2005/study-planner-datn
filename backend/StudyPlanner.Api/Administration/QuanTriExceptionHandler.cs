@@ -10,6 +10,11 @@ public sealed class QuanTriExceptionHandler : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken ct)
     {
+        if (Logging.RequestFailure.IsClientCancellation(context, exception))
+        {
+            context.Response.StatusCode = 499;
+            return true;
+        }
         if (exception is StudyPlanner.Application.HocTap.HocTapException hocTap)
         {
             var detail = new ProblemDetails { Status=hocTap.Status,Title=hocTap.Message,Detail=hocTap.Message,Instance=context.Request.Path };
@@ -31,8 +36,7 @@ public sealed class QuanTriExceptionHandler : IExceptionHandler
         if (failure == null && exception.GetBaseException() is PostgresException pg && EfQuanLyNguoiDungStore.IsConflict(pg))
             failure = EfQuanLyNguoiDungStore.Translate(pg);
 
-        var unavailable = exception is NpgsqlException and not PostgresException ||
-            exception.GetBaseException() is NpgsqlException and not PostgresException;
+        var unavailable = Logging.RequestFailure.IsDatabaseUnavailable(exception);
         var status = failure?.LoaiLoi switch
         {
             LoaiLoiNghiepVu.InvalidInput => 400,

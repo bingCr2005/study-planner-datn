@@ -20,6 +20,9 @@ public sealed class NhiemVuController(NhiemVuService service) : HocTapController
     { var r = await service.ThemAsync(Chu,PhienBanYeuCau(),request,ct); GanPhienBan(r.PhienBan); return CreatedAtAction(nameof(ChiTiet),new{id=r.DuLieu.Ma},r); }
     [HttpPut("{id:int}")]
     public Task<HocTapResponse<NhiemVuResponse>> Sua(int id,NhiemVuRequest request,CancellationToken ct) => DoiNhiemVu(id,"update",request,ct);
+    [HttpPatch("{id:int}/pin")]
+    public async Task<HocTapResponse<NhiemVuResponse>> Ghim(int id,GhimNhiemVuRequest request,CancellationToken ct)
+    { var r = await service.GhimAsync(Chu,id,PhienBanYeuCau(),request,ct); GanPhienBan(r.PhienBan); return r; }
     [HttpPost("{id:int}/children"),ProducesResponseType(201)]
     public async Task<ActionResult<HocTapResponse<IReadOnlyList<NhiemVuResponse>>>> ThemCon(int id,ThemNhiemVuConRequest request,CancellationToken ct)
     {

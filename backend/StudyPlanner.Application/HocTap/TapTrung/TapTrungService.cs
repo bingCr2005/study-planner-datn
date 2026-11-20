@@ -1,3 +1,4 @@
+using System.Text.Json;
 using StudyPlanner.Domain.Entities;
 using StudyPlanner.Domain.Enums;
 
@@ -5,6 +6,9 @@ namespace StudyPlanner.Application.HocTap;
 
 public sealed class TapTrungService(IHocTapStore store, HocTapDieuPhoi dieuPhoi, TimeProvider clock)
 {
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    private sealed record LichSuSuaThoiGian(List<KhoangThoiGian> KhoangDungBanDau, List<LanSuaThoiGianTapTrung> CacLanSua);
+
     public async Task<HocTapResponse<TapTrungState>> DocAsync(int chu, int trang, CancellationToken ct)
     {
         if (trang is < 1 or > 50000) throw Loi("Trang lịch sử không hợp lệ.");
@@ -30,10 +34,13 @@ public sealed class TapTrungService(IHocTapStore store, HocTapDieuPhoi dieuPhoi,
         var rows = await store.DanhSachAsync(history.OrderByDescending(p => p.BatDau).ThenByDescending(p => p.Ma)
             .Skip((trang - 1) * 20).Take(20), ct);
         // Thống kê hôm nay tính theo ngày hoàn tất phiên trong múi giờ của tài khoản.
-        var summary = await store.DauTienAsync(history.GroupBy(p => 1).Select(g => new TongQuanTapTrung(
-            g.Sum(p => p.KetThuc >= from && p.KetThuc < to && p.CheDo == "Pomodoro" ? (int)(p.SoMiliGiayDaHoc / (p.MucTieuGiay * 1000L)) : 0),
+        var summary = await store.DauTienAsync(history.Select(p => new { p.KetThuc, p.SoMiliGiayDaHoc,
+            SoPomodoro = p.CheDo != "Pomodoro" || p.SoMiliGiayDaHoc < p.MucTieuGiay * 1000L ? 0
+                : p.NhapThuCong ? (int)(p.SoMiliGiayDaHoc / (p.MucTieuGiay * 1000L)) : 1
+        }).GroupBy(p => 1).Select(g => new TongQuanTapTrung(
+            g.Sum(p => p.KetThuc >= from && p.KetThuc < to ? p.SoPomodoro : 0),
             g.Sum(p => p.KetThuc >= from && p.KetThuc < to ? p.SoMiliGiayDaHoc : 0),
-            g.Sum(p => p.CheDo == "Pomodoro" ? (int)(p.SoMiliGiayDaHoc / (p.MucTieuGiay * 1000L)) : 0),
+            g.Sum(p => p.SoPomodoro),
             g.Sum(p => p.SoMiliGiayDaHoc))), ct) ?? new(0, 0, 0, 0);
         var legacyId = current is null ? await store.DauTienAsync(store.TruyVan<PhienTuHoc>()
             .Where(p => p.MaNguoiDung == chu && p.TrangThai == TrangThaiPhienTuHoc.InProgress).Select(p => (int?)p.Ma), ct) : null;
@@ -154,10 +161,7 @@ public sealed class TapTrungService(IHocTapStore store, HocTapDieuPhoi dieuPhoi,
         if (r.MaPhienTuHoc.HasValue || r.KetThuc <= r.BatDau || r.KetThuc > now || r.KetThuc - r.BatDau > TimeSpan.FromDays(1) || r.GhiChu?.Length > 2000)
             throw Loi("Nhập khoảng đã học trong quá khứ, dài tối đa 24 giờ và ghi chú tối đa 2.000 ký tự.");
         await using var session = await dieuPhoi.MoAsync(chu, revision, true, ct);
-        if (await store.DemAsync(store.TruyVan<PhienTapTrung>().Where(p => p.MaNguoiDung == chu && p.TrangThai != "Discarded" &&
-            p.BatDau < r.KetThuc && (!p.KetThuc.HasValue || p.KetThuc > r.BatDau)), ct) > 0 ||
-            await store.DemAsync(store.TruyVan<KhoangThoiGianHoc>().Where(d => d.MaNguoiDung == chu && d.BatDauThucTe < r.KetThuc &&
-                (!d.KetThucThucTe.HasValue || d.KetThucThucTe > r.BatDau)), ct) > 0)
+        if (await CoKhoangTrungAsync(chu, r.BatDau, r.KetThuc, null, ct))
             throw XungDot("Khoảng nhập trùng với thời gian đã ghi hoặc phiên đang mở.");
         var task = await NhiemVuAsync(chu, r.MaNhiemVu, true, ct);
         var row = new PhienTapTrung { MaNguoiDung = chu, MaNhiemVu = task?.Ma, TieuDe = task?.TieuDe ?? "Tập trung tự do",
@@ -170,6 +174,99 @@ public sealed class TapTrungService(IHocTapStore store, HocTapDieuPhoi dieuPhoi,
         await session.CommitAsync(true, ct);
         return new(session.NguoiDung.PhienBanLapLich, TapTrungResponse.Tu(row));
     }
+
+    public async Task<HocTapResponse<ChiTietThoiGianTapTrung>> DocThoiGianAsync(int chu, int ma, CancellationToken ct)
+    {
+        await using var session = await dieuPhoi.MoAsync(chu, null, false, ct);
+        var row = await BanGhiDaLuuAsync(chu, ma, ct);
+        var segments = await DocDoanDaLuuAsync(chu, ma, ct);
+        await session.CommitAsync(false, ct);
+        return new(session.NguoiDung.PhienBanLapLich, ChiTietThoiGian(row, segments.Count, DocLichSuSua(row)?.CacLanSua ?? []));
+    }
+
+    public async Task<HocTapResponse<ChiTietThoiGianTapTrung>> SuaThoiGianAsync(int chu, int ma, long revision,
+        SuaThoiGianTapTrungRequest request, CancellationToken ct)
+    {
+        await using var session = await dieuPhoi.MoAsync(chu, revision, true, ct);
+        var row = await BanGhiDaLuuAsync(chu, ma, ct);
+        var now = clock.GetUtcNow();
+        var start = request.BatDau.ToUniversalTime();
+        var end = request.KetThuc.ToUniversalTime();
+        if (start >= end || end > now) throw Loi("Giờ bắt đầu phải trước giờ kết thúc và khoảng học không được ở tương lai.");
+        if (row.NhapThuCong && end - start > TimeSpan.FromDays(1))
+            throw Loi("Bản ghi nhập thủ công có khoảng bắt đầu–kết thúc tối đa 24 giờ.");
+
+        var segments = await DocDoanDaLuuAsync(chu, ma, ct);
+        var before = new MocThoiGianTapTrung(row.BatDau, row.KetThuc!.Value, row.SoMiliGiayDaHoc);
+        var audit = DocLichSuSua(row);
+        var canEnterDuration = CanNhapThoiLuong(row, segments.Count);
+        var windowMs = (end - start).Ticks / TimeSpan.TicksPerMillisecond;
+        if (canEnterDuration && (request.SoMiliGiayDaHoc is null or <= 0 || request.SoMiliGiayDaHoc > windowMs))
+            throw Loi("Nhập thời gian thực học lớn hơn 0 và không vượt khoảng bắt đầu–kết thúc.");
+        if (!canEnterDuration && request.SoMiliGiayDaHoc.HasValue)
+            throw Loi("Thời gian thực học được tính từ khoảng giờ đã chọn và các đoạn đã ghi.");
+
+        if (start == before.BatDau && end == before.KetThuc &&
+            (!canEnterDuration || request.SoMiliGiayDaHoc == before.SoMiliGiayDaHoc))
+        {
+            await session.CommitAsync(false, ct);
+            return new(session.NguoiDung.PhienBanLapLich, ChiTietThoiGian(row, segments.Count, audit?.CacLanSua ?? []));
+        }
+        if (await CoKhoangTrungAsync(chu, start, end, ma, ct))
+            throw XungDot("Khoảng chỉnh sửa trùng với thời gian đã ghi hoặc phiên đang mở.");
+
+        // Giữ mốc dừng ban đầu nếu bản ghi được thu hẹp rồi mở rộng qua nhiều lần sửa.
+        audit ??= new(segments.Count == 0 ? [] : QuyTacThoiGian.Tru([new(before.BatDau, before.KetThuc)],
+            segments.Select(s => new KhoangThoiGian(s.BatDauThucTe, s.KetThucThucTe!.Value))), []);
+        var corrected = QuyTacThoiGian.Tru([new(start, end)], audit.KhoangDungBanDau);
+        var milliseconds = request.SoMiliGiayDaHoc ?? corrected.Sum(s => (s.KetThuc - s.BatDau).Ticks) / TimeSpan.TicksPerMillisecond;
+        if (milliseconds <= 0) throw Loi("Khoảng đã chọn phải có thời gian thực học.");
+
+        if (row.MaNhiemVu is int taskId && !canEnterDuration)
+        {
+            foreach (var segment in segments) store.Xoa(segment);
+            foreach (var segment in corrected)
+                store.Them(new KhoangThoiGianHoc { MaNguoiDung = chu, MaNhiemVu = taskId, MaPhienTapTrung = ma,
+                    MaPhienTuHoc = row.MaPhienTuHoc, BatDauThucTe = segment.BatDau, KetThucThucTe = segment.KetThuc });
+        }
+        row.BatDau = start;
+        row.KetThuc = end;
+        row.SoMiliGiayDaHoc = milliseconds;
+        audit.CacLanSua.Add(new(now, before, new(start, end, milliseconds)));
+        row.LichSuSuaThoiGianJson = JsonSerializer.Serialize(audit, Json);
+        await session.CommitAsync(true, ct);
+        var count = row.MaNhiemVu.HasValue && !canEnterDuration ? corrected.Count : 0;
+        return new(session.NguoiDung.PhienBanLapLich, ChiTietThoiGian(row, count, audit.CacLanSua));
+    }
+
+    private async Task<PhienTapTrung> BanGhiDaLuuAsync(int chu, int ma, CancellationToken ct)
+    {
+        var row = await store.DauTienAsync(store.TruyVan<PhienTapTrung>().Where(p => p.MaNguoiDung == chu && p.Ma == ma), ct)
+            ?? throw KhongTimThay();
+        if (row.TrangThai != "Completed" || !row.KetThuc.HasValue) throw XungDot("Chỉ chỉnh thời gian của bản ghi đã lưu.");
+        return row;
+    }
+
+    private Task<List<KhoangThoiGianHoc>> DocDoanDaLuuAsync(int chu, int ma, CancellationToken ct) =>
+        store.DanhSachAsync(store.KhoangHocKeCaThungRac().Where(d => d.MaNguoiDung == chu &&
+            d.MaPhienTapTrung == ma && d.KetThucThucTe.HasValue), ct);
+
+    private async Task<bool> CoKhoangTrungAsync(int chu, DateTimeOffset start, DateTimeOffset end, int? boQua, CancellationToken ct) =>
+        await store.DemAsync(store.TruyVan<PhienTapTrung>().Where(p => p.MaNguoiDung == chu && p.Ma != boQua &&
+            p.TrangThai != "Discarded" && p.BatDau < end && (!p.KetThuc.HasValue || p.KetThuc > start)), ct) > 0 ||
+        await store.DemAsync(store.KhoangHocKeCaThungRac().Where(d => d.MaNguoiDung == chu &&
+            (!boQua.HasValue || d.MaPhienTapTrung != boQua) && d.BatDauThucTe < end &&
+            (!d.KetThucThucTe.HasValue || d.KetThucThucTe > start)), ct) > 0;
+
+    private static LichSuSuaThoiGian? DocLichSuSua(PhienTapTrung row) => row.LichSuSuaThoiGianJson is { } json
+        ? JsonSerializer.Deserialize<LichSuSuaThoiGian>(json, Json) : null;
+
+    // Bản ghi không còn các đoạn chi tiết chỉ còn tổng mili giây, nên không thể suy ra chính xác vị trí các lần dừng.
+    private static bool CanNhapThoiLuong(PhienTapTrung row, int soDoan) => soDoan == 0 &&
+        (row.KetThuc!.Value - row.BatDau).Ticks / TimeSpan.TicksPerMillisecond - row.SoMiliGiayDaHoc > 1;
+
+    private static ChiTietThoiGianTapTrung ChiTietThoiGian(PhienTapTrung row, int soDoan, List<LanSuaThoiGianTapTrung> history) =>
+        new(TapTrungResponse.Tu(row), CanNhapThoiLuong(row, soDoan), history);
 
     private Task<PhienTapTrung?> HienTaiAsync(int chu, CancellationToken ct) => store.DauTienAsync(store.TruyVan<PhienTapTrung>()
         .Where(p => p.MaNguoiDung == chu && (p.TrangThai == "Running" || p.TrangThai == "Paused")), ct);

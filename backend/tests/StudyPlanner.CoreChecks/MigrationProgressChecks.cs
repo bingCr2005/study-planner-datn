@@ -59,6 +59,19 @@ public static class MigrationProgressChecks
             TrangThai = progress == 100 ? TrangThaiNhiemVu.Completed : progress == 0 ? TrangThaiNhiemVu.NotStarted : TrangThaiNhiemVu.InProgress,
             NgayHoanThanh = progress == 100 ? oldDate : null, NgayTao = oldDate, NgayCapNhat = oldDate,
         };
+        async Task SeedTask(ApplicationDbContext db, NhiemVu task)
+        {
+            // EF hiện đọc/ghi cả cột ghim. Tạo và đọc dữ liệu thử theo đúng cấu trúc trước migration.
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO nhiem_vu (ma_nguoi_dung, ma_nhiem_vu_cha, tieu_de, checklist, loai, muc_do_uu_tien,
+                    tien_do, trang_thai, ngay_hoan_thanh, ngay_xoa, ma_nhom_xoa, ngay_tao, ngay_cap_nhat)
+                VALUES ({task.MaNguoiDung}, {task.NhiemVuCha?.Ma}, {task.TieuDe},
+                    CAST({task.ChecklistJson} AS jsonb), {task.Loai.ToString()}, {task.MucDoUuTien.ToString()},
+                    {task.TienDo}, {task.TrangThai.ToString()}, {task.NgayHoanThanh}, {task.NgayXoa}, {task.MaNhomXoa}, {task.NgayTao}, {task.NgayCapNhat})
+                """);
+            task.Ma = await db.DanhSachNhiemVu.IgnoreQueryFilters()
+                .Where(n => n.MaNguoiDung == task.MaNguoiDung && n.TieuDe == task.TieuDe).Select(n => n.Ma).SingleAsync();
+        }
         const string fullChecklist = """[{"tieuDe":"Đọc ví dụ","daXong":true},{"tieuDe":"Làm bài","daXong":true}]""";
         const string halfChecklist = """[{"tieuDe":"Một","daXong":true},{"tieuDe":"Hai","daXong":false}]""";
 
@@ -78,14 +91,14 @@ public static class MigrationProgressChecks
             var manualLeaf = Task(owner.Ma, "Lá nhập tay", 25);
             var checklistLeaf = Task(owner.Ma, "Lá checklist", 0, checklist: halfChecklist);
             var untouched = Task(other.Ma, "Tài khoản khác", 40);
-            db.AddRange(a, b, c, d, floor, almost, done, completed, completedChild, manualLeaf, checklistLeaf, untouched);
-            await db.SaveChangesAsync();
+            foreach (var task in new[] { a, b, c, d, floor, almost, done, completed, completedChild, manualLeaf, checklistLeaf, untouched })
+                await SeedTask(db, task);
             var trash = Task(owner.Ma, "Nhóm trong thùng rác", 100, checklist: fullChecklist);
-            trash.NgayXoa = oldDate; db.Add(trash); await db.SaveChangesAsync();
-            trash.MaNhomXoa = trash.Ma;
+            trash.NgayXoa = oldDate; await SeedTask(db, trash);
+            await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE nhiem_vu SET ma_nhom_xoa = ma WHERE ma = {trash.Ma}");
             var trashChild = Task(owner.Ma, "Con chưa xong trong thùng rác", 0, trash);
             trashChild.NgayXoa = oldDate; trashChild.MaNhomXoa = trash.Ma;
-            db.Add(trashChild);
+            await SeedTask(db, trashChild);
             // Kiểm tra migration lịch sử bằng SQL để không phụ thuộc entity đã được gỡ.
             await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO lich_nhac(ma_nguoi_dung,ma_nhiem_vu,thoi_diem_nhac,noi_dung,moc_nhac,trang_thai,so_lan_thu,ngay_tao,ngay_cap_nhat) VALUES ({owner.Ma},{completed.Ma},{DateTimeOffset.UtcNow.AddDays(1)},'Pending fixture','Deadline','Pending',0,now(),now())");
             var pending = new ThongBao { MaNguoiDung = owner.Ma, MaNhiemVu = completed.Ma, ThoiDiemNhac = DateTimeOffset.UtcNow.AddDays(1), NoiDung = "Pending fixture" };
@@ -94,7 +107,11 @@ public static class MigrationProgressChecks
             db.AddRange(pending, delivered); await db.SaveChangesAsync(); db.ChangeTracker.Clear();
 
             await db.GetService<IMigrator>().MigrateAsync(After);
-            var all = await db.DanhSachNhiemVu.IgnoreQueryFilters().ToListAsync();
+            var all = await db.DanhSachNhiemVu.IgnoreQueryFilters().Select(n => new NhiemVu {
+                Ma = n.Ma, MaNguoiDung = n.MaNguoiDung, MaNhiemVuCha = n.MaNhiemVuCha, TieuDe = n.TieuDe,
+                ChecklistJson = n.ChecklistJson, TienDo = n.TienDo, TrangThai = n.TrangThai,
+                NgayHoanThanh = n.NgayHoanThanh, NgayXoa = n.NgayXoa, MaNhomXoa = n.MaNhomXoa,
+            }).ToListAsync();
             NhiemVu Read(int id) => all.Single(n => n.Ma == id);
             var preserved = all.Single(n => n.MaNhiemVuCha == b.Ma && n.TieuDe == "Công việc chung");
             Check(JsonDocument.Parse(preserved.ChecklistJson!).RootElement.GetArrayLength() == 2 && preserved.TienDo == 100, "parent checklist preserved verbatim in a real completed child");
@@ -146,6 +163,7 @@ public static class MigrationProgressChecks
             Check(await db.Database.SqlQueryRaw<int>("SELECT count(*)::integer AS \"Value\" FROM doan_thuc_hoc").SingleAsync() == 2, "downgrade restores original table without deleting intervals");
             await db.Database.MigrateAsync();
             db.ChangeTracker.Clear();
+            Check(!await db.DanhSachNhiemVu.IgnoreQueryFilters().AnyAsync(n => n.DaGhim), "existing tasks are unpinned after upgrading");
             Check((await db.DanhSachKhoangThoiGianHoc.OrderBy(x => x.Ma).Select(x => x.Ma).ToArrayAsync()).SequenceEqual(intervalIds), "upgrade again retains original interval identities");
             var later = new KhoangThoiGianHoc { MaNguoiDung = owner.Ma, MaNhiemVu = manualLeaf.Ma, BatDauThucTe = oldDate.AddDays(1), KetThucThucTe = oldDate.AddDays(1).AddMinutes(10) };
             db.Add(later); await db.SaveChangesAsync();
@@ -160,13 +178,16 @@ public static class MigrationProgressChecks
         await InDatabase(async db =>
         {
             var owner = User("migration-bounds@example.test", 0); await SeedUser(db, owner);
-            var root = Task(owner.Ma, "1000 nút trước khi bảo toàn", 100, checklist: fullChecklist); db.Add(root); await db.SaveChangesAsync();
-            db.AddRange(Enumerable.Range(0, 999).Select(i => Task(owner.Ma, "Con " + i, parent: root)));
-            await db.SaveChangesAsync(); db.ChangeTracker.Clear();
+            var root = Task(owner.Ma, "1000 nút trước khi bảo toàn", 100, checklist: fullChecklist); await SeedTask(db, root);
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO nhiem_vu (ma_nguoi_dung, ma_nhiem_vu_cha, tieu_de, loai, muc_do_uu_tien, tien_do, trang_thai, ngay_tao, ngay_cap_nhat)
+                SELECT {owner.Ma}, {root.Ma}, 'Con ' || i, 'Personal', 'Medium', 0, 'NotStarted', {oldDate}, {oldDate}
+                FROM generate_series(0, 998) AS i
+                """);
             try { await db.GetService<IMigrator>().MigrateAsync(After); throw new Exception("Expected tree size rejection"); }
             catch (PostgresException e) when (e.MessageText.Contains("TASK_PROGRESS_MIGRATION_TREE_LIMIT")) { Check(true, "prospective preserved child respects 1000-node limit"); }
             Check(!(await db.Database.GetAppliedMigrationsAsync()).Contains(After), "failed preflight does not mark migration applied");
-            Check(await db.DanhSachNhiemVu.CountAsync() == 1000 && (await db.DanhSachNhiemVu.SingleAsync(n => n.Ma == root.Ma)).ChecklistJson != null &&
+            Check(await db.DanhSachNhiemVu.CountAsync() == 1000 && await db.DanhSachNhiemVu.AnyAsync(n => n.Ma == root.Ma && n.ChecklistJson != null) &&
                 await db.DanhSachLichSuNhiemVu.CountAsync() == 0 && await db.DanhSachNguoiDung.Select(u => u.PhienBanLapLich).SingleAsync() == 0,
                 "failed preflight leaves checklist, progress, history and revision untouched");
         });

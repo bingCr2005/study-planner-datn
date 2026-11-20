@@ -29,6 +29,7 @@ public class NhiemVuConfiguration : IEntityTypeConfiguration<NhiemVu>
         builder.Property(x => x.Loai).HasColumnName("loai");
         builder.Property(x => x.HanHoanThanh).HasColumnName("han_hoan_thanh");
         builder.Property(x => x.MucDoUuTien).HasColumnName("muc_do_uu_tien");
+        builder.Property(x => x.DaGhim).HasColumnName("da_ghim").HasDefaultValue(false);
         builder.Property(x => x.TrangThai).HasColumnName("trang_thai");
         builder.Property(x => x.ThoiLuongDuKienPhut).HasColumnName("thoi_luong_du_kien_phut");
         builder.Property(x => x.TienDo).HasColumnName("tien_do");

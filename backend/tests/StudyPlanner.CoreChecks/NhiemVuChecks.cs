@@ -45,6 +45,9 @@ public static class NhiemVuChecks
         Check(forest[0].TienDo==20&&forest[2].TienDo==80,"independent roots are recalculated in the same forest");
         Check(forest[1].TienDo==20&&forest[3].TienDo==80,"manual progress of leaves is preserved");
         var deep=Enumerable.Range(1,10).Select(id=>N(id,id==1?null:id-1)).ToList();QuyTacCay.KiemTra(deep);Check(true,"10 levels allowed");
+        QuyTacCay.KiemTra(deep, new HashSet<int> { 5 });
+        Check(true, "new level 5 is allowed alongside an existing deeper branch");
+        Reject("TASK_DEPTH_LIMIT", () => QuyTacCay.KiemTra(deep, new HashSet<int> { 6 }));
         deep.Add(N(11,10));Reject("TASK_TREE_LIMIT",()=>QuyTacCay.KiemTra(deep));
         var wide=Enumerable.Range(1,1001).Select(id=>N(id,id==1?null:1)).ToList();Reject("TASK_TREE_LIMIT",()=>QuyTacCay.KiemTra(wide));
         var leaf=N(99,null,25);leaf.ThoiLuongDuKienPhut=200;Check(leaf.ThoiLuongConLaiPhut==150,"remaining estimate");

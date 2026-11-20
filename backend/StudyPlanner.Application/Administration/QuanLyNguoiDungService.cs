@@ -43,6 +43,10 @@ public sealed class QuanLyNguoiDungService(IQuanLyNguoiDungStore store, INguoiDu
         QuyTacTaiNguyen.Validate(request);
         await using var transaction = await store.BeginTransactionAsync(ct);
         var user = await resources.GetAsync<NguoiDung>(id, ct);
+        // Đối chiếu trong giao dịch Serializable. Kiểm tra này đồng thời bảo vệ
+        // trạng thái tài khoản: form cũ không được mở lại một tài khoản vừa khóa.
+        if (request.NgayCapNhatMongDoi.HasValue && user.NgayCapNhat != request.NgayCapNhatMongDoi.Value)
+            throw QuyTacTaiNguyen.Conflict("ACCOUNT_CHANGED", "Tài khoản đã được cập nhật. Hãy đóng biểu mẫu, tải lại và sửa từ dữ liệu mới.");
         if (user.DangHoatDong && !request.DangHoatDong) await ProtectLastAdminAsync(user, ct);
         await ApplyAsync(user, request, ct);
         await store.SaveAsync(ct); await transaction.CommitAsync(ct);

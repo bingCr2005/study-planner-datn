@@ -8,5 +8,9 @@ public sealed record NhiemVuResponse(int Ma, int? MaHocKy, int? MaMonHoc, int? M
     bool ThieuUocLuong, bool CoNhiemVuCon, bool QuaHan, int? NhacTruocGio,
     DateTimeOffset? NgayHoanThanh, DateTimeOffset NgayTao, DateTimeOffset NgayCapNhat)
 {
+    public bool DaGhim { get; init; }
+    public string? TieuDeNhiemVuCha { get; init; }
+    public IReadOnlyList<NhiemVuChaTomTat> DuongDanNhiemVuCha { get; init; } = [];
     public IReadOnlyList<MucChecklist> Checklist { get; init; } = [];
 }
+public sealed record NhiemVuChaTomTat(int Ma, string TieuDe, DateTimeOffset? HanHoanThanh);

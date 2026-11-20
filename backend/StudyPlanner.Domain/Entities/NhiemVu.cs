@@ -21,6 +21,7 @@ public class NhiemVu
     public DateTimeOffset? BatDauSuKien { get; set; }
     public DateTimeOffset? KetThucSuKien { get; set; }
     public MucDoUuTienNhiemVu MucDoUuTien { get; set; } = MucDoUuTienNhiemVu.Medium;
+    public bool DaGhim { get; set; }
     public TrangThaiNhiemVu TrangThai { get; set; } = TrangThaiNhiemVu.NotStarted;
     public int? ThoiLuongDuKienPhut { get; set; }
     public int TienDo { get; set; }

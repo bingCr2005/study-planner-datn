@@ -743,6 +743,12 @@ namespace StudyPlanner.Infrastructure.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("checklist");
 
+                    b.Property<bool>("DaGhim")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("da_ghim");
+
                     b.Property<DateTimeOffset?>("HanHoanThanh")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("han_hoan_thanh");
@@ -916,6 +922,10 @@ namespace StudyPlanner.Infrastructure.Migrations
                     b.Property<DateTimeOffset?>("KetThuc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("ket_thuc");
+
+                    b.Property<string>("LichSuSuaThoiGianJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("lich_su_sua_thoi_gian_json");
 
                     b.Property<int>("MaNguoiDung")
                         .HasColumnType("integer")

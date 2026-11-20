@@ -22,6 +22,7 @@ public class PhienTapTrungConfiguration : IEntityTypeConfiguration<PhienTapTrung
         b.Property(x => x.CheDo).HasMaxLength(16);
         b.Property(x => x.TrangThai).HasMaxLength(16);
         b.Property(x => x.GhiChu).HasMaxLength(2000);
+        b.Property(x => x.LichSuSuaThoiGianJson).HasColumnType("jsonb");
         b.HasIndex(x => x.MaNguoiDung).IsUnique().HasFilter("trang_thai IN ('Running', 'Paused')");
         b.HasIndex(x => new { x.MaNguoiDung, x.BatDau });
         b.HasIndex(x => new { x.MaNguoiDung, x.MaPhienTuHoc }).IsUnique().HasFilter("ma_phien_tu_hoc IS NOT NULL AND trang_thai <> 'Discarded'");

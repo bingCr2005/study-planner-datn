@@ -1,9 +1,11 @@
+using StudyPlanner.Application.UuTien;
+
 namespace StudyPlanner.Application.HocTap;
 
 /// <summary>Xếp tham lam cho kết quả xác định; không đọc/ghi cơ sở dữ liệu hoặc tự sửa hạn hoàn thành.</summary>
 public static class QuyTacLapLich
 {
-    public const int PhienBan = 2;
+    public const int PhienBan = 4;
     public const int PhienToiDaPhut = 50;
     public const int PhienToiThieuPhut = 15;
     public const int NghiPhut = 5;
@@ -11,7 +13,25 @@ public static class QuyTacLapLich
 
     public static KetQuaXepLich Xep(IEnumerable<CongViecLapLich> congViec,
         IEnumerable<KhoangThoiGian> gioRanh, DateTimeOffset now, CauHinhHocResponse? cauHinh = null,
-        TimeZoneInfo? muiGio = null, IReadOnlyDictionary<DateOnly, double>? phutDaDat = null)
+        TimeZoneInfo? muiGio = null, IReadOnlyDictionary<DateOnly, double>? phutDaDat = null, CauHinhUuTien? uuTien = null)
+    {
+        var jobs = congViec.ToArray(); var free = gioRanh.ToArray();
+        var config = uuTien ?? QuyTacCauHinhUuTien.MacDinh();
+        var baseline = XepTheoThuTu(QuyTacUuTienNhiemVu.SapXep(jobs, now, config), free, now, cauHinh, muiGio, phutDaDat, config);
+        if (!jobs.Any(j => j.HanHieuLuc.HasValue && baseline.ChuaXep[j.MaNhiemVu] > 0)) return baseline;
+        // Thử thêm một thứ tự trong từng nhóm, dùng lại bộ phân bổ và mọi ràng buộc.
+        var alternative = XepTheoThuTu(QuyTacUuTienNhiemVu.SapXep(jobs, now, config, true), free, now, cauHinh, muiGio, phutDaDat, config);
+        // Chỉ nhận nếu không việc nào mất phút và ít nhất một việc được xếp đủ thêm.
+        if (jobs.All(j => alternative.ChuaXep[j.MaNhiemVu] <= baseline.ChuaXep[j.MaNhiemVu]) &&
+            jobs.Any(j => baseline.ChuaXep[j.MaNhiemVu] > 0 && alternative.ChuaXep[j.MaNhiemVu] == 0))
+            return alternative with { Phien = alternative.Phien.Select(p => p with
+                { LyDo = p.LyDo + " · Điều chỉnh thứ tự trong nhóm để xếp đủ trước hạn" }).ToList() };
+        return baseline;
+    }
+
+    private static KetQuaXepLich XepTheoThuTu(IEnumerable<CongViecLapLich> congViec,
+        IEnumerable<KhoangThoiGian> gioRanh, DateTimeOffset now, CauHinhHocResponse? cauHinh,
+        TimeZoneInfo? muiGio, IReadOnlyDictionary<DateOnly, double>? phutDaDat, CauHinhUuTien uuTien)
     {
         var settings = cauHinh ?? CauHinhHocResponse.MacDinh; settings.KiemTra();
         var zone = muiGio ?? TimeZoneInfo.Utc;
@@ -24,10 +44,10 @@ public static class QuyTacLapLich
             .SelectMany(g => ChiaNgay(g, zone)).ToList();
         var sessions = new List<DeXuatPhienTuHoc>();
         var missing = new Dictionary<int, int>();
-        foreach (var job in congViec.OrderBy(x => x.HanHieuLuc ?? DateTimeOffset.MaxValue)
-                     .ThenByDescending(x => x.MucDoUuTien).ThenBy(x => x.SoPhutCanXep).ThenBy(x => x.MaNhiemVu))
+        foreach (var job in congViec)
         {
             var remaining = job.SoPhutCanXep;
+            var lastEnd = earliest;
             while (remaining > 0)
             {
                 KhoangThoiGian? selected = null;
@@ -42,20 +62,19 @@ public static class QuyTacLapLich
                     var capacity = (int)Math.Max(0, Math.Floor((end - start).TotalMinutes));
                     var dayCapacity = (int)Math.Max(0, Math.Floor(settings.GioiHanHocMoiNgayPhut - dayMinutes.GetValueOrDefault(day)));
                     var minutes = Math.Min(Math.Min(settings.PhienHocPhut, remaining), Math.Min(capacity, dayCapacity));
-                    // Chỉ cho phép phiên ngắn hơn tối thiểu khi nó xếp hết phần cuối còn lại của nhiệm vụ.
-                    if (minutes <= 0 || minutes < PhienToiThieuPhut && minutes != remaining) continue;
+                    // Phần cuối phải nằm sau các phiên của cùng nhiệm vụ theo thứ tự thời gian.
+                    if (minutes <= 0 || minutes < PhienToiThieuPhut && (minutes != remaining || start < lastEnd)) continue;
                     selected = new(start, start.AddMinutes(minutes)); duration = minutes; break;
                 }
                 if (selected is null) break;
                 if (sessions.Count == GioiHanPhien)
                     throw new HocTapException(400, "PLANNING_LIMIT", "Gợi ý vượt 2.000 phiên; hãy thu hẹp phạm vi.");
-                var reason = job.HanHieuLuc.HasValue
-                    ? "Ưu tiên hạn gần; tiếp theo mức ưu tiên và phần thời lượng cần xếp."
-                    : "Việc không hạn được xếp sau các việc có hạn, trong giờ rảnh còn lại.";
+                var reason = QuyTacUuTienNhiemVu.LyDo(job, now, uuTien);
                 sessions.Add(new(job.MaNhiemVu, selected.BatDau, selected.KetThuc, job.TieuDe, reason));
                 var selectedDay = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(selected.BatDau, zone).DateTime);
                 dayMinutes[selectedDay] = dayMinutes.GetValueOrDefault(selectedDay) + duration;
                 remaining -= duration;
+                if (selected.KetThuc > lastEnd) lastEnd = selected.KetThuc;
                 // Dành khoảng nghỉ ở cả hai phía để cả việc sau có thể chèn vào khe trước phiên này.
                 gaps = QuyTacThoiGian.Tru(gaps,
                     [new(selected.BatDau.AddMinutes(-settings.NghiGiuaPhienPhut), selected.KetThuc.AddMinutes(settings.NghiGiuaPhienPhut))])

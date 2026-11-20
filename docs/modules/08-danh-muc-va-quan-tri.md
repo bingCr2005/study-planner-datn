@@ -1,5 +1,16 @@
 # Module 08 — Danh mục và quản trị
 
+## Cập nhật hiện hành 19/11/2026
+
+- Đã tích hợp giao diện thêm/sửa tài khoản sinh viên và theo dõi học tập vào checkout gốc, nhánh `feat/tich-hop-quan-tri-sinh-vien`. Hai nhánh chức năng riêng vẫn được giữ trong worktree. Xem [bản ghi tích hợp](../history/2026-11-19-tich-hop-admin-vao-ban-dang-chay.md).
+- Admin có danh sách/chi tiết, tạo tài khoản Student, sửa hồ sơ và khóa/mở khóa. API xóa tài khoản đã tồn tại trước thay đổi này nhưng không bổ sung nút xóa vào giao diện. Sửa hồ sơ gửi mốc cập nhật để backend chặn ghi đè dữ liệu cũ bằng 409.
+- [Theo dõi học tập](10-admin-theo-doi-hoc-tap.md) chỉ đọc nhiệm vụ học tập, kế hoạch tự học và tổng hợp thời gian; không mở quyền sửa/xóa nhiệm vụ hoặc đọc dữ liệu Personal, mô tả, checklist, ghi chú, tệp và giờ rảnh.
+- Danh mục mẫu môn/học kỳ lưu JSON; hồ sơ dùng tên trường/lớp/ngành tự khai. Không triển khai lại danh mục tổ chức cũ. Tổng quan tài khoản và quản lý quy tắc ưu tiên là chức năng có sẵn.
+
+## Nội dung lịch sử
+
+Các mô tả phân cấp trường/khoa/khóa/lớp và trạng thái chưa triển khai dưới đây thuộc đặc tả cũ, không phản ánh đầy đủ code hiện hành.
+
 **Hiện hành 15/11/2026:** đã bỏ bốn bảng tổ chức trường/khoa/khóa/lớp và khóa `nguoi_dung.ma_lop`. Hồ sơ dùng tên tự khai; quản trị tài khoản đã có. Danh mục mẫu môn/học kỳ dùng JSON. Nội dung về phân cấp tổ chức bên dưới là đặc tả lịch sử đã rút khỏi phạm vi hiện tại. Xem [bảng đang sử dụng](../database-tables.md).
 
 Trang quản lý học kỳ/môn học mẫu của admin được triển khai riêng trong [Dữ liệu nền tảng](09-du-lieu-nen-tang.md). Các danh mục tổ chức trường/khoa/khóa/lớp mô tả dưới đây vẫn là phạm vi dự thảo; không dùng chúng để thay thế mẫu hoặc dữ liệu học tập riêng của sinh viên.

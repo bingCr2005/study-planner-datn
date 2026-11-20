@@ -102,6 +102,23 @@ public static class AttachmentHttpChecks
             using (await Send(client, HttpMethod.Delete, path + $"/{file}", 409, expected: 0)) { }
             using (await Send(client, HttpMethod.Delete, path + $"/{file}", 204, expected: version)) { }
             Check(!Directory.EnumerateFiles(folder).Any(), "Xóa tệp dọn cả nội dung");
+            var historyPath = $"/api/v1/task-history?maNhiemVu={task.Ma}";
+            using (var r = await Send(client, HttpMethod.Get, historyPath))
+            using (var json = JsonDocument.Parse(await r.Content.ReadAsStringAsync()))
+            {
+                var rows = json.RootElement.GetProperty("duLieu").GetProperty("danhSach");
+                Check(rows.GetArrayLength() == 2, "Chỉ thêm/xóa thành công tạo lịch sử, tải xuống và thao tác thất bại không tạo lịch sử");
+                using var removed = JsonDocument.Parse(rows[0].GetProperty("duLieuSau").GetString()!);
+                using var added = JsonDocument.Parse(rows[1].GetProperty("duLieuSau").GetString()!);
+                Check(removed.RootElement.GetProperty("loaiHoatDong").GetString() == "AttachmentRemoved" &&
+                    added.RootElement.GetProperty("loaiHoatDong").GetString() == "AttachmentAdded" &&
+                    new[] { added.RootElement, removed.RootElement }.All(x => x.GetProperty("tenTep").GetString() == "Báo cáo.pdf" && x.EnumerateObject().Count() == 2),
+                    "Lịch sử giữ đúng tên hiển thị và hành động, không lưu khóa kho hoặc nội dung");
+            }
+            using (var r = await Send(stranger, HttpMethod.Get, historyPath))
+            using (var json = JsonDocument.Parse(await r.Content.ReadAsStringAsync()))
+                Check(json.RootElement.GetProperty("duLieu").GetProperty("danhSach").GetArrayLength() == 0, "Tài khoản khác không thấy lịch sử tệp");
+            using (await Send(client, HttpMethod.Get, path)) { } // Lấy lại version của chủ sau khi dùng token của tài khoản khác.
             for (int i = 0; i < 20; i++) using (await Send(client, HttpMethod.Post, path, 201, Form(bytes), version)) { }
             using (await Send(client, HttpMethod.Post, path, 400, Form(bytes), version)) { }
             // Mô phỏng một tệp cũ chưa COMMIT và các tệp của nhiệm vụ đã xóa vĩnh viễn.

@@ -1,3 +1,4 @@
+using StudyPlanner.Application.UuTien;
 using StudyPlanner.Application.HocTap;
 using StudyPlanner.Domain.Enums;
 using StudyPlanner.Infrastructure.HocTap;
@@ -19,33 +20,38 @@ void Invalid(Action action, string message)
 var now = new DateTimeOffset(2026, 11, 4, 18, 0, 0, TimeSpan.Zero);
 var free = new KhoangThoiGian(now.AddHours(1), now.AddHours(3));
 var job = new CongViecLapLich(1, "ERD", now.AddDays(1), MucDoUuTienNhiemVu.High, 100);
-var result = QuyTacLapLich.Xep([job], [free], now);
+// Legacy fixtures explicitly test 50/10 rather than assuming obsolete defaults.
+var legacy = new CauHinhHocResponse(50, 10, 180);
+var deadlineFirst = new CauHinhUuTien { PhienBanSchema = 1, TieuChi = ["Deadline", "Importance"] };
+KetQuaXepLich Legacy(IEnumerable<CongViecLapLich> jobs, IEnumerable<KhoangThoiGian> ranges, DateTimeOffset time)
+    => QuyTacLapLich.Xep(jobs, ranges, time, legacy, uuTien: deadlineFirst);
+var result = Legacy([job], [free], now);
 Check(result.Phien.Count == 2, "100 minutes becomes two sessions");
 Check(result.Phien.All(p => (p.KetThucDuKien - p.BatDauDuKien).TotalMinutes == 50), "Each session is at most 50 minutes");
 Check(result.Phien[1].BatDauDuKien - result.Phien[0].KetThucDuKien == TimeSpan.FromMinutes(10), "Ten-minute break is kept");
 Check(result.ChuaXep[1] == 0, "Full allocation has no missing minutes");
 Check(result.Phien[0].BatDauDuKien == free.BatDau, "Earliest feasible slot is selected");
 
-var partial = QuyTacLapLich.Xep([job], [new(free.BatDau, free.BatDau.AddHours(1))], now);
+var partial = Legacy([job], [new(free.BatDau, free.BatDau.AddHours(1))], now);
 Check(partial.Phien.Count == 1 && partial.ChuaXep[1] == 50, "Insufficient availability returns partial allocation and exact shortage");
 Check(partial.Phien.Sum(p => (p.KetThucDuKien - p.BatDauDuKien).TotalMinutes) == 50, "No allocation outside availability");
 
-var small = QuyTacLapLich.Xep([job with { SoPhutCanXep = 10 }], [new(free.BatDau, free.BatDau.AddMinutes(10))], now);
+var small = Legacy([job with { SoPhutCanXep = 10 }], [new(free.BatDau, free.BatDau.AddMinutes(10))], now);
 Check(small.Phien.Count == 1 && small.ChuaXep[1] == 0, "Final ten-minute remainder is allowed");
-var tooSmall = QuyTacLapLich.Xep([job], [new(free.BatDau, free.BatDau.AddMinutes(10))], now);
+var tooSmall = Legacy([job], [new(free.BatDau, free.BatDau.AddMinutes(10))], now);
 Check(tooSmall.Phien.Count == 0 && tooSmall.ChuaXep[1] == 100, "Ten-minute slot does not start a long task");
 
-var deadline = QuyTacLapLich.Xep([job with { HanHieuLuc = free.BatDau.AddMinutes(30) }], [free], now);
+var deadline = Legacy([job with { HanHieuLuc = free.BatDau.AddMinutes(30) }], [free], now);
 Check(deadline.Phien.Count == 1 && deadline.Phien[0].KetThucDuKien == free.BatDau.AddMinutes(30), "Session is clipped at effective deadline");
 Check(deadline.ChuaXep[1] == 70, "Deadline shortage is explicit");
-var past = QuyTacLapLich.Xep([job with { HanHieuLuc = now.AddMinutes(-1) }], [free], now);
+var past = Legacy([job with { HanHieuLuc = now.AddMinutes(-1) }], [free], now);
 Check(past.Phien.Count == 0, "No placement after an elapsed deadline");
 
-var merged = QuyTacLapLich.Xep([job], [free, free, new(free.BatDau.AddMinutes(20), free.KetThuc)], now);
+var merged = Legacy([job], [free, free, new(free.BatDau.AddMinutes(20), free.KetThuc)], now);
 Check(merged.Phien.SequenceEqual(result.Phien), "Overlapping availability does not multiply capacity");
 var busy = new KhoangThoiGian(free.BatDau.AddMinutes(30), free.BatDau.AddMinutes(90));
 var gaps = QuyTacThoiGian.Tru([free], [busy]);
-var around = QuyTacLapLich.Xep([job], gaps, now);
+var around = Legacy([job], gaps, now);
 Check(around.Phien.All(p => !QuyTacThoiGian.Giao(new(p.BatDauDuKien, p.KetThucDuKien), busy)), "Busy interval is never crossed");
 Check(around.ChuaXep[1] == 40, "Fragmented thirty-minute windows allocate only sixty minutes");
 
@@ -55,13 +61,13 @@ var orderedJobs = new[] {
     new CongViecLapLich(2, "High", now.AddDays(1), MucDoUuTienNhiemVu.High, 25),
     new CongViecLapLich(1, "Soon", now.AddHours(5), MucDoUuTienNhiemVu.Low, 25)
 };
-var ordered = QuyTacLapLich.Xep(orderedJobs, [new(now.AddHours(1), now.AddHours(6))], now);
-Check(ordered.Phien.Select(p => p.MaNhiemVu).SequenceEqual([1, 2, 3, 4]), "Ordering is deadline, priority, remaining work, ID");
+var ordered = Legacy(orderedJobs, [new(now.AddHours(1), now.AddHours(6))], now);
+Check(ordered.Phien.Select(p => p.MaNhiemVu).SequenceEqual([1, 2, 3, 4]), "Explicit deadline-first rule respects urgency groups then deadline, importance, ID");
 Check(ordered.Phien.Zip(ordered.Phien.Skip(1)).All(p => p.Second.BatDauDuKien >= p.First.KetThucDuKien.AddMinutes(10)), "Breaks remain valid across different tasks");
-var stable = QuyTacLapLich.Xep(orderedJobs.Reverse(), [new(now.AddHours(1), now.AddHours(6))], now);
+var stable = Legacy(orderedJobs.Reverse(), [new(now.AddHours(1), now.AddHours(6))], now);
 Check(ordered.Phien.SequenceEqual(stable.Phien), "Input enumeration order does not change schedule");
 
-var tinyThenLong = QuyTacLapLich.Xep([
+var tinyThenLong = Legacy([
     new(1, "Long", now.AddDays(1), MucDoUuTienNhiemVu.High, 100),
     new(2, "Tiny", now.AddDays(2), MucDoUuTienNhiemVu.Low, 10)],
     [new(now.AddHours(1), now.AddHours(1).AddMinutes(10))], now);
@@ -101,10 +107,14 @@ for (var trial = 0; trial < 60; trial++)
     var jobs = Enumerable.Range(1, 12).Select(i => new CongViecLapLich(i, "Task " + i,
         i % 4 == 0 ? null : now.AddHours(3 + i % 5), (MucDoUuTienNhiemVu)(i % 3), random.Next(1, 200))).ToArray();
     var ranges = new[] {new KhoangThoiGian(now.AddHours(1), now.AddHours(2)), new(now.AddHours(3), now.AddHours(8))};
-    var generated = QuyTacLapLich.Xep(jobs, ranges, now);
+    var generated = Legacy(jobs, ranges, now);
     Check(generated.Phien.All(p => ranges.Any(r => r.BatDau <= p.BatDauDuKien && r.KetThuc >= p.KetThucDuKien) &&
         (!jobs[p.MaNhiemVu - 1].HanHieuLuc.HasValue || p.KetThucDuKien <= jobs[p.MaNhiemVu - 1].HanHieuLuc)), "Generated schedule stays in availability and before deadlines " + trial);
     Check(jobs.All(j => generated.Phien.Where(p => p.MaNhiemVu == j.MaNhiemVu).Sum(p => (p.KetThucDuKien - p.BatDauDuKien).TotalMinutes) + generated.ChuaXep[j.MaNhiemVu] == j.SoPhutCanXep), "Generated allocation conserves remaining workload " + trial);
     Check(generated.Phien.Zip(generated.Phien.Skip(1)).All(p => p.Second.BatDauDuKien >= p.First.KetThucDuKien.AddMinutes(10)), "Generated schedule preserves breaks " + trial);
 }
+PriorityPlanningChecks.Run(Check, now);
+var defaults = QuyTacLapLich.Xep([job], [free], now);
+Check(defaults.Phien.Count == 4 && defaults.Phien.All(p => (p.KetThucDuKien - p.BatDauDuKien).TotalMinutes == 25), "Current defaults allocate 25 minute sessions");
+Check(defaults.Phien.Zip(defaults.Phien.Skip(1)).All(p => p.Second.BatDauDuKien - p.First.KetThucDuKien == TimeSpan.FromMinutes(5)), "Current default rest is five minutes");
 Console.WriteLine($"Planning checks passed: {count} assertions. No database connection was opened.");

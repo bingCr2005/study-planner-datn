@@ -16,6 +16,7 @@ public class PhienTapTrung
     public DateTimeOffset? KetThuc { get; set; }
     public string? GhiChu { get; set; }
     public bool NhapThuCong { get; set; }
+    public string? LichSuSuaThoiGianJson { get; set; }
     public NguoiDung NguoiDung { get; set; } = null!;
     public NhiemVu? NhiemVu { get; set; }
     public PhienTuHoc? PhienTuHoc { get; set; }

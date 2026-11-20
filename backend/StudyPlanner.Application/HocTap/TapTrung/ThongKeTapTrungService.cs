@@ -19,7 +19,8 @@ public sealed class ThongKeTapTrungService(IHocTapStore store, HocTapDieuPhoi di
             p.TrangThai == "Completed" && p.KetThuc >= from && p.KetThuc < to)
             .OrderByDescending(p => p.BatDau).Take(10001), ct);
         if (rows.Count > 10000) throw new HocTapException(400, "QUERY_LIMIT", "Có quá nhiều bản ghi trong khoảng này. Hãy chọn khoảng ngắn hơn.");
-        static int Pomo(PhienTapTrung p) => p.CheDo == "Pomodoro" ? (int)(p.SoMiliGiayDaHoc / (p.MucTieuGiay * 1000L)) : 0;
+        static int Pomo(PhienTapTrung p) => p.CheDo != "Pomodoro" || p.SoMiliGiayDaHoc < p.MucTieuGiay * 1000L ? 0
+            : p.NhapThuCong ? (int)(p.SoMiliGiayDaHoc / (p.MucTieuGiay * 1000L)) : 1;
         var days = rows.ToLookup(p => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(p.KetThuc!.Value, zone).DateTime));
         var byDay = Enumerable.Range(0, soNgay).Select(i =>
         {
@@ -43,7 +44,8 @@ public sealed class ThongKeTapTrungService(IHocTapStore store, HocTapDieuPhoi di
             throw new HocTapException(404, "RESOURCE_NOT_FOUND", "Không tìm thấy nhiệm vụ của bạn.");
         var summary = await store.DauTienAsync(store.TruyVan<PhienTapTrung>().Where(p => p.MaNguoiDung == chu &&
             p.MaNhiemVu == ma && p.TrangThai == "Completed").GroupBy(p => 1).Select(g => new TongHopTapTrung(
-                g.Count(), g.Sum(p => p.CheDo == "Pomodoro" ? (int)(p.SoMiliGiayDaHoc / (p.MucTieuGiay * 1000L)) : 0),
+                g.Count(), g.Sum(p => p.CheDo != "Pomodoro" || p.SoMiliGiayDaHoc < p.MucTieuGiay * 1000L ? 0
+                    : p.NhapThuCong ? (int)(p.SoMiliGiayDaHoc / (p.MucTieuGiay * 1000L)) : 1),
                 g.Sum(p => p.SoMiliGiayDaHoc))), ct) ?? new(0, 0, 0);
         await session.CommitAsync(false, ct);
         return new(session.NguoiDung.PhienBanLapLich, summary);

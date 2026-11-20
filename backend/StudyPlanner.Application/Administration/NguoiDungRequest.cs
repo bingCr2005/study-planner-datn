@@ -13,5 +13,9 @@ public class NguoiDungRequest
     [StringLength(200)] public string? TenLop { get; init; }
     [StringLength(200)] public string? NganhHoc { get; init; }
     public bool DangHoatDong { get; init; } = true;
+    // Mốc được trả về khi admin đọc hồ sơ. Nếu người khác đã đổi hồ sơ hoặc
+    // khóa/mở tài khoản sau mốc này, từ chối lưu thay vì ghi đè dữ liệu mới.
+    // Nullable để các client cũ chưa gửi trường này vẫn hoạt động như trước.
+    public DateTimeOffset? NgayCapNhatMongDoi { get; init; }
 }
 

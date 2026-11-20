@@ -39,7 +39,7 @@ Trạng thái: dự thảo ngày 2026-10-13. Đọc cùng [mục lục module](R
 | Q02 | Xác thực và mật khẩu | Đề xuất access token ngắn hạn, chưa refresh; cần chốt thư viện, chính sách mật khẩu, thời hạn và lưu phiên | Auth |
 | Q03 | Thu hồi phiên | Đăng xuất client chưa thu hồi token; nếu cần vô hiệu hóa ngay khi đổi mật khẩu phải bổ sung dữ liệu/cơ chế | Auth/schema phụ thuộc |
 | Q04 | Sửa đồng thời | Chưa chọn khóa/phiên bản, header và phản hồi; không dùng UpdatedAt như giải pháp hoàn chỉnh mặc định | API sửa và giao dịch liên quan |
-| Q05 | Giới hạn cây | Chưa chốt độ sâu/số node/query budget và hợp đồng lỗi khi vượt giới hạn | API cây/chuyển cha |
+| Q05 | Giới hạn cây | Tối đa 5 cấp khi thêm/chuyển nhánh, tính cả nhiệm vụ gốc, và 1.000 nhiệm vụ mỗi cây. API trả `409 TASK_DEPTH_LIMIT` khi vượt cấp 5. Dữ liệu cũ vẫn đọc được tới 10 cấp. | [Nhiệm vụ và tiến độ](03-nhiem-vu-va-tien-do.md#3-quy-tắc-cây-và-hạn-hiệu-lực) |
 | Q06 | Nhắc cha/con và tắt nhắc | ERD nhắc mọi nhiệm vụ đủ điều kiện, chưa có bật/tắt; thay đổi cần cập nhật schema/quy tắc | Schema lời nhắc và tạo task |
 | Q07 | Biên và thử lại lời nhắc | Chốt cách xử lý đúng hạn khi giờ nhắc = 0, mốc đã quá hạn, khoảng retry và tranh chấp | Worker |
 | Q08 | Lưu lịch sử | Chưa chốt thời hạn giữ và quyền quản trị với lịch sử mất liên kết người dùng | Vận hành/xóa tài khoản |

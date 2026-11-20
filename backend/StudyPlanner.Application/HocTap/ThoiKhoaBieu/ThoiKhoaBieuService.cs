@@ -30,7 +30,7 @@ public sealed class ThoiKhoaBieuService(IHocTapStore store, HocTapDieuPhoi dieuP
     }
 
     public async Task<HocTapResponse<ThoiKhoaBieuResponse>> LayAsync(int chu, DateTimeOffset tu, DateTimeOffset den,
-        int? maHocKy, int? maMonHoc, bool hienHanCha, CancellationToken ct)
+        int? maHocKy, int? maMonHoc, bool hienHanCha, bool gomHanKeThua, CancellationToken ct)
     {
         QuyTacThoiGian.KiemTraKhoang(tu, den);
         await using var session = await dieuPhoi.MoAsync(chu, null, false, ct);
@@ -54,17 +54,29 @@ public sealed class ThoiKhoaBieuService(IHocTapStore store, HocTapDieuPhoi dieuP
         if (maHocKy.HasValue) tasks = tasks.Where(x => x.MaHocKy == maHocKy);
         if (maMonHoc.HasValue) tasks = tasks.Where(x => x.MaMonHoc == maMonHoc);
         var taskEvents = await TaiCoGioiHanAsync(tasks.Where(x => x.BatDauSuKien != null && x.KetThucSuKien > tu && x.BatDauSuKien < den)
-            .Select(x => new { NhiemVu = x, MauSac = x.MonHoc == null ? null : x.MonHoc.MauSac }), ct);
+            .Select(x => new
+            {
+                NhiemVu = x,
+                MauSac = x.MonHoc == null ? null : x.MonHoc.MauSac,
+                CoTheDanhDau = x.ChecklistJson == null && !x.DanhSachNhiemVuCon.Any(),
+            }), ct);
         foreach (var x in taskEvents)
             events.Add(new($"event-{x.NhiemVu.Ma}", "SuKien", x.NhiemVu.Ma, x.NhiemVu.MaMonHoc, x.NhiemVu.MaHocKy,
-                x.NhiemVu.TieuDe, x.NhiemVu.BatDauSuKien!.Value, x.NhiemVu.KetThucSuKien, x.MauSac, x.NhiemVu.TrangThai.ToString(), true));
+                x.NhiemVu.TieuDe, x.NhiemVu.BatDauSuKien!.Value, x.NhiemVu.KetThucSuKien, x.MauSac, x.NhiemVu.TrangThai.ToString(), true)
+            { CoTheDanhDauHoanThanh = x.CoTheDanhDau, TienDoNhiemVu = x.NhiemVu.TienDo });
 
         var deadlineQuery = tasks;
         var allTasks = store.TruyVan<NhiemVu>();
-        if (!hienHanCha) deadlineQuery = deadlineQuery.Where(x => !allTasks.Any(con => con.MaNhiemVuCha == x.Ma));
+        // Lịch hiển thị hạn một lần ở nhiệm vụ đã đặt hạn. Bước có hạn riêng vẫn là mốc độc lập.
+        if (gomHanKeThua) deadlineQuery = deadlineQuery.Where(x => x.HanHoanThanh.HasValue);
+        else if (!hienHanCha) deadlineQuery = deadlineQuery.Where(x => !allTasks.Any(con => con.MaNhiemVuCha == x.Ma));
         // Lọc hạn kế thừa trong SQL trước khi tải các cây cần hiển thị.
         var matchedDeadlines = QuyTacCay.LocHan(deadlineQuery, tu, den).OrderBy(x => x.Ma);
-        var deadlines = await TaiCoGioiHanAsync(matchedDeadlines.Select(x => new { x.Ma, x.MaMonHoc, x.MaHocKy, x.TieuDe, x.TrangThai }), ct);
+        var deadlines = await TaiCoGioiHanAsync(matchedDeadlines.Select(x => new
+        {
+            x.Ma, x.MaMonHoc, x.MaHocKy, x.TieuDe, x.TrangThai, x.TienDo,
+            CoTheDanhDau = x.ChecklistJson == null && !x.DanhSachNhiemVuCon.Any(),
+        }), ct);
         // Hai SELECT cùng ảnh chụp dữ liệu/thứ tự: dùng biểu thức SQL chung, tránh tải từng cây để tính hạn.
         var dates = await TaiCoGioiHanAsync(matchedDeadlines.Select(QuyTacCay.BieuThucHan), ct);
         for (var i = 0; i < deadlines.Count; i++)
@@ -72,7 +84,8 @@ public sealed class ThoiKhoaBieuService(IHocTapStore store, HocTapDieuPhoi dieuP
             var task = deadlines[i]; var han = dates[i];
             if (han is null) continue;
             events.Add(new($"deadline-{task.Ma}", "HanNhiemVu", task.Ma, task.MaMonHoc, task.MaHocKy,
-                task.TieuDe, han.Value, null, null, task.TrangThai.ToString(), true));
+                task.TieuDe, han.Value, null, null, task.TrangThai.ToString(), true)
+            { CoTheDanhDauHoanThanh = task.CoTheDanhDau, TienDoNhiemVu = task.TienDo });
         }
 
         var phienQuery = store.TruyVan<PhienTuHoc>().Where(x => x.MaNguoiDung == chu && x.TrangThai != TrangThaiPhienTuHoc.Cancelled &&
