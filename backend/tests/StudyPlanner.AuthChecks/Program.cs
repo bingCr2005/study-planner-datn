@@ -18,6 +18,7 @@ using StudyPlanner.Domain.Entities;
 using StudyPlanner.Domain.Enums;
 using StudyPlanner.Infrastructure.Data;
 
+if (args.Contains("--request-failures-only")) { await RequestFailureChecks.RunAsync(); return; }
 if (args.Contains("--login-validation-only")) { await LoginValidationChecks.RunAsync(); return; }
 
 var supplied = Environment.GetEnvironmentVariable("STUDYPLANNER_TEST_POSTGRES");

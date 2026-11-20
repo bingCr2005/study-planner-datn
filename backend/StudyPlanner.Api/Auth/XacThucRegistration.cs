@@ -72,7 +72,17 @@ public static class XacThucRegistration
                     if (!int.TryParse(context.Principal?.FindFirstValue("sub"), out var id))
                     { context.Fail("Invalid account"); return; }
                     var db = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
-                    var user = await db.DanhSachNguoiDung.AsNoTracking().SingleOrDefaultAsync(x => x.Ma == id, context.HttpContext.RequestAborted);
+                    NguoiDung? user;
+                    try
+                    {
+                        user = await db.DanhSachNguoiDung.AsNoTracking().SingleOrDefaultAsync(x => x.Ma == id, context.HttpContext.RequestAborted);
+                    }
+                    catch (Exception error) when (Logging.RequestFailure.IsClientCancellation(context.HttpContext, error))
+                    {
+                        // Client đã ngắt kết nối; không coi việc hủy truy vấn là lỗi JWT.
+                        context.NoResult();
+                        return;
+                    }
                     if (user is not null && !user.DangHoatDong)
                     {
                         context.HttpContext.Items["AccountDisabled"] = true;
@@ -87,7 +97,9 @@ public static class XacThucRegistration
                 },
                 OnChallenge = context =>
                 {
-                    context.HandleResponse(); context.Response.Headers.WWWAuthenticate = "Bearer";
+                    context.HandleResponse();
+                    if (context.HttpContext.RequestAborted.IsCancellationRequested) return Task.CompletedTask;
+                    context.Response.Headers.WWWAuthenticate = "Bearer";
                     if (context.HttpContext.Items.ContainsKey("AccountDisabled"))
                         return WriteProblem(context.HttpContext, 401, "ACCOUNT_DISABLED", "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.");
                     return WriteProblem(context.HttpContext, 401, "UNAUTHORIZED", "Cần đăng nhập hoặc phiên đã hết hiệu lực.");

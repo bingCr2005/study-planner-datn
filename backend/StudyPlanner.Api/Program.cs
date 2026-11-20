@@ -80,6 +80,7 @@ if (!string.IsNullOrWhiteSpace(bootstrapEmail))
     Console.WriteLine("Đã khởi tạo Admin. Chạy lại API bình thường và đăng nhập.");
     return;
 }
+app.UseMiddleware<StudyPlanner.Api.Logging.ApiRequestLoggingMiddleware>();
 app.UseExceptionHandler();
 
 // Cấu hình chuỗi xử lý yêu cầu HTTP.
