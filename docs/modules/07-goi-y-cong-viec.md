@@ -1,14 +1,18 @@
 # Module 07 — Gợi ý và áp dụng lịch tự học
 
-Trạng thái đối chiếu code ngày 2026-11-14: BE/FE đã có xếp lịch, giờ rảnh nhiều thứ, ngoại lệ theo ngày, cấu hình học dùng chung, cập nhật phần chưa học và nhắc kế hoạch tùy chọn. Xem [bản ghi triển khai/kiểm chứng](../history/2026-11-14-cai-tien-lap-ke-hoach.md), [đối chiếu trước cải tiến](../history/2026-11-14-doi-chieu-luong-lap-ke-hoach.md), [nhiệm vụ](03-nhiem-vu-va-tien-do.md) và [đồng hồ](09-dong-ho-tap-trung.md).
+BE/FE đã có xếp lịch, giờ rảnh nhiều thứ, ngoại lệ theo ngày, cấu hình học dùng chung, cập nhật phần chưa học và nhắc kế hoạch tùy chọn. Xem [bản ghi triển khai](../history/2026-11-14-cai-tien-lap-ke-hoach.md), [sửa luồng áp dụng cho sinh viên](../history/2026-11-17-ap-dung-lich-tu-hoc.md), [nhiệm vụ](03-nhiem-vu-va-tien-do.md) và [đồng hồ](09-dong-ho-tap-trung.md).
 
 ## 1. Luồng hiện hành
 
+Giao diện sinh viên có mục **Lập kế hoạch** riêng: tổng quan → lịch/giờ rảnh/gợi ý/phiên, với sidebar tách khỏi Nhiệm vụ. Gợi ý có ba bước **Thiết lập → Xem gợi ý → Hoàn tất**; Hoàn tất chỉ hiện sau khi server lưu thành công. Chi tiết lý do mở riêng, bản nhập vẫn được giữ khi quay lại. [Bản ghi giao diện và xác nhận lịch](../history/2026-11-18-bo-tri-lap-ke-hoach-va-xac-nhan-lich.md).
+
+Tick hoàn thành nhiệm vụ có phiên liên quan cần xác nhận: **Giữ nguyên** không ghi thay đổi; **Hoàn thành và hủy phiên** mới hoàn thành và hủy các phiên dự kiến bị ảnh hưởng. Lịch sử thực học được giữ. Trả focus không đổi vị trí cuộn. Tùy chọn lịch nhớ theo tài khoản trên trình duyệt, gồm ẩn/hiện mục hoàn thành; đây là lọc hiển thị, không xóa dữ liệu.
+
 1. Thêm nhiệm vụ học tập/cá nhân, nhập thời lượng dự kiến cho lá; hạn/ưu tiên khi có. Thiếu ước lượng vẫn quản lý được việc nhưng chưa đủ dữ liệu để tự xếp lịch.
-2. Nhập lịch lớp và mẫu giờ rảnh lặp theo tuần trong khoảng ngày hiệu lực. Lịch lớp/sự kiện/phiên đã đặt được trừ khi tính giờ khả dụng; không cần cấm mẫu giờ rảnh trùng lịch lớp ngay khi nhập.
+2. Thêm mẫu giờ rảnh lặp theo tuần trong khoảng ngày hiệu lực. Nhập lịch lớp nếu muốn hệ thống tránh giờ lên lớp. Lịch lớp, sự kiện và phiên đã đặt được trừ khi tính giờ khả dụng.
 3. Chọn phạm vi nhiệm vụ, ngày bắt đầu, số ngày và cách lập: **Tạo thêm lịch** hoặc **Cập nhật phần chưa học**. Chọn cha đưa các lá phù hợp trong nhánh vào phạm vi; không cộng cha như việc độc lập. Có thể chỉnh cấu hình học/nghỉ dùng chung trước khi tạo gợi ý.
-4. Xem phiên đề xuất, lý do/cảnh báo/phần chưa xếp; chọn các phiên rồi áp dụng. Preview chưa ghi phiên, apply kiểm tra lại dữ liệu và ràng buộc trước khi lưu chung giao dịch.
-5. Mở phiên → Bắt đầu ngay/Bắt đầu học → đồng hồ thực học. Phiên từ kế hoạch dùng đếm lên, không coi giờ dự kiến là giờ đã học. Kết thúc rồi cập nhật tiến độ/checklist nhiệm vụ hoặc để sau.
+4. Bước **Chọn lịch muốn lưu** hiển thị năm số: cần xếp thêm, đã có lịch giữ lại, được đề xuất, đang chọn để lưu và còn chưa xếp sau khi lưu. Bỏ chọn làm tăng phần chưa xếp, không đổi phút đề xuất. Phiên cũ sẽ thay không nằm trong phút giữ lại. Hộp xác nhận tách phiên cũ bị thay và phiên mới đang chọn, có nhiệm vụ/ngày/giờ/phút; thay toàn bộ danh sách cũ kể cả chỉ lưu một phần gợi ý. **Chỉnh thông tin lập lịch** giữ lựa chọn. Cấu hình học/nghỉ mở riêng. Thiết lập có lối tạo/sửa nhiệm vụ, giờ rảnh và lịch lớp tùy chọn; cảnh báo có đường xử lý kèm **Quay lại lập lịch**. Draft được giữ theo tài khoản/phạm vi trong phiên trình duyệt; quay lại khôi phục phạm vi gốc kể cả đã đổi bộ lọc/tạo nhiệm vụ. Sau khi sửa dữ liệu cần tạo gợi ý mới. Gợi ý quá giờ có **Tạo lại gợi ý**. Server kiểm tra lại rồi ghi trong một giao dịch. [Đối chiếu và kiểm chứng](../history/2026-11-18-doi-chieu-luong-lap-ke-hoach-sinh-vien.md).
+5. Mở phiên → **Bắt đầu ngay** hoặc **Bắt đầu học** → chọn **Pomodoro** hoặc **Đếm lên**. Đồng hồ ghi thời gian thực học để đối chiếu với giờ dự kiến. Kết thúc rồi cập nhật tiến độ/checklist nhiệm vụ hoặc để sau. Có thể sửa giờ đã ghi từ lịch sử Đồng hồ tập trung. Xem [luồng sửa thời gian](09-dong-ho-tap-trung.md).
 
 ## 2. Thời lượng dự kiến và tiến độ
 
@@ -32,9 +36,11 @@ Trạng thái đối chiếu code ngày 2026-11-14: BE/FE đã có xếp lịch,
 `QuyTacLapLich.Xep` là thuật toán tham lam xác định, nhận việc/khe rảnh/thời điểm xét, không tự đọc DB hoặc đồng hồ bên trong:
 
 1. Service sinh/gộp giờ rảnh theo múi giờ và trừ lịch lớp, sự kiện có giờ, phiên học còn hiệu lực cùng khoảng nghỉ. Loại phần quá khứ.
-2. Sắp việc theo hạn hiệu lực gần nhất, không hạn sau cùng; cùng hạn xét ưu tiên cao trước, phần thời lượng cần xếp ít hơn trước, cuối cùng mã nhiệm vụ để ổn định.
+2. Phiên bản 4 dùng cùng cấu hình Admin với Hôm nay: nhóm QH/K1/K2/K3/K4/K5 trước, sau đó các tiêu chí Admin theo thứ tự đang kích hoạt, cuối cùng mã nhiệm vụ. Mặc định là mức quan trọng → hạn chính xác → đang thực hiện → mã. Quá hạn vẫn có cảnh báo và không được xếp vào tương lai. Không dùng thời lượng ngắn hơn để phân xử thay mã.
 3. Tìm khe sớm nhất trước hạn cho từng việc, chia nhiều phiên khi cần. Độ dài mục tiêu và khoảng nghỉ lấy từ cấu hình tài khoản; phiên thông thường ít nhất 15 phút, phần cuối có thể ngắn hơn khi xếp hết phần còn lại. Tính giới hạn học mỗi ngày theo múi giờ tài khoản, gồm cả phút tương lai đã dành trong các phiên Planned/InProgress và phút mới đề xuất. Khe qua nửa đêm được tách theo ngày địa phương; không cộng thời gian nghỉ vào hạn mức học.
-4. Trừ phiên vừa chọn/khoảng nghỉ rồi tiếp tục. Trả lịch theo thời gian cùng lý do và phần chưa xếp.
+4. Trừ phiên vừa chọn/khoảng nghỉ rồi tiếp tục. Nếu việc có hạn chưa được xếp đủ, thử thêm đúng một lần với hạn chính xác trước trong từng nhóm. Chỉ nhận phương án này khi không nhiệm vụ nào mất phút đã xếp và ít nhất một nhiệm vụ được xếp đủ thêm. Ví dụ A Cao còn 3 ngày, B Thấp còn 2 ngày: có hai khe, chỉ khe đầu trước hạn B, thì B dùng khe đầu và A dùng khe sau. Nếu chỉ còn một khe chung, giữ A theo Admin mặc định. Trả lịch theo thời gian cùng lý do và phần chưa xếp. Đây là cải thiện có giới hạn, không bảo đảm tìm ra mọi lịch khả thi.
+
+Phiên dưới 15 phút chỉ được gợi ý khi xếp đủ phần còn lại và có thể đặt sau tất cả phiên khác của cùng nhiệm vụ. Nếu chỉ còn khe ở trước, phần thời lượng đó vẫn tính vào **Chưa xếp**. Khi chọn phiên ngắn, nút **Chọn cùng** bổ sung các phiên trước của nhiệm vụ còn thiếu. Hai bước tính số phút có thể đặt đều làm tròn xuống sau khi trừ thời lượng đã dành chỗ.
 
 Cảnh báo gồm thiếu ước lượng, quá hạn, học kỳ lưu trữ, không có/không đủ giờ hoặc hạn mức ngày, đã đủ chỗ hoặc phiên cũ cần rà soát. Việc quá hạn chưa được tự ép vào lịch tương lai. Phạm vi 1–31 ngày, tối đa 1.000 lá/2.000 phiên. Chưa chứng minh tối ưu toàn cục, chưa cá nhân hóa theo lịch sử và không phải AI.
 
@@ -43,7 +49,7 @@ Cảnh báo gồm thiếu ước lượng, quá hạn, học kỳ lưu trữ, kh
 - Cấu hình server mặc định **25 phút học / 5 phút nghỉ / 180 phút học mỗi ngày**. Cho phép phiên 15–50 phút, nghỉ 1–30 phút, ngày 15–720 phút và không ít hơn một phiên. Cấu hình áp dụng cho đồng hồ Pomodoro phiên sau, bộ gợi ý và validator lưu/dời phiên; âm báo vẫn là tùy chọn trình duyệt.
 - Thay cấu hình tăng revision và làm preview cũ hết hiệu lực; không tự sửa các phiên đã đặt hoặc mục tiêu đồng hồ đang chạy. Hạn mức ngày dùng để lập/kiểm tra lịch tương lai, không phải khóa đồng hồ tự do khi học vượt mức.
 - Chế độ cập nhật chỉ xét các phiên **Planned chưa đến giờ, nằm trọn trong khoảng ngày và thuộc các lá hợp lệ đã chọn**. Các phiên đó tạm được bỏ khỏi phần dành chỗ/khoảng bận khi tính preview mới; các phiên ngoài phạm vi, đang học, đã học hoặc đã bỏ lỡ được giữ.
-- Preview trả `maPhienThayThe` và `cauHinhHoc`; token ký cả danh sách thay thế và cấu hình cùng revision/quy tắc. Người dùng xác nhận rồi apply mới hủy đúng các phiên cũ và thêm các phiên mới đã chọn trong một giao dịch. Hỏng kiểm tra/lưu phải rollback cả hủy cũ và thêm mới. Bỏ chọn một phần phiên mới có thể làm kế hoạch mới chưa phủ đủ công việc; số lượng phiên cũ bị thay thế vẫn được thông báo trước khi xác nhận.
+- Preview trả `maPhienThayThe`, chi tiết `phienThayThe`, `cauHinhHoc`, `phienBanUuTien`; token ký cả danh sách thay thế, cấu hình và phiên bản Admin cùng revision/quy tắc. Admin đổi quy tắc làm gợi ý chưa lưu hết hiệu lực (`PRIORITY_RULE_CHANGED`). Apply dùng khóa chia sẻ cùng khóa kích hoạt của Admin để giữ cấu hình ổn định đến cuối giao dịch. Yêu cầu đã lưu thành công vẫn được thử lại bằng cùng khóa/nội dung và nhận đúng kết quả cũ, kể cả Admin đã đổi quy tắc. Không đổi cách tính hash cũ để giữ tương thích retry. Người dùng xác nhận rồi apply mới hủy đúng các phiên cũ và thêm các phiên mới đã chọn trong một giao dịch. Hỏng kiểm tra/lưu phải rollback cả hủy cũ và thêm mới.
 
 ## 5. API và tính nhất quán
 
@@ -59,8 +65,8 @@ Cảnh báo gồm thiếu ước lượng, quá hạn, học kỳ lưu trữ, kh
 | `GET/PUT /api/v1/planning-reminders/settings` | Bật/tắt nhắc kế hoạch; PUT `{dangBat}` và If-Match |
 | `GET /api/v1/planning-reminders` | Tạo nhắc đến hạn khi mở hộp và trả danh sách/số chưa đọc |
 
-- Chỉ dùng dữ liệu tài khoản đăng nhập. Preview không tạo phiên, token hết hạn sau 10 phút. Apply kiểm tra phiên bản nguồn/quy tắc/thời gian/ràng buộc; dữ liệu đã đổi cần tạo gợi ý mới, không tự sửa hạn/ưu tiên/tiến độ cho vừa lịch.
-- Retry cùng key/nội dung trả kết quả đã lưu; cùng key khác nội dung bị từ chối. FE giữ yêu cầu chưa rõ kết quả để kiểm tra/thử lại, tránh tạo trùng sau mất phản hồi.
+- Chỉ dùng dữ liệu tài khoản đăng nhập. Preview không tạo phiên, token hết hạn sau 10 phút. Nếu một phiên được chọn đã qua giờ bắt đầu trước thời điểm apply, API trả `PREVIEW_SESSION_STARTED` kèm mốc giờ. Nếu chỉ chọn phiên ngắn mà chưa xếp đủ thời lượng có thể đặt, API trả `SHORT_SESSION_REQUIRES_REMAINDER`. Dữ liệu hoặc quy tắc đổi cần tạo gợi ý mới.
+- Nếu API trả lỗi xác định cần gợi ý mới, giao diện kết thúc yêu cầu chờ và mở **Tạo lại gợi ý** với phạm vi đã nhập. Khi chưa rõ kết quả lưu, **Thử lại cùng yêu cầu áp dụng** dùng đúng key và nội dung cũ để lấy kết quả đã lưu nếu có. Cùng key với nội dung khác bị từ chối.
 - Có thể bỏ chọn phiên; không sửa thời gian một phiên preview rồi gửi apply. Dời phiên dùng luồng riêng.
 - Preview nhận `capNhatKeHoach`; bỏ qua/mặc định false vẫn là tạo thêm lịch. Apply kiểm tra lại cấu hình trong token, trạng thái/giờ của các phiên thay thế và hạn mức ngày. Retry sau mất phản hồi vẫn trả đúng batch đã hoàn tất, không hủy/thêm lần hai.
 
@@ -77,4 +83,19 @@ Cảnh báo gồm thiếu ước lượng, quá hạn, học kỳ lưu trữ, kh
 
 ## Quy tắc ưu tiên trên trang Hôm nay
 
-Main đã bổ sung quản trị cấu hình ưu tiên và xếp hạng công việc trên trang Hôm nay; xem [bản ghi quy tắc ưu tiên](../history/2026-11-12-quan-ly-quy-tac-uu-tien.md). Cấu hình đó được FE đọc để xếp thứ tự công việc. Bộ phân bổ phiên tự học `QuyTacLapLich` hiện giữ quy tắc hạn, mức ưu tiên và thời lượng đã mô tả ở trên; chưa sử dụng cấu hình thứ tự tiêu chí của quản trị để thay thuật toán xếp giờ. Hai luồng được ghi riêng để tránh hiểu nhầm khi thay cấu hình Hôm nay.
+**Gợi ý nên làm trước** xếp các nhiệm vụ lá chưa hoàn thành theo sáu nhóm dựa trên hạn hiệu lực. Một nhóm chỉ xuất hiện khi có nhiệm vụ trong phần danh sách đang hiển thị.
+
+| Nhóm | Thời gian còn lại | Thứ tự |
+| --- | --- | --- |
+| QH | Hạn đã qua | 1 |
+| K1 | Từ 0 đến đúng 24 giờ | 2 |
+| K2 | Trên 1 ngày đến đúng 3 ngày | 3 |
+| K3 | Trên 3 ngày đến đúng 7 ngày | 4 |
+| K4 | Trên 7 ngày | 5 |
+| K5 | Chưa có hạn hiệu lực | 6 |
+
+Trong cùng nhóm, quy tắc mặc định xét **mức quan trọng Cao → Trung bình → Thấp**, rồi **hạn chính xác sớm hơn**, rồi **Đang thực hiện**. Mã nhiệm vụ tăng dần phân xử khi các tiêu chí đã chọn đều bằng nhau. Admin có thể đổi thứ tự và bật/tắt các tiêu chí phụ trong cùng nhóm. Nhóm độ gấp luôn được so sánh trước theo bảng trên. [Bản ghi cập nhật](../history/2026-11-17-xep-goi-y-theo-nhom-do-gap.md).
+
+Bộ phân bổ phiên tự học `QuyTacLapLich` áp dụng quy tắc tại mục 4. Ghim chi phối thứ tự trên danh sách Nhiệm vụ theo bộ lọc và tiêu chí sắp xếp đang chọn.
+
+[Kịch bản kiểm thử ưu tiên nhiệm vụ](../KICH-BAN-KIEM-THU-UU-TIEN-NHIEM-VU.md) có mốc biên, ma trận 36 cặp nhóm và các ca đối chiếu giữa ba màn.

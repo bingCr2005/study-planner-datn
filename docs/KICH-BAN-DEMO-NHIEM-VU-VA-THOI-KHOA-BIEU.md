@@ -52,7 +52,7 @@ Trước buổi demo, chạy BE và FE React, dùng tài khoản demo có dữ l
 
 ### Bước 1 — Nhận phần trình bày từ bạn trong team, khoảng 30 giây
 
-Mở mục Nhiệm vụ với tài khoản đang đăng nhập và dùng dữ liệu học kỳ, môn đã tạo ở phần trước. Menu dọc bên trong Nhiệm vụ có Hôm nay, 7 ngày tới, Tất cả nhiệm vụ và nhóm Lập kế hoạch. Có thể mở cùng màn Thời khóa biểu từ thanh bên ngoài. Trong Thời khóa biểu, bấm Công cụ học tập để hiện lại menu dọc và chuyển sang Lịch học theo môn, Giờ rảnh hoặc Gợi ý lịch học.
+Mở mục Nhiệm vụ với tài khoản đang đăng nhập và dùng dữ liệu học kỳ, môn đã tạo ở phần trước. Chọn Thời khóa biểu trong menu dọc rồi bấm **Ẩn menu** cạnh **Bộ lọc** nếu cần thêm chỗ cho lịch. Bấm **Hiện menu** để chuyển sang Lịch học theo môn, Giờ rảnh hoặc Gợi ý lịch học. Khi mở lịch trực tiếp từ thanh icon ngoài, menu dọc thu gọn sẵn.
 
 > Tiếp theo, em trình bày phần quản lý nhiệm vụ, chia nhỏ nhiệm vụ và thời khóa biểu. Từ tài khoản, học kỳ và môn học vừa được tạo, sinh viên có thể ghi lại việc cần làm, chia thành các bước nhỏ, theo dõi tiến độ và sắp lịch tự học phù hợp với thời gian của mình.
 
@@ -180,7 +180,7 @@ Nếu cần demo Bắt đầu/Kết thúc, có thể mở phiên tương lai và
 | Quyền sở hữu | Đọc và ghi theo tài khoản đăng nhập. Môn/học kỳ được chọn phải thuộc tài khoản đó |
 | Tên nhiệm vụ | Bắt buộc, không chỉ khoảng trắng, tối đa 200 ký tự |
 | Ước lượng | Tùy chọn. Khi nhập là số phút nguyên dương, tối đa 100.000. Việc thiếu ước lượng vẫn được quản lý nhưng chưa đủ dữ liệu tự xếp lịch |
-| Phân cấp | Cùng học kỳ/môn, không chuyển vào chính mình hoặc bước thuộc mình, tối đa 10 cấp và 1.000 nhiệm vụ trong một nhóm |
+| Phân cấp | Cùng học kỳ/môn, tối đa 5 cấp tính cả gốc khi thêm hoặc chuyển nhánh và 1.000 nhiệm vụ trong một nhóm. Ở cấp 5, giao diện ẩn nút thêm bước nhỏ. |
 | Thêm theo nhóm | Tối đa 100 bước mỗi request. Một bước không hợp lệ thì cả lần thêm không được lưu |
 | Hạn | Có thể để trống. Ưu tiên hạn riêng, nếu thiếu dùng hạn gần nhất ở phía nhiệm vụ lớn. Bước nhỏ không có hạn muộn hơn hạn đang áp dụng cho nhiệm vụ lớn |
 | Tiến độ | 0% chưa bắt đầu, 1–99% đang thực hiện, 100% hoàn thành. Có checklist thì lấy tỷ lệ mục đã đánh dấu, còn lại nhập phần trăm riêng cho từng nhiệm vụ |
@@ -329,7 +329,7 @@ Không chỉ đọc tên nút hoặc báo thao tác thành công. Khi mở mỗi
 ### 10.4. Bảng trạng thái
 
 - Gom kết quả theo các cột Chưa bắt đầu, Đang thực hiện và Đã hoàn thành. Thẻ tách tên việc, môn học, hạn và tiến độ để dễ đọc trong cột hẹp.
-- Số đếm trên cột tính theo trang và bộ lọc hiện tại. Bảng mặc định tập trung việc chưa xong. Dùng **Xem danh sách đã hoàn thành** trong cột tương ứng để xem các việc đã xong theo ngày.
+- Cột **Đã hoàn thành** hiện các thẻ ngay trên bảng, dùng ngày hoàn thành và mặc định xếp việc mới xong trước. Cột có phân trang riêng khi xem cùng các trạng thái khác. Hai cột việc chưa xong đếm theo trang hiện tại. Mục **Đã hoàn thành** ở thanh bên vẫn dùng để xem theo ngày.
 - Không giới thiệu kéo thả chuyển cột vì module này chưa có thao tác đó.
 
 > Cùng dữ liệu nhiệm vụ có thể xem theo bảng trạng thái để thấy việc nào chưa làm, đang làm và đã hoàn thành. Trạng thái được gắn với tiến độ, nên khi em cập nhật phần trăm thì bảng và danh sách dùng cùng kết quả.

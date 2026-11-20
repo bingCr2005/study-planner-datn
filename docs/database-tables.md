@@ -42,7 +42,7 @@ Migration khóa các bảng liên quan trong giao dịch, bổ sung tên trườ
 
 ## Cách dùng tệp đính kèm
 
-Mở chi tiết nhiệm vụ ở trang Nhiệm vụ hoặc trong Tập trung → **Tệp đính kèm → Đính kèm tệp**. Bấm tên để tải xuống, bấm Xóa rồi xác nhận để gỡ tệp.
+Mở chi tiết nhiệm vụ ở trang Nhiệm vụ hoặc trong Tập trung, rồi chọn **⋯ → Đính kèm tệp**. Danh sách tệp chỉ chiếm chỗ khi có tệp để hiển thị hoặc có trạng thái cần xử lý. Ảnh PNG, JPG/JPEG, WebP và GIF có thể xem ngay trong khung chi tiết. Bấm ảnh để mở lớn và dùng nút đóng hoặc Escape để quay lại. Menu ⋯ của từng tệp cho phép thu nhỏ/mở rộng ảnh, tải xuống hoặc xóa. Với tài liệu và tệp khác, bấm tên để tải xuống.
 
 | API | Xử lý |
 | --- | --- |
@@ -55,6 +55,6 @@ Mở chi tiết nhiệm vụ ở trang Nhiệm vụ hoặc trong Tập trung →
 - Thông tin tệp lưu database; nội dung lưu ngoài `wwwroot`, mặc định `backend/StudyPlanner.Api/App_Data/tep-nhiem-vu`. Có thể cấu hình `Attachments:StoragePath`. Thư mục không vào Git hoặc gói publish. Khi triển khai phải giữ volume bền vững và sao lưu cả DB lẫn kho tệp; nếu chạy nhiều API phải dùng chung kho.
 - Đưa vào thùng rác: giữ tệp để khôi phục, nhưng API ẩn cả danh sách và tải xuống. Xóa vĩnh viễn nhiệm vụ: FK cascade xóa thông tin tệp; worker dọn nội dung mồ côi mỗi giờ sau khi tệp đủ 24 giờ tuổi. Worker đọc cả bản ghi trong thùng rác, không xóa tệp còn được tham chiếu.
 - Khi kết quả COMMIT chưa xác định do mất kết nối, giữ nội dung để tránh xóa nhầm tệp đã ghi thành công; lượt dọn sau đọc lại DB rồi mới xóa tệp không còn tham chiếu.
-- Phạm vi hiện tại là tải lên/tải xuống/xóa. Chưa có xem trước nội dung, quét mã độc, phiên bản tệp hoặc kho đối tượng bên ngoài. Không bắt buộc thêm các phần này chỉ để sử dụng bảng.
+- Giao diện lấy dữ liệu ảnh qua API tải xuống đã xác thực và kiểm tra định dạng từ byte đầu tệp trước khi tạo URL tạm cho thẻ ảnh. Tệp hiện có được hỗ trợ. SVG/HTML hay ảnh hỏng giữ thao tác tải xuống, không mở trong trình xem. Chưa có xem trước tài liệu, quét mã độc, phiên bản tệp hoặc kho đối tượng bên ngoài.
 
 Xem [lịch sử triển khai và kiểm chứng](history/2026-11-15-don-bang-cu-va-tep-dinh-kem.md).

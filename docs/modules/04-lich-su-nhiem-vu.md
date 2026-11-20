@@ -6,7 +6,7 @@ API đọc lịch sử và màn xem hoạt động của từng nhiệm vụ đ�
 
 Sinh viên xem nhiệm vụ đã được tạo/sửa/hoàn thành/mở lại/xóa như thế nào. Đây là lịch sử nghiệp vụ, khác log chẩn đoán server. Không phải cơ chế khôi phục nhiệm vụ, event sourcing hoặc nhật ký đăng nhập.
 
-Từ chi tiết nhiệm vụ, chọn **⋯ → Hoạt động nhiệm vụ** để xem các thao tác theo ngày. Giao diện tóm tắt những thay đổi như đổi hạn, cập nhật tiến độ và hoàn thành. API hỗ trợ tra cứu theo mã nhiệm vụ đã xóa. Lối mở trên FE hiện nằm trong chi tiết nhiệm vụ còn truy cập được.
+Từ chi tiết nhiệm vụ, chọn **⋯ → Hoạt động nhiệm vụ** để xem các thao tác theo ngày. Giao diện tóm tắt những thay đổi như đổi hạn, cập nhật tiến độ và hoàn thành. Thao tác thêm bước hiện tên bước và thay đổi tiến độ trong cùng dòng ở nhiệm vụ cha. Thêm hoặc xóa tệp hiện tên tệp. API hỗ trợ tra cứu theo mã nhiệm vụ đã xóa. Lối mở trên FE hiện nằm trong chi tiết nhiệm vụ còn truy cập được.
 
 ## 2. Dữ liệu và quyền
 
@@ -21,6 +21,8 @@ User chỉ đọc dòng còn liên kết với UserId của mình. Task đã xó
 3. Lưu TaskHistory cùng giao dịch với nhiệm vụ/tổ tiên/lời nhắc. Nếu ghi lịch sử lỗi, không commit riêng phần nhiệm vụ.
 4. Tính lại tổ tiên hoặc đổi môn cả cây: ghi trước/sau cho những nhiệm vụ thực sự thay đổi. No-op như complete lặp không sinh lịch sử vô ích.
 5. Khi đọc, lọc UserId trước, rồi taskId/action/thời gian và phân trang. Không đòi TaskItem đang tồn tại để đọc history.
+
+Thêm bước trực tiếp ghi một dòng của nhiệm vụ cha ngay cả khi tiến độ không đổi. `duLieuSau` bổ sung `loaiHoatDong: StepsAdded` và `cacBuocDaThem` từ bước do sinh viên nhập. Hệ thống giữ nguyên hành động hoàn thành hoặc mở lại nếu trạng thái cha đổi. Tệp đính kèm dùng hành động `Updated`, với `loaiHoatDong: AttachmentAdded` hoặc `AttachmentRemoved` và `tenTep` trong `duLieuSau`. Metadata tệp và lịch sử lưu chung giao dịch. Tải xuống, xem ảnh và thao tác thất bại không tạo bản ghi. Các bản ghi cũ tiếp tục dùng cách tóm tắt cũ.
 
 Xóa cây phải chuẩn bị sự kiện Deleted từng node trước cascade. Xóa môn/học kỳ phải ghi Updated cho CourseId bị bỏ liên kết. Xóa User nếu có luồng riêng phải ghi trước cascade và chấp nhận mất liên kết UserId sau đó. SQL xóa trực tiếp không tự tạo các sự kiện này.
 

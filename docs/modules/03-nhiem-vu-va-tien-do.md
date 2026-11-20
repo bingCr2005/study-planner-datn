@@ -10,6 +10,12 @@ Các phần bên dưới giữ nội dung đặc tả ban đầu để đối ch
 
 Sinh viên ghi việc học/cá nhân, đặt hạn và ưu tiên, chia nhỏ việc lớn và theo dõi tiến độ. Màn hình: danh sách với bộ lọc, form nhiệm vụ, chi tiết/cây và xác nhận các thao tác ảnh hưởng nhiều dòng.
 
+Bảng trạng thái hiện ba cột, gồm cả thẻ việc đã hoàn thành. Cột hoàn thành dùng cùng bộ lọc hiện tại. Khi xem nhiều trạng thái, cột này lấy trang riêng để các việc đã xong có thể xuất hiện ngay ở trang đầu của bảng. [Bản ghi giao diện](../history/2026-11-17-hien-nhiem-vu-da-hoan-thanh-tren-bang.md).
+
+Nhiệm vụ đã hoàn thành dùng tông xám trong danh sách và bảng. Hàng được chọn vẫn có nền riêng để nhận ra việc đang mở. Tên và nội dung trong khung chi tiết giữ màu chữ thông thường.
+
+Trong menu **⋯** của một nhiệm vụ hoặc của khung chi tiết, chọn **Ghim nhiệm vụ** hoặc **Bỏ ghim nhiệm vụ**. Mục **Đã ghim** nằm đầu danh sách đang làm. Nhiệm vụ ghim vẫn phải khớp môn, hạn, trạng thái và các bộ lọc hiện hành. Trong mỗi nhóm, danh sách dùng tiêu chí sắp xếp đã chọn. Có thể ghim bước nhỏ để mở trực tiếp từ đầu danh sách. Bảng trạng thái đưa thẻ ghim lên đầu cột đang làm tương ứng trong trang hiện tại. [Bản ghi triển khai](../history/2026-11-17-ghim-nhiem-vu.md).
+
 TaskItem là dữ liệu chính. Course tùy chọn nhưng phải thuộc người dùng; ParentTaskId tùy chọn, không phải liên kết sang nhiệm vụ người khác. Mọi thay đổi có ý nghĩa phối hợp [Lịch sử](04-lich-su-nhiem-vu.md) và [Thông báo](06-thong-bao-nhac-han.md).
 
 ## 2. Quy tắc nhiệm vụ lá
@@ -32,10 +38,12 @@ Exam chưa phải sự kiện thi có giờ/phòng. DueDate là hạn hoàn thà
 ## 3. Quy tắc cây và hạn hiệu lực
 
 - Cha/con phải cùng UserId và CourseId, kể cả cùng NULL. Không tự làm cha, gắn vào hậu duệ hoặc tạo vòng ở bất kỳ độ sâu nào.
+- Thêm con hoặc chuyển nhánh sang cha khác phải nằm trong 5 cấp tính cả nhiệm vụ gốc, tối đa 1.000 nhiệm vụ trong một cây. API trả `409 TASK_DEPTH_LIMIT` khi thao tác vượt cấp 5. Các nhánh sâu đã tồn tại vẫn có thể mở, chỉnh sửa và tách riêng. Khôi phục một nhánh thành nhiệm vụ gốc riêng nếu gắn lại vào cha cũ sẽ vượt giới hạn.
+- Giao diện dùng đường dẫn tổ tiên do API trả để tính cấp, kể cả khi nhiệm vụ con được ghim hoặc hiện riêng trong bộ lọc. Từ cấp 5, ẩn thao tác **Thêm bước nhỏ**. Khung chi tiết hiển thị các tầng con bên dưới tệp đính kèm và cho thu gọn từng nhánh.
 - Mỗi nhiệm vụ có một nguồn tiến độ: có con thì lấy trung bình số nguyên của mọi con trực tiếp, làm tròn xuống; không có con nhưng có checklist thì lấy tỷ lệ mục đã xong; lá không có checklist nhận tiến độ nhập tay. Tính từ dưới lên mọi cấp, không gom toàn bộ cháu vào mẫu số của gốc.
 - Con đã hoàn thành vẫn thuộc cây và vẫn được tính. Cha chỉ đạt 100%/Completed khi mọi con trực tiếp đạt 100%; làm tròn không được tạo 100% giả. Ghi ngày hoàn thành khi đạt 100%, giữ mốc nếu vẫn hoàn thành, xóa mốc khi mở lại.
 - Không nhập tay progress/complete/reopen cho cha và không gắn checklist công việc trực tiếp lên cha. API từ chối tương ứng bằng `TASK_PROGRESS_IS_DERIVED` và `TASK_CHECKLIST_REQUIRES_LEAF`. Mô tả cha vẫn chỉnh sửa bình thường; UI giải thích nguồn tiến độ và mở chi tiết con khi cần.
-- Thêm/chuyển con vào lá có checklist giữ checklist trong con **Công việc chung**; lá có tiến độ nhập tay >0 giữ tiến độ/ước lượng trong con **Phần việc đã thực hiện**. Cha chuyển sang nguồn tổng hợp. Cả nhánh bảo toàn và nhánh mới đều góp một phần bằng nhau. Ước lượng cha để NULL, tổng thời lượng lấy từ lá.
+- Thêm/chuyển con vào lá có checklist giữ checklist trong con **Công việc chung**; lá có tiến độ nhập tay >0 giữ tiến độ/ước lượng trong con **Nhiệm vụ đã bắt đầu**. Cha chuyển sang nguồn tổng hợp. Cả nhánh bảo toàn và nhánh mới đều góp một phần bằng nhau. Ước lượng cha để NULL, tổng thời lượng lấy từ lá.
 - Preview thông báo các mã nhiệm vụ sẽ mở lại hoặc chuyển phần việc cũ thành con. Ghi children/parent cần `xacNhanDoiCauTruc=true` khi có các ảnh hưởng đó; không được chỉ dựa vào nút xác nhận FE. Metadata không đổi cấu trúc và cập nhật trực tiếp nhiệm vụ lá không cần cờ này.
 - Thêm/xóa/chuyển/thùng rác/khôi phục tính lại các tổ tiên bị ảnh hưởng trong cùng giao dịch; chuyển con tính cả nhánh cũ và nhánh mới. Khi không còn con, cha cũ trở lại lá tiến độ 0, không giữ 100% dẫn xuất đã mất nguồn. Khôi phục là thao tác rõ ràng đưa việc trở lại và có thể mở lại các tổ tiên; nếu cha đã trở thành lá và có phần việc riêng mới, bảo toàn phần đó trước khi gắn lại con.
 - Hạn hiệu lực = DueDate của chính node nếu có; nếu không, lấy tổ tiên gần nhất có hạn. Không có hạn ở cả chuỗi → NULL.

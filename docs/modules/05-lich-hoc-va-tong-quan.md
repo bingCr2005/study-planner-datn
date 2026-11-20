@@ -2,6 +2,8 @@
 
 Trạng thái xác minh ngày 2026-11-06. BE và FE React đã có lịch lớp theo môn, giờ rảnh, lịch ngày/tuần/tháng/danh sách, gợi ý và áp dụng lịch tự học, quản lý phiên tự học. Calendar trả năm loại mục gồm lịch lớp, sự kiện, hạn nhiệm vụ, giờ rảnh và phiên tự học. Trục giờ, chia cột lịch trùng và các luồng tương ứng trong `frontend-preview` được đối chiếu trong [bản ghi chuyển đổi đầy đủ](../history/2026-11-06-chuyen-day-du-frontend-preview-va-sua-bo-loc.md).
 
+Cập nhật ngày 2026-11-16 về [dải Hạn nộp và hạn kế thừa](../history/2026-11-16-lam-ro-han-trong-lich-tuan.md).
+
 Các phần bên dưới giữ nội dung đặc tả ban đầu để đối chiếu. Dashboard là phần việc riêng của team, giao diện và nguồn dữ liệu của trang đó cần được kiểm chứng trong lượt triển khai tương ứng.
 
 ## 1. Mục tiêu và phạm vi
@@ -17,14 +19,17 @@ ClassSession là mẫu lặp theo tuần trong học kỳ, chưa phải buổi t
 - Dùng User.TimeZone để diễn giải giờ học và ngày hiển thị; tuần bắt đầu thứ Hai. Khoảng request [from, to) và tối đa 93 ngày theo API.
 - Phương án hiện tại cảnh báo trùng lịch nhưng cho lưu. Đổi biên học kỳ thay phạm vi lịch, không tự đổi deadline nhiệm vụ.
 - Calendar có ClassSessionOccurrence (start/end) và TaskDeadline (dueAt). Không tạo một buổi học dài EstimatedMinutes từ deadline.
-- Task không có hạn hiệu lực không tạo deadline event. Con kế thừa hạn dùng cùng quy tắc [Nhiệm vụ](03-nhiem-vu-va-tien-do.md).
+- Task không có hạn hiệu lực không tạo mốc hạn. Màn Thời khóa biểu hiển thị hạn theo nhiệm vụ được đặt hạn trực tiếp. Nếu con kế thừa hạn của cha, lịch chỉ hiện mốc của cha. Con được đặt hạn riêng có mốc riêng. Quy tắc hạn hiệu lực để theo dõi từng nhiệm vụ được mô tả trong [Nhiệm vụ](03-nhiem-vu-va-tien-do.md).
 
 ## 3. Luồng sử dụng
 
+Trên màn Thời khóa biểu, **Ẩn menu** và **Hiện menu** cho phép mở rộng lịch hoặc mở lại cột điều hướng. Chế độ xem, ngày và bộ lọc vẫn giữ khi đổi độ rộng. Trên desktop, thanh cuộn bên phải dùng chung cho phần điều khiển và lưới lịch. Cuộn xuống để khu vực lịch chiếm gần hết khung. Hàng ngày và hạn của lịch giờ tiếp tục ghim ở đầu vùng xem.
+
 1. Mở môn, nhập thứ/giờ/phòng → xác minh chủ sở hữu và dữ liệu → lưu mẫu, kèm warning nếu trùng theo phương án hiện tại.
 2. Mở lịch → server xác định khoảng/múi giờ → tải mẫu thuộc người dùng → sinh lần xuất hiện trong học kỳ và khoảng request → gộp deadline → trả DTO có loại/nguồn sự kiện.
-3. Bấm sự kiện mở môn/nhiệm vụ tương ứng; UI phân biệt buổi học và mốc hạn, hiển thị quan hệ cha–con nếu cùng hiện nhiều deadline.
-4. Mở Dashboard → lấy ngày địa phương và phạm vi học kỳ tùy chọn → tính số liệu từ nhiệm vụ lá → trả scope/generatedAt cùng lịch ngày và tối đa 10 việc cần chú ý.
+3. Bấm tên trên thẻ để mở chi tiết. Thẻ hạn và sự kiện của nhiệm vụ đơn lẻ có ô tích để hoàn thành hoặc mở lại ngay trong lịch. Nhiệm vụ có bước nhỏ hoặc checklist cần cập nhật trong chi tiết. Việc đã hoàn thành và phiên tự học đã xong có màu nhạt hơn.
+4. Trong lịch Ngày, Tuần hoặc 3 ngày, dải Hạn nộp được ghim ở đầu lưới giờ. Dải thường hiện tối đa hai thẻ mỗi ngày và **Xem thêm N hạn**. Bấm **Thu gọn hạn** để chỉ giữ nút đếm hạn bên dưới ngày, rồi bấm số hạn nếu cần mở danh sách. Chế độ Ngày đặt hai thẻ cạnh nhau khi đủ chiều rộng.
+5. Mở Dashboard → lấy ngày địa phương và phạm vi học kỳ tùy chọn → tính số liệu từ nhiệm vụ lá → trả scope/generatedAt cùng lịch ngày và tối đa 10 việc cần chú ý.
 
 ## 4. Định nghĩa số liệu Dashboard
 
@@ -42,7 +47,7 @@ Total/completed/undated không bị hiểu là chỉ riêng ngày đang xem. T�
 
 - GET/POST /api/courses/{id}/class-sessions.
 - PUT/DELETE /api/class-sessions/{id}.
-- GET /api/calendar?from=...&to=...&semesterId=... .
+- `GET /api/v1/calendar?tu=...&den=...&maHocKy=...&gomHanKeThua=true` trả hạn theo nhiệm vụ đặt hạn trực tiếp. Bên gọi bỏ tham số `gomHanKeThua` tiếp tục nhận hạn của nhiệm vụ lá theo mặc định, hoặc cả hạn của nhiệm vụ cha nếu bật `hienHanCha`.
 - GET /api/dashboard?date=...&semesterId=... .
 
 Route/DTO chính thức theo tài liệu API. 400 cho giờ/khoảng truy vấn sai hoặc quá dài; 404 cho tài nguyên cá nhân không thuộc người gọi. Không trả event của người khác hoặc toàn bộ entity có navigation. Sửa/xóa buổi học chỉ tác động mẫu tương ứng, không biến thành xóa nhiệm vụ.
@@ -55,7 +60,9 @@ Route/DTO chính thức theo tài liệu API. 400 cho giờ/khoảng truy vấn 
 | Cuối tháng/năm, thứ Hai/Chủ nhật | Sinh đúng thứ/ngày, không thiếu hoặc lặp sai |
 | EndTime <= StartTime; request > 93 ngày | 400, không lưu/truy vấn ngoài giới hạn |
 | Hai buổi trùng | Cảnh báo, vẫn lưu theo phương án đề xuất |
-| Con NULL DueDate nhưng cha có hạn | Event dùng hạn kế thừa, không dùng thời lượng giả |
+| Con kế thừa hạn và cha có hạn trực tiếp | Màn Thời khóa biểu hiện một mốc mang tên cha |
+| Cha và con đều đặt hạn trực tiếp | Màn Thời khóa biểu hiện mốc của cả hai |
+| Một ngày có hơn hai hạn | Mở danh sách đầy đủ ngay trên dải Hạn nộp, giữ nguyên lịch tuần |
 | Cha và hai lá | Counts chỉ tính lá, số event không đại diện khối lượng |
 | Đổi múi giờ, lọc học kỳ, hai tài khoản | Ngày/phạm vi đúng, không lộ dữ liệu tài khoản khác |
 | Không có nhiệm vụ | Counts bằng 0, không chia cho 0 hoặc hiển thị hoàn thành giả |
