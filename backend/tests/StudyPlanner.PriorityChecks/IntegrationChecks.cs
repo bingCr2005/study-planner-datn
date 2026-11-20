@@ -69,7 +69,8 @@ public static class IntegrationChecks
                 Check((await studentClient.GetAsync(route)).StatusCode == HttpStatusCode.Forbidden, "Student cannot read admin history");
                 Check((await studentClient.PostAsJsonAsync(route, new { ten = "Attempt", cauHinh = QuyTacCauHinhUuTien.MacDinh() })).StatusCode == HttpStatusCode.Forbidden, "Student cannot write config");
                 var initial = await studentClient.GetFromJsonAsync<QuyTacUuTienResponse>("/api/v1/priority-rules/active");
-                Check(initial?.PhienBan == 0 && initial.CauHinh.TieuChi[0] == "Deadline", "Built-in fallback before activation");
+                Check(initial?.PhienBan == 0 && initial.CauHinh.TieuChi.SequenceEqual(["Importance", "Deadline", "InProgress"]),
+                    "Built-in rule ranks importance before exact deadline within an urgency group");
                 Check((await client.PostAsJsonAsync(route, new { ten = " ", cauHinh = QuyTacCauHinhUuTien.MacDinh() })).StatusCode == HttpStatusCode.BadRequest, "Blank name rejected");
                 Check((await client.PostAsJsonAsync(route, new { ten = "Bad", cauHinh = new { phienBanSchema = 1, tieuChi = new[] { "Importance" } } })).StatusCode == HttpStatusCode.BadRequest, "Missing deadline rejected");
                 Check((await client.PostAsJsonAsync(route, new { ten = "Bad", cauHinh = new { phienBanSchema = 1, tieuChi = new[] { "Deadline", "script" } } })).StatusCode == HttpStatusCode.BadRequest, "Unknown criterion rejected");

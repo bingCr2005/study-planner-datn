@@ -21,6 +21,12 @@ public sealed class TapTrungController(TapTrungService service, ThongKeTapTrungS
     [HttpPost("records")]
     public async Task<HocTapResponse<TapTrungResponse>> Nhap(NhapTapTrungRequest request, CancellationToken ct)
     { var r = await service.NhapAsync(Chu, PhienBanYeuCau(), request, ct); GanPhienBan(r.PhienBan); return r; }
+    [HttpGet("{id:int}/time")]
+    public async Task<HocTapResponse<ChiTietThoiGianTapTrung>> DocThoiGian(int id, CancellationToken ct)
+    { var r = await service.DocThoiGianAsync(Chu, id, ct); GanPhienBan(r.PhienBan); return r; }
+    [HttpPut("{id:int}/time")]
+    public async Task<HocTapResponse<ChiTietThoiGianTapTrung>> SuaThoiGian(int id, SuaThoiGianTapTrungRequest request, CancellationToken ct)
+    { var r = await service.SuaThoiGianAsync(Chu, id, PhienBanYeuCau(), request, ct); GanPhienBan(r.PhienBan); return r; }
     [HttpPost("{id:int}/{operation}")]
     public async Task<HocTapResponse<TapTrungResponse>> ThaoTac(int id, string operation, ThaoTacTapTrungRequest request, CancellationToken ct)
     { var r = await service.ThaoTacAsync(Chu, id, PhienBanYeuCau(), operation, request, ct); GanPhienBan(r.PhienBan); return r; }

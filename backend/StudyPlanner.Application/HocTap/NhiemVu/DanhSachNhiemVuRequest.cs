@@ -9,10 +9,12 @@ public sealed class DanhSachNhiemVuRequest
     public int? MaHocKy { get; init; }
     public int? MaMonHoc { get; init; }
     public LoaiNhiemVu? Loai { get; init; }
+    public string? PhamVi { get; init; }
     public MucDoUuTienNhiemVu? MucDoUuTien { get; init; }
     public TrangThaiNhiemVu? TrangThai { get; init; }
     public string CheDo { get; init; } = "all";
     public bool ChiLa { get; init; }
+    public bool GhimTruoc { get; init; }
     public string SapXep { get; init; } = "due";
     public DateTimeOffset? TuHan { get; init; }
     public DateTimeOffset? DenHan { get; init; }

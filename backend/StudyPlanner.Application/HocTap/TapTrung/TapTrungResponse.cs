@@ -11,3 +11,7 @@ public sealed record TapTrungResponse(int Ma, int? MaNhiemVu, int? MaPhienTuHoc,
 public sealed record TongQuanTapTrung(int PomoHomNay, long MiliGiayHomNay, int TongPomo, long TongMiliGiay);
 public sealed record TapTrungState(TapTrungResponse? HienTai, IReadOnlyList<TapTrungResponse> LichSu,
     TongQuanTapTrung TongQuan, int Trang, int TongSo, DateTimeOffset ThoiDiemMayChu, string MuiGio, int? MaPhienDangHocCu);
+
+public sealed record MocThoiGianTapTrung(DateTimeOffset BatDau, DateTimeOffset KetThuc, long SoMiliGiayDaHoc);
+public sealed record LanSuaThoiGianTapTrung(DateTimeOffset SuaLuc, MocThoiGianTapTrung Truoc, MocThoiGianTapTrung Sau);
+public sealed record ChiTietThoiGianTapTrung(TapTrungResponse BanGhi, bool CanNhapThoiLuong, IReadOnlyList<LanSuaThoiGianTapTrung> LichSu);

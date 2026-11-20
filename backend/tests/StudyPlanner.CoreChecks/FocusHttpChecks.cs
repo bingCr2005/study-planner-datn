@@ -67,9 +67,10 @@ public static class FocusHttpChecks
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", issuer.Issue(owner).TokenTruyCap);
             other.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", issuer.Issue(stranger).TokenTruyCap);
             long version = 0;
-            async Task<JsonElement> Send(HttpClient who, string path, object? body = null, int expected = 200, long? explicitVersion = null)
+            async Task<JsonElement> Send(HttpClient who, string path, object? body = null, int expected = 200,
+                long? explicitVersion = null, HttpMethod? method = null)
             {
-                using var request = new HttpRequestMessage(body is null ? HttpMethod.Get : HttpMethod.Post, "/api/v1/" + path);
+                using var request = new HttpRequestMessage(method ?? (body is null ? HttpMethod.Get : HttpMethod.Post), "/api/v1/" + path);
                 if (body is not null) { request.Content = JsonContent.Create(body); request.Headers.TryAddWithoutValidation("If-Match", $"\"ht-{explicitVersion ?? version}\""); }
                 using var response = await who.SendAsync(request);
                 var text = await response.Content.ReadAsStringAsync();
@@ -188,7 +189,83 @@ public static class FocusHttpChecks
             var privateStats = await Send(other, "focus/statistics?soNgay=30");
             Check(privateStats.GetProperty("tongHop").GetProperty("soPhien").GetInt32() == 0, "statistics never include another owner's records");
             Check(version == statsVersion, "statistics and task previews never change task or timer revisions");
-            Console.WriteLine($"PASS: {count} focus HTTP/PostgreSQL assertions; migration, ownership, stopwatch, countdown, pause/resume, notes, manual records, discard and legacy session integration.");
+            var editPath = $"focus/{linkedId}/time";
+            var edit = await Send(client, editPath);
+            var record = edit.GetProperty("banGhi");
+            var originalStart = record.GetProperty("batDau").GetDateTimeOffset();
+            var originalEnd = record.GetProperty("ketThuc").GetDateTimeOffset();
+            var correctedEnd = originalEnd.AddSeconds(-3);
+            Check(!edit.GetProperty("canNhapThoiLuong").GetBoolean() && edit.GetProperty("lichSu").GetArrayLength() == 0,
+                "saved study session exposes its tracked intervals with empty audit history");
+            Task<JsonElement> Edit(DateTimeOffset start, DateTimeOffset end, int status = 200, long? revision = null) =>
+                Send(client, editPath, new { batDau = start, ketThuc = end }, status, revision, HttpMethod.Put);
+            await Edit(originalEnd, originalStart, 400);
+            await Edit(originalStart, originalStart, 400);
+            await Edit(originalStart, clock.GetUtcNow().AddSeconds(1), 400);
+            await Edit(manualStart, correctedEnd, 409);
+            await Send(other, editPath, expected: 404);
+            await Send(other, editPath, new { batDau = originalStart, ketThuc = correctedEnd }, 404, 0, HttpMethod.Put);
+            await Edit(originalStart, correctedEnd, 409, version - 1);
+            await Edit(originalStart.AddSeconds(13), originalStart.AddSeconds(30), 400);
+            var updated = await Edit(originalStart, correctedEnd);
+            var audit = updated.GetProperty("lichSu").EnumerateArray().Single();
+            Check(audit.GetProperty("truoc").GetProperty("soMiliGiayDaHoc").GetInt64() == 20000 &&
+                audit.GetProperty("sau").GetProperty("soMiliGiayDaHoc").GetInt64() == 17000 &&
+                audit.GetProperty("suaLuc").GetDateTimeOffset() == clock.GetUtcNow(), "editing keeps pause excluded and audits both times");
+            var editedVersion = version;
+            Check((await Edit(originalStart, correctedEnd)).GetProperty("lichSu").GetArrayLength() == 1 && version == editedVersion,
+                "identical edit does not append audit entries or change revision");
+            var readBack = await Send(client, editPath);
+            Check(readBack.GetProperty("banGhi").GetProperty("ketThuc").GetDateTimeOffset() == correctedEnd &&
+                readBack.GetProperty("lichSu").GetArrayLength() == 1, "editable times and audit persist");
+            var savedPlan = await Send(client, $"study-sessions/{planned.Ma}");
+            Check(savedPlan.GetProperty("soGiayDaHoc").GetInt64() == 17 &&
+                savedPlan.GetProperty("batDauDuKien").GetDateTimeOffset() == planned.BatDauDuKien &&
+                savedPlan.GetProperty("ketThucDuKien").GetDateTimeOffset() == planned.KetThucDuKien, "correction updates plan actuals and preserves planned interval");
+            var editedSummary = await Send(client, $"focus/tasks/{academic.Ma}/summary");
+            Check(editedSummary.GetProperty("tongMiliGiay").GetInt64() == 1527000, "task statistics use corrected time");
+            await Edit(originalStart, originalStart.AddSeconds(10));
+            var widened = await Edit(originalStart, originalEnd);
+            Check(widened.GetProperty("banGhi").GetProperty("soMiliGiayDaHoc").GetInt64() == 20000 &&
+                widened.GetProperty("lichSu").GetArrayLength() == 3, "widening a trimmed record restores its original pause and can meet an adjacent record");
+            await Send(client, $"focus/{manual.GetProperty("ma").GetInt32()}/time",
+                new { batDau = manualStart.AddHours(-24), ketThuc = manualEnd }, 400, method: HttpMethod.Put);
+
+            var freePaused = await Send(client, "focus/start", Start(mode: "Stopwatch"));
+            var freePausedId = freePaused.GetProperty("ma").GetInt32();
+            clock.Advance(TimeSpan.FromSeconds(10));
+            await Send(client, $"focus/{freePausedId}/pause", Note());
+            clock.Advance(TimeSpan.FromSeconds(30));
+            var freeStopped = await Send(client, $"focus/{freePausedId}/finish", Note());
+            var freeEditPath = $"focus/{freePausedId}/time";
+            var freeStart = freeStopped.GetProperty("batDau").GetDateTimeOffset();
+            var freeEnd = clock.GetUtcNow().AddSeconds(-5);
+            Check((await Send(client, freeEditPath)).GetProperty("canNhapThoiLuong").GetBoolean(),
+                "free stopwatch with pauses needs the duration because the pause positions were not saved");
+            await Send(client, freeEditPath, new { batDau = freeStart, ketThuc = freeEnd }, 400, method: HttpMethod.Put);
+            await Send(client, freeEditPath, new { batDau = freeStart, ketThuc = freeEnd, soMiliGiayDaHoc = 36000 }, 400, method: HttpMethod.Put);
+            var freeEdited = await Send(client, freeEditPath, new { batDau = freeStart, ketThuc = freeEnd, soMiliGiayDaHoc = 9500 }, method: HttpMethod.Put);
+            Check(freeEdited.GetProperty("banGhi").GetProperty("soMiliGiayDaHoc").GetInt64() == 9500, "free paused record accepts a corrected actual duration");
+
+            var pomoPlan = new PhienTuHoc { MaNguoiDung = owner.Ma, MaNhiemVu = academic.Ma,
+                TrangThai = TrangThaiPhienTuHoc.Planned, BatDauDuKien = clock.GetUtcNow().AddMinutes(1),
+                KetThucDuKien = clock.GetUtcNow().AddMinutes(20) };
+            await using (var db = new ApplicationDbContext(options)) { db.Add(pomoPlan); await db.SaveChangesAsync(); }
+            var scheduledPomo = await Send(client, "focus/start", Start(session: pomoPlan.Ma));
+            var pomoId = scheduledPomo.GetProperty("ma").GetInt32();
+            Check(scheduledPomo.GetProperty("cheDo").GetString() == "Pomodoro" &&
+                scheduledPomo.GetProperty("maPhienTuHoc").GetInt32() == pomoPlan.Ma, "planned session can start in Pomodoro mode");
+            await Send(client, $"focus/{pomoId}/time", expected: 409);
+            clock.Advance(TimeSpan.FromMinutes(3));
+            await Send(client, "focus/state");
+            var completedPomo = await Send(client, $"study-sessions/{pomoPlan.Ma}");
+            Check(completedPomo.GetProperty("trangThai").GetString() == "Completed" &&
+                completedPomo.GetProperty("soGiayDaHoc").GetInt64() == 60, "scheduled Pomodoro ends at the configured target");
+            await Send(client, $"focus/{pomoId}/time", new { batDau = scheduledPomo.GetProperty("batDau").GetDateTimeOffset(),
+                ketThuc = clock.GetUtcNow() }, method: HttpMethod.Put);
+            var editedPomoSummary = await Send(client, $"focus/tasks/{academic.Ma}/summary");
+            Check(editedPomoSummary.GetProperty("soPomodoro").GetInt32() == 2, "correcting one timed round preserves a single round in statistics");
+            Console.WriteLine($"PASS: {count} focus HTTP/PostgreSQL assertions; timer modes, pause/resume, saved time corrections, audit, ownership, conflicts and statistics.");
         }
         finally
         {

@@ -8,8 +8,8 @@ public sealed class ThoiKhoaBieuController(ThoiKhoaBieuService service, LichHocS
 {
     [HttpGet]
     public async Task<HocTapResponse<ThoiKhoaBieuResponse>> DanhSach([FromQuery] DateTimeOffset tu, [FromQuery] DateTimeOffset den,
-        [FromQuery] int? maHocKy, [FromQuery] int? maMonHoc, [FromQuery] bool hienHanCha, CancellationToken ct)
-    { var r = await service.LayAsync(Chu, tu, den, maHocKy, maMonHoc, hienHanCha, ct); GanPhienBan(r.PhienBan); return r; }
+        [FromQuery] int? maHocKy, [FromQuery] int? maMonHoc, [FromQuery] bool hienHanCha, [FromQuery] bool gomHanKeThua, CancellationToken ct)
+    { var r = await service.LayAsync(Chu, tu, den, maHocKy, maMonHoc, hienHanCha, gomHanKeThua, ct); GanPhienBan(r.PhienBan); return r; }
     [HttpPost("change-preview")]
     public async Task<HocTapResponse<AnhHuongLichResponse>> XemAnhHuong(XemAnhHuongLichRequest request, CancellationToken ct)
     {

@@ -122,6 +122,7 @@ public static class PhienTuHocChecks
         public void Xoa<T>(T entity) where T : class => entities.Remove(entity);
         public Task LuuAsync(CancellationToken ct) => Task.CompletedTask;
         public Task<List<NhiemVu>> CayAsync(int chu, int ma, CancellationToken ct) => throw new NotSupportedException();
+        public Task KhoaQuyTacUuTienAsync(CancellationToken ct) => Task.CompletedTask;
         public Task<IHocTapTransaction> BatDauAsync(bool ghi, CancellationToken ct) => Task.FromResult<IHocTapTransaction>(new MemoryTransaction());
         public Task<NguoiDung> NguoiDungAsync(int chu, bool khoa, CancellationToken ct) => Task.FromResult(User);
     }

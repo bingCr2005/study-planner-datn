@@ -6,6 +6,7 @@ namespace StudyPlanner.Application.HocTap;
 public static class QuyTacCay
 {
     public const int DoSauToiDa = 10, SoNodeToiDa = 1000;
+    public const int DoSauTaoMoiToiDa = 5;
     public static Expression<Func<NhiemVu, DateTimeOffset?>> BieuThucHan { get; } = TaoBieuThucHan();
     private static Expression<Func<NhiemVu, DateTimeOffset?>> TaoBieuThucHan()
     {
@@ -39,12 +40,13 @@ public static class QuyTacCay
             node = parent;
         }
     }
-    public static void KiemTra(IReadOnlyList<NhiemVu> nodes)
+    public static void KiemTra(IReadOnlyList<NhiemVu> nodes, IReadOnlySet<int>? nhiemVuDoiDoSau = null)
     {
         if (nodes.Count > SoNodeToiDa) throw new HocTapException(409, "TASK_TREE_LIMIT", "Cây tối đa 1.000 nhiệm vụ.");
         var map = nodes.ToDictionary(x => x.Ma);
         foreach (var n in nodes)
         {
+            var apDungGioiHanMoi = nhiemVuDoiDoSau?.Contains(n.Ma) == true;
             var seen = new HashSet<int>(); var current = n; var depth = 1;
             while (current.MaNhiemVuCha is int id)
             {
@@ -52,7 +54,10 @@ public static class QuyTacCay
                 if (!map.TryGetValue(id, out var parent)) throw new HocTapException(409, "TASK_TREE_INVALID", "Cây không đầy đủ.");
                 if (current.MaNguoiDung != parent.MaNguoiDung || current.MaHocKy != parent.MaHocKy || current.MaMonHoc != parent.MaMonHoc)
                     throw new HocTapException(409, "TASK_SCOPE_CONFLICT", "Cha và con phải cùng chủ, học kỳ và môn.");
-                if (++depth > DoSauToiDa) throw new HocTapException(409, "TASK_TREE_LIMIT", "Cây tối đa 10 cấp.");
+                depth++;
+                if (apDungGioiHanMoi && depth > DoSauTaoMoiToiDa)
+                    throw new HocTapException(409, "TASK_DEPTH_LIMIT", $"Nhiệm vụ chỉ được chia tối đa {DoSauTaoMoiToiDa} cấp, tính cả nhiệm vụ gốc.");
+                if (depth > DoSauToiDa) throw new HocTapException(409, "TASK_TREE_LIMIT", "Cây tối đa 10 cấp.");
                 current = parent;
             }
             if (n.MaNhiemVuCha is int pid && n.HanHoanThanh is DateTimeOffset own && HanHieuLuc(map[pid], map).Han is DateTimeOffset ph && own > ph)

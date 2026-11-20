@@ -1,4 +1,4 @@
-﻿param([switch]$NoBuild, [switch]$PureOnly, [switch]$IncludeLegacy, [string]$TestConfiguration='Release')
+param([switch]$NoBuild, [switch]$PureOnly, [switch]$IncludeLegacy, [string]$TestConfiguration='Release', [string]$FrontendPath = (Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'Study_Planner_FE'))
 $ErrorActionPreference='Stop'
 Push-Location (Split-Path -Parent $PSScriptRoot)
 try {
@@ -10,7 +10,7 @@ try {
         dotnet build backend/StudyPlanner.sln --configuration $TestConfiguration --no-restore
         if ($LASTEXITCODE -ne 0) { throw 'Build thất bại; restore dependencies trước khi chạy.' }
     }
-    $suites=@('StudyPlanner.SchemaChecks','StudyPlanner.PlanningChecks','StudyPlanner.CoreChecks')
+    $suites=@('StudyPlanner.SchemaChecks','StudyPlanner.PlanningChecks','StudyPlanner.PriorityChecks','StudyPlanner.CoreChecks')
     if ($IncludeLegacy) { $suites+=@('StudyPlanner.AdministrationChecks','StudyPlanner.AuthChecks') }
     $previousPostgres=$env:STUDYPLANNER_TEST_POSTGRES
     try {
@@ -19,7 +19,9 @@ try {
             dotnet ("backend/tests/{0}/bin/{1}/net10.0/{0}.dll" -f $suite,$TestConfiguration)
             if ($LASTEXITCODE -ne 0) { throw "Kiểm thử thất bại: $suite" }
         }
-        node frontend-preview/checks.cjs
+        if (-not (Test-Path (Join-Path $FrontendPath 'package.json'))) { throw 'Không tìm thấy frontend.' }
+        Push-Location $FrontendPath
+        try { npm.cmd test } finally { Pop-Location }
         if ($LASTEXITCODE -ne 0) { throw 'Kiểm thử client thất bại.' }
     } finally { $env:STUDYPLANNER_TEST_POSTGRES=$previousPostgres }
 } finally { Pop-Location }

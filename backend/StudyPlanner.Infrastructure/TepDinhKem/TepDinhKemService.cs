@@ -1,7 +1,9 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using StudyPlanner.Application.HocTap;
 using StudyPlanner.Domain.Entities;
+using StudyPlanner.Domain.Enums;
 using StudyPlanner.Infrastructure.Data;
 
 namespace StudyPlanner.Infrastructure.TepDinhKem;
@@ -32,13 +34,14 @@ public sealed class TepDinhKemService(ApplicationDbContext db, HocTapDieuPhoi di
         if (ten.Length is 0 or > 255 || ten.Any(char.IsControl) || ten is "." or "..")
             throw new HocTapException(400, "VALIDATION_ERROR", "Tên tệp phải dài từ 1 đến 255 ký tự và không chứa ký tự điều khiển.");
         await using var tx = await dieuPhoi.MoAsync(chu, phienBan, true, ct);
-        await NhiemVuAsync(chu, ma, ct);
+        var task = await NhiemVuAsync(chu, ma, ct);
         if (await db.DanhSachTepDinhKemNhiemVu.CountAsync(x => x.MaNhiemVu == ma, ct) >= 20)
             throw new HocTapException(400, "ATTACHMENT_LIMIT", "Mỗi nhiệm vụ tối đa 20 tệp đính kèm.");
         var khoa = await kho.GhiAsync(noiDung, kichThuoc, ct);
         var tep = new TepDinhKemNhiemVu { MaNhiemVu = ma, MaNguoiTaiLen = chu, TenTep = ten,
             KhoaLuuTru = khoa, LoaiTep = "application/octet-stream", KichThuocByte = kichThuoc, NgayTao = dongHo.GetUtcNow() };
         db.Add(tep);
+        GhiHoatDong(task, tep.TenTep, "AttachmentAdded", tep.NgayTao);
         // Nếu mất kết nối lúc COMMIT thì kết quả có thể chưa xác định. Giữ tệp để tránh xóa nhầm;
         // lượt dọn kho chỉ xóa tệp mồ côi sau 24 giờ và sau khi đọc lại database thành công.
         await tx.CommitAsync(true, ct);
@@ -55,13 +58,26 @@ public sealed class TepDinhKemService(ApplicationDbContext db, HocTapDieuPhoi di
     public async Task<long> XoaAsync(int chu, int ma, int tep, long phienBan, CancellationToken ct)
     {
         await using var tx = await dieuPhoi.MoAsync(chu, phienBan, true, ct);
+        var task = await NhiemVuAsync(chu, ma, ct);
         var row = await TimAsync(chu, ma, tep, ct);
         db.Remove(row);
+        GhiHoatDong(task, row.TenTep, "AttachmentRemoved", dongHo.GetUtcNow());
         await tx.CommitAsync(true, ct);
         try { kho.Xoa(row.KhoaLuuTru); }
         catch (IOException) { logger.LogWarning("Sẽ thử dọn lại tệp đính kèm {MaTep} ở lượt dọn kho.", tep); }
         catch (UnauthorizedAccessException) { logger.LogWarning("Chưa thể dọn nội dung tệp đính kèm {MaTep}.", tep); }
         return tx.NguoiDung.PhienBanLapLich;
+    }
+
+    private void GhiHoatDong(NhiemVu task, string tenTep, string loaiHoatDong, DateTimeOffset now)
+    {
+        // Ghi tên hiển thị cùng giao dịch với metadata tệp. Lịch sử không giữ đường dẫn, khóa kho hay nội dung tệp.
+        db.Add(new LichSuNhiemVu
+        {
+            MaNhiemVu = task.Ma, MaNguoiDung = task.MaNguoiDung, TieuDeNhiemVu = task.TieuDe,
+            HanhDong = HanhDongLichSuNhiemVu.Updated, NguonThayDoi = "User", NgayThayDoi = now,
+            DuLieuSau = JsonSerializer.Serialize(new { loaiHoatDong, tenTep })
+        });
     }
     private async Task<TepDinhKemNhiemVu> TimAsync(int chu, int ma, int tep, CancellationToken ct) =>
         await db.DanhSachTepDinhKemNhiemVu.SingleOrDefaultAsync(x => x.Ma == tep && x.MaNhiemVu == ma && x.MaNguoiTaiLen == chu, ct)

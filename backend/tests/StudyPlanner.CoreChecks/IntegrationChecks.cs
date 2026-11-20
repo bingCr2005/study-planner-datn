@@ -155,6 +155,24 @@ public static class IntegrationChecks
             }
             var childRead = Data(await Send(aClient, HttpMethod.Get, $"/api/v1/tasks/{child1}", null, 200));
             Check(childRead.GetProperty("hanHieuLuc").GetDateTimeOffset() == DateTimeOffset.Parse("2026-11-06T23:59:00+07:00"), "Child inherits effective deadline");
+            var pinPath = $"/api/v1/tasks/{child1}/pin";
+            await Write(bClient, HttpMethod.Patch, pinPath, new { daGhim = true }, 404);
+            await Write(aClient, HttpMethod.Patch, pinPath, new { }, 400);
+            var pinned = Data(await Write(aClient, HttpMethod.Patch, pinPath, new { daGhim = true }, 200));
+            Check(pinned.GetProperty("daGhim").GetBoolean() && pinned.GetProperty("maNhiemVuCha").GetInt32() == parentId &&
+                pinned.GetProperty("mucDoUuTien").GetString() == childRead.GetProperty("mucDoUuTien").GetString(), "Pin preserves the parent and priority");
+            async Task<int[]> ListedIds(string query) => Data(await Send(aClient, HttpMethod.Get, "/api/v1/tasks?" + query, null, 200))
+                .GetProperty("danhSach").EnumerateArray().Select(x => x.GetProperty("ma").GetInt32()).ToArray();
+            var firstPinnedPage = await ListedIds("ghimTruoc=true&kichThuocTrang=1");
+            Check(firstPinnedPage.SequenceEqual([child1]), "Pinned child moves to page one before paginating");
+            Check(!(await ListedIds("ghimTruoc=true&kichThuocTrang=1&trang=2")).Contains(child1), "Pin occupies one position in the paginated list");
+            Check(!(await ListedIds("ghimTruoc=true&tuKhoa=BaoCaoKhongKhop")).Contains(child1) &&
+                !(await ListedIds("cheDo=all")).Contains(child1), "Pins respect filters and are opt-in for list callers");
+            var pinRevision = await Revision(aClient);
+            var alreadyPinned = await Write(aClient, HttpMethod.Patch, pinPath, new { daGhim = true }, 200);
+            Check(alreadyPinned.GetProperty("phienBan").GetInt64() == pinRevision, "Repeated pin does not increment the revision");
+            await Write(aClient, HttpMethod.Patch, pinPath, new { daGhim = false }, 200);
+            Check(!(await ListedIds("ghimTruoc=true")).Contains(child1), "Unpinned child returns to its branch without a top-level row");
             await Write(aClient, HttpMethod.Patch, $"/api/v1/tasks/{child1}/progress", new { tienDo = 60 }, 200);
             var parentPath = $"/api/v1/tasks/{parentId}";
             Check(Data(await Send(aClient, HttpMethod.Get, parentPath, null, 200)).GetProperty("tienDo").GetInt32() == 30, "Parent progress is the mean of all immediate children");
@@ -182,6 +200,17 @@ public static class IntegrationChecks
             var calendar = Data(await Send(aClient, HttpMethod.Get, "/api/v1/calendar?tu=2026-11-04T00:00:00%2B07:00&den=2026-11-08T00:00:00%2B07:00", null, 200));
             Check(calendar.GetProperty("suKien").EnumerateArray().Any(e => e.GetProperty("loai").GetString() == "HanNhiemVu" && e.GetProperty("maNguon").GetInt32() == child1), "Calendar renders inherited leaf deadline through SQL projection");
             Check(!calendar.GetProperty("suKien").EnumerateArray().Any(e => e.GetProperty("loai").GetString() == "HanNhiemVu" && e.GetProperty("maNguon").GetInt32() == parentId), "Calendar hides parent deadlines by default");
+            await Write(aClient, HttpMethod.Put, $"/api/v1/tasks/{child2}", TaskBody("SQL", 60, "2026-11-05T20:00:00+07:00"), 200);
+            var groupedCalendar = Data(await Send(aClient, HttpMethod.Get,
+                "/api/v1/calendar?tu=2026-11-04T00:00:00%2B07:00&den=2026-11-08T00:00:00%2B07:00&gomHanKeThua=true", null, 200));
+            var groupedDeadlines = groupedCalendar.GetProperty("suKien").EnumerateArray().Where(e => e.GetProperty("loai").GetString() == "HanNhiemVu").ToArray();
+            Check(groupedDeadlines.Any(e => e.GetProperty("maNguon").GetInt32() == parentId && e.GetProperty("tieuDe").GetString() == "Báo cáo chia nhỏ") &&
+                !groupedDeadlines.Any(e => e.GetProperty("maNguon").GetInt32() == child1), "Grouped calendar shows inherited deadlines once under the source task name");
+            Check(groupedDeadlines.Any(e => e.GetProperty("maNguon").GetInt32() == child2 && e.GetProperty("batDau").GetDateTimeOffset() == DateTimeOffset.Parse("2026-11-05T20:00:00+07:00")),
+                "Grouped calendar also shows a child's separately set deadline");
+            Check(!groupedDeadlines.Single(e => e.GetProperty("maNguon").GetInt32() == parentId).GetProperty("coTheDanhDauHoanThanh").GetBoolean() &&
+                groupedDeadlines.Single(e => e.GetProperty("maNguon").GetInt32() == child2).GetProperty("coTheDanhDauHoanThanh").GetBoolean(),
+                "Calendar permits direct completion of the leaf and keeps derived parent progress read-only");
 
             async Task<JsonElement> ReadTask(int id) => Data(await Send(aClient, HttpMethod.Get, $"/api/v1/tasks/{id}", null, 200));
             async Task<int> NewTask(string title, int? estimate = null) => Id(await Write(aClient, HttpMethod.Post, "/api/v1/tasks", TaskBody(title, estimate, null), 201));
@@ -250,9 +279,23 @@ public static class IntegrationChecks
             Check(ContainsId(manualPreview.GetProperty("maTienDoChuyenThanhBuoc"), manualRoot), "Preview discloses preserving manually recorded progress before first split");
             await Write(aClient, HttpMethod.Post, $"/api/v1/tasks/{manualRoot}/children", AddTasks(false, "Phần mới"), 409);
             var manualChildren = await AddChildren(manualRoot, true, "Phần mới");
-            var preservedWork = await ReadTask(NamedId(manualChildren, "Phần việc đã thực hiện"));
+            var preservedWork = await ReadTask(NamedId(manualChildren, "Nhiệm vụ đã bắt đầu"));
             Check(preservedWork.GetProperty("tienDo").GetInt32() == 60 && preservedWork.GetProperty("thoiLuongDuKienPhut").GetInt32() == 90
                 && (await ReadTask(manualRoot)).GetProperty("tienDo").GetInt32() == 30, "First split preserves prior manual work instead of resetting or double counting it");
+            var activity = Data(await Send(aClient, HttpMethod.Get, $"/api/v1/task-history?maNhiemVu={manualRoot}", null, 200)).GetProperty("danhSach");
+            Check(activity.GetArrayLength() == 3, "Preview and missing confirmation add no history, and adding steps records one parent activity");
+            using (var beforeSplit = JsonDocument.Parse(activity[0].GetProperty("duLieuTruoc").GetString()!))
+            using (var afterSplit = JsonDocument.Parse(activity[0].GetProperty("duLieuSau").GetString()!))
+                Check(afterSplit.RootElement.GetProperty("loaiHoatDong").GetString() == "StepsAdded" &&
+                    afterSplit.RootElement.GetProperty("cacBuocDaThem").EnumerateArray().Select(x => x.GetString()).SequenceEqual(new[] { "Phần mới" }) &&
+                    beforeSplit.RootElement.GetProperty("tienDo").GetInt32() == 60 && afterSplit.RootElement.GetProperty("tienDo").GetInt32() == 30,
+                    "Parent history records the requested step and progress transition without naming the automatic preservation step");
+            var unchangedRoot = await NewTask("Việc mới chưa có tiến độ");
+            await AddChildren(unchangedRoot, false, "Bước đầu", "Bước tiếp theo");
+            var unchangedHistory = Data(await Send(aClient, HttpMethod.Get, $"/api/v1/task-history?maNhiemVu={unchangedRoot}", null, 200)).GetProperty("danhSach");
+            using (var stepData = JsonDocument.Parse(unchangedHistory[0].GetProperty("duLieuSau").GetString()!))
+                Check(unchangedHistory.GetArrayLength() == 2 && stepData.RootElement.GetProperty("cacBuocDaThem").GetArrayLength() == 2,
+                    "Adding steps is recorded even when overall progress stays unchanged");
 
             var rollbackRoot = Id(await Write(aClient, HttpMethod.Post, "/api/v1/tasks", new { tieuDe = "Không mất checklist khi lỗi", maMonHoc = course,
                 checklist = new[] { new { tieuDe = "Giữ nguyên", daXong = true } } }, 201));
@@ -288,7 +331,7 @@ public static class IntegrationChecks
             await Write(aClient, HttpMethod.Patch, $"/api/v1/tasks/{restoreRoot}/progress", new { tienDo = 40 }, 200);
             await Write(aClient, HttpMethod.Post, $"/api/v1/tasks/trash/{restoreChild}/restore", null, 204);
             var restoredBranch = Data(await Send(aClient, HttpMethod.Get, $"/api/v1/tasks/{restoreRoot}/tree", null, 200));
-            Check(restoredBranch.GetArrayLength() == 3 && NamedId(restoredBranch, "Phần việc đã thực hiện") > 0
+            Check(restoredBranch.GetArrayLength() == 3 && NamedId(restoredBranch, "Nhiệm vụ đã bắt đầu") > 0
                 && (await ReadTask(restoreRoot)).GetProperty("tienDo").GetInt32() == 20,
                 "Restore preserves a former parent's newly recorded manual work before attaching the old child");
 
@@ -401,6 +444,33 @@ public static class IntegrationChecks
             Check(swagger.GetProperty("paths").TryGetProperty("/api/v1/planning/apply",out _),"Swagger exposes real planning route");
             Check(swagger.GetProperty("paths").GetProperty("/api/v1/tasks/{id}/children").GetProperty("post").GetProperty("responses").TryGetProperty("201",out _),"Swagger documents actual batch creation status201");
             Check(swagger.GetProperty("paths").GetProperty("/api/v1/tasks/{id}").GetProperty("put").GetProperty("parameters").EnumerateArray().Any(x=>x.GetProperty("name").GetString()=="If-Match"),"Swagger documents concurrency precondition");
+
+            var currentLevel = await NewTask("Gốc kiểm tra giới hạn");
+            for (var level = 2; level <= 5; level++)
+            {
+                var title = $"Nhiệm vụ cấp {level}";
+                currentLevel = NamedId(await AddChildren(currentLevel, false, title), title);
+            }
+            Check((await ReadTask(currentLevel)).GetProperty("duongDanNhiemVuCha").GetArrayLength() == 4, "Level 5 counts the root as level 1");
+            var depthRevision = await Revision(aClient);
+            var levelSix = await Write(aClient, HttpMethod.Post, $"/api/v1/tasks/{currentLevel}/children", AddTasks(true, "Không thể thêm cấp 6"), 409);
+            Check(levelSix.GetProperty("code").GetString() == "TASK_DEPTH_LIMIT" && await Revision(aClient) == depthRevision,
+                "Creating a sixth level leaves the tree and revision unchanged");
+
+            var levelFour = (await ReadTask(currentLevel)).GetProperty("maNhiemVuCha").GetInt32();
+            var movingBranch = await NewTask("Nhánh sẽ vượt cấp khi chuyển");
+            var legacyId = NamedId(await AddChildren(movingBranch, false, "Việc có sẵn"), "Việc có sẵn");
+            var moveTooDeep = await Write(aClient, HttpMethod.Patch, $"/api/v1/tasks/{movingBranch}/parent", new { maNhiemVuCha = levelFour }, 409);
+            Check(moveTooDeep.GetProperty("code").GetString() == "TASK_DEPTH_LIMIT", "Changing parents checks the depth of the entire moved branch");
+
+            // Seed one relationship accepted by the historical ten-level rule.
+            await using (var db = new ApplicationDbContext(options))
+                await db.DanhSachNhiemVu.Where(task => task.Ma == legacyId)
+                    .ExecuteUpdateAsync(update => update.SetProperty(task => task.MaNhiemVuCha, currentLevel));
+            Check((await ReadTask(legacyId)).GetProperty("duongDanNhiemVuCha").GetArrayLength() == 5, "Existing level 6 remains readable");
+            await Write(aClient, HttpMethod.Put, $"/api/v1/tasks/{legacyId}", TaskBody("Đổi tên việc cũ ở cấp 6", null, null), 200);
+            Check((await ReadTask(legacyId)).GetProperty("tieuDe").GetString() == "Đổi tên việc cũ ở cấp 6", "Existing deep tasks remain editable");
+
             var directory=new DirectoryInfo(AppContext.BaseDirectory);
             while(directory is not null && !File.Exists(Path.Combine(directory.FullName,"backend","tests","StudyPlanner.CoreChecks","ClientContractChecks.mjs"))) directory=directory.Parent;
             if(directory is null)throw new InvalidOperationException("Cannot locate ClientContractChecks.mjs in this repository.");
@@ -460,6 +530,7 @@ internal sealed class LoiSauLuuStore(IHocTapStore inner, IHttpContextAccessor co
             throw new InvalidOperationException("Injected failure after persisted SaveChanges, before commit.");
     }
     public Task<List<NhiemVu>> CayAsync(int chu, int ma, CancellationToken ct) => inner.CayAsync(chu, ma, ct);
+    public Task KhoaQuyTacUuTienAsync(CancellationToken ct) => inner.KhoaQuyTacUuTienAsync(ct);
     public Task<IHocTapTransaction> BatDauAsync(bool ghi, CancellationToken ct) => inner.BatDauAsync(ghi, ct);
     public Task<NguoiDung> NguoiDungAsync(int chu, bool khoa, CancellationToken ct) => inner.NguoiDungAsync(chu, khoa, ct);
 }

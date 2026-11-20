@@ -2,6 +2,8 @@ using StudyPlanner.CoreChecks;
 
 try
 {
+    if (args.Contains("--student-v2-host")) { await StudentV2Host.RunAsync(); return; }
+    if (args.Contains("--student-v2-audit")) { await StudentV2Host.AuditAsync(); return; }
     ThoiGianChecks.Run();
     NhiemVuChecks.Run();
     await PhienTuHocChecks.RunAsync();
@@ -14,6 +16,7 @@ try
     {
         if (Environment.GetEnvironmentVariable("STUDYPLANNER_ATTACHMENTS_ONLY") == "1") await AttachmentHttpChecks.RunAsync(supplied);
         else if (Environment.GetEnvironmentVariable("STUDYPLANNER_FOCUS_ONLY") == "1") await FocusHttpChecks.RunAsync(supplied);
+        else if (Environment.GetEnvironmentVariable("STUDYPLANNER_PLANNING_ONLY") == "1") await PlanningUpgradeChecks.RunAsync(supplied);
         else { await MigrationProgressChecks.RunAsync(supplied); await IntegrationChecks.RunAsync(supplied); await AvailabilityUpgradeChecks.RunAsync(supplied); await PlanningUpgradeChecks.RunAsync(supplied); await PlanningReminderChecks.RunAsync(supplied); await FocusHttpChecks.RunAsync(supplied); await AttachmentHttpChecks.RunAsync(supplied); }
     }
 }

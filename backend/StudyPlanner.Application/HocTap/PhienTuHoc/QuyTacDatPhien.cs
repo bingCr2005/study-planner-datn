@@ -83,7 +83,8 @@ public sealed class QuyTacDatPhien(IHocTapStore store, ThoiKhoaBieuService lich)
             var reserved = existing.Where(p => p.MaNhiemVu == task.Ma &&
                 p.TrangThai is TrangThaiPhienTuHoc.Planned or TrangThaiPhienTuHoc.InProgress)
                 .Sum(p => Math.Max(0, (p.KetThucDuKien - (p.BatDauDuKien < now ? now : p.BatDauDuKien)).TotalMinutes));
-            var available = Math.Max(0, task.ThoiLuongConLaiPhut!.Value - reserved);
+            // Tính theo số phút nguyên có thể đặt, giống khi tạo gợi ý.
+            var available = Math.Max(0, Math.Floor(task.ThoiLuongConLaiPhut!.Value - reserved));
             var list = group.OrderBy(s => s.BatDauDuKien).ToList();
             var minutes = list.Sum(p => (p.KetThucDuKien - p.BatDauDuKien).TotalMinutes);
             if (minutes > available) throw XungDot("TASK_MINUTES_EXCEEDED", "Thời lượng đặt mới vượt phần việc còn chưa được dành chỗ.");
@@ -91,7 +92,9 @@ public sealed class QuyTacDatPhien(IHocTapStore store, ThoiKhoaBieuService lich)
             {
                 var duration = (list[i].KetThucDuKien - list[i].BatDauDuKien).TotalMinutes;
                 if (duration < QuyTacLapLich.PhienToiThieuPhut && (i != list.Count - 1 || minutes != available))
-                    throw Loi("Phiên dưới 15 phút chỉ được dùng để xếp hết phần cuối còn lại của nhiệm vụ.");
+                    throw new HocTapException(400, "SHORT_SESSION_REQUIRES_REMAINDER",
+                        "Phiên dưới 15 phút chỉ được dùng để xếp hết phần cuối còn lại của nhiệm vụ.",
+                        new { maNhiemVu = task.Ma });
             }
         }
     }

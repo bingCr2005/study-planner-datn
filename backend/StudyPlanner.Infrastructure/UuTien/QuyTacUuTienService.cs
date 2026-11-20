@@ -15,14 +15,7 @@ public sealed class QuyTacUuTienService(ApplicationDbContext db, TimeProvider cl
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private static QuyTacUuTienResponse Dto(QuyTacUuTien row)
     {
-        try
-        {
-            var config = JsonSerializer.Deserialize<CauHinhUuTien>(row.CauHinh, Json);
-            QuyTacCauHinhUuTien.KiemTra(config);
-            return new(row.Ma, row.Ten, row.PhienBan, row.DangSuDung, config!, row.NgayTao);
-        }
-        catch (Exception error) when (error is JsonException or HocTapException)
-        { throw new HocTapException(503, "PRIORITY_CONFIG_UNAVAILABLE", "Cấu hình quy tắc đã lưu không hợp lệ. Cần quản trị viên kiểm tra dữ liệu."); }
+        return new(row.Ma, row.Ten, row.PhienBan, row.DangSuDung, QuyTacCauHinhUuTien.Doc(row.CauHinh), row.NgayTao);
     }
 
     public async Task<QuyTacUuTienResponse> DangDungAsync(CancellationToken ct)

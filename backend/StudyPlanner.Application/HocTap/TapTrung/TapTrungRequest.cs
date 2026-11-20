@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 namespace StudyPlanner.Application.HocTap;
 
 public class BatDauTapTrungRequest
@@ -18,3 +19,8 @@ public sealed class NhapTapTrungRequest : BatDauTapTrungRequest
     public DateTimeOffset KetThuc { get; init; }
     [MaxLength(2000)] public string? GhiChu { get; init; }
 }
+
+public sealed record SuaThoiGianTapTrungRequest(
+    [property: JsonRequired] DateTimeOffset BatDau,
+    [property: JsonRequired] DateTimeOffset KetThuc,
+    long? SoMiliGiayDaHoc);
