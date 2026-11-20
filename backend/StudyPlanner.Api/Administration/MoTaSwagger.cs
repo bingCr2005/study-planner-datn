@@ -9,6 +9,7 @@ public sealed class MoTaSwagger : IOperationFilter, ISchemaFilter
     public static string Group(string controller) => controller switch
     {
         "NguoiDung" => "Quản lý người dùng",
+        "TheoDoiHocTap" => "Admin theo dõi học tập sinh viên",
         "Health" => "Kiểm tra hoạt động API",
         "Semesters" => "Quản lý học kỳ",
         "Courses" => "Quản lý môn học",

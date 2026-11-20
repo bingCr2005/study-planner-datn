@@ -34,6 +34,7 @@ public static class QuanTriRegistration
         services.AddScoped<IQuanLyNguoiDungStore, EfQuanLyNguoiDungStore>();
         services.AddScoped<INguoiDungPasswordHasher, IdentityNguoiDungPasswordHasher>();
         services.AddScoped<QuanLyNguoiDungService>();
+        services.AddScoped<TheoDoiHocTapService>();
         services.AddProblemDetails();
         services.AddExceptionHandler<QuanTriExceptionHandler>();
         return services;
